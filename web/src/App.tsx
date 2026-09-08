@@ -66,7 +66,12 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'analytics' && (
-          <AnalyticsView benchmark={dataset.benchmark} />
+          <AnalyticsView
+            benchmark={dataset.benchmark}
+            analytics={dataset.analytics}
+            standings={dataset.standings}
+            totalMatches={dataset.totalMatches}
+          />
         )}
       </main>
 

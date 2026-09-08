@@ -49,6 +49,7 @@ export interface ModelMetric {
   awayGoalMae: number;
   avgGoalMae: number;
   within1Goal: number;
+  exactScoreAcc?: number;
 }
 
 export interface FeatureImportance {
@@ -79,6 +80,63 @@ export interface TeamProfile {
   restDaysAvg: number;
   possessionAvg: number;
   shotsTargetAvg: number;
+  played?: number;
+  won?: number;
+  drawn?: number;
+  lost?: number;
+  gf?: number;
+  ga?: number;
+  gd?: number;
+  homeSplit?: VenueSplit;
+  awaySplit?: VenueSplit;
+}
+
+export interface VenueSplit {
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+}
+
+export interface GameweekGoals {
+  gw: number;
+  goals: number;
+  homeGoals: number;
+  awayGoals: number;
+  avgPerMatch: number;
+}
+
+export interface OutcomeDistribution {
+  home: number;
+  draw: number;
+  away: number;
+  homePct: number;
+  drawPct: number;
+  awayPct: number;
+}
+
+export interface LeagueAnalytics {
+  outcomeDistribution: OutcomeDistribution;
+  goalsPerGameweek: GameweekGoals[];
+  totalGoals: number;
+  avgGoalsPerMatch: number;
+}
+
+export interface ClubGameweekPoint {
+  gw: number;
+  gf: number;
+  ga: number;
+  points: number;
+  cumPoints: number;
+  cumGF: number;
+  cumGA: number;
+  cumGD: number;
+}
+
+export interface DatasetMeta {
+  productionModel: string;
+  generatedBy: string;
 }
 
 export interface EPLDataset {
@@ -94,6 +152,9 @@ export interface EPLDataset {
     diagnostics: DiagnosticImage[];
   };
   teams: Record<string, TeamProfile>;
+  analytics: LeagueAnalytics;
+  clubSeries: Record<string, ClubGameweekPoint[]>;
+  meta: DatasetMeta;
 }
 
 export interface WhatIfConfig {
