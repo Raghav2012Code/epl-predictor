@@ -1,9 +1,11 @@
 import React from 'react';
-import { Trophy, Calendar, Swords, BarChart3, Search, Activity, Cpu } from 'lucide-react';
+import { Trophy, Calendar, Swords, BarChart3, Search, Activity, Cpu, Shield } from 'lucide-react';
+
+export type NavTab = 'fixtures' | 'simulator' | 'standings' | 'analytics' | 'clubs';
 
 interface NavbarProps {
-  activeTab: 'fixtures' | 'simulator' | 'standings' | 'analytics';
-  setActiveTab: (tab: 'fixtures' | 'simulator' | 'standings' | 'analytics') => void;
+  activeTab: NavTab;
+  setActiveTab: (tab: NavTab) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   season: string;
@@ -96,6 +98,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Trophy className="h-3.5 w-3.5" />
             <span>Table Projection</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('clubs')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              activeTab === 'clubs'
+                ? 'bg-pl-purple text-white shadow-sm font-semibold'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+            }`}
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span>Clubs</span>
           </button>
 
           <button

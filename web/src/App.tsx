@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import eplDataRaw from './data/eplData.json';
 import { EPLDataset } from './types';
-import { Navbar } from './components/Navbar';
+import { Navbar, NavTab } from './components/Navbar';
 import { GameweekView } from './components/GameweekView';
 import { MatchSimulator } from './components/MatchSimulator';
 import { StandingsView } from './components/StandingsView';
 import { AnalyticsView } from './components/AnalyticsView';
+import { ClubView } from './components/ClubView';
 import { ExternalLink, Github, Terminal } from 'lucide-react';
 
 const dataset = eplDataRaw as unknown as EPLDataset;
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'fixtures' | 'simulator' | 'standings' | 'analytics'>('fixtures');
+  const [activeTab, setActiveTab] = useState<NavTab>('fixtures');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedClub, setSelectedClub] = useState<string>('Arsenal');
   const [simulatorSelection, setSimulatorSelection] = useState<{ home: string; away: string }>({
     home: 'Arsenal',
     away: 'Chelsea',
@@ -24,8 +26,8 @@ export const App: React.FC = () => {
   };
 
   const handleSelectTeamFromStandings = (teamName: string) => {
-    setSimulatorSelection({ home: teamName, away: 'Manchester City' });
-    setActiveTab('simulator');
+    setSelectedClub(teamName);
+    setActiveTab('clubs');
   };
 
   return (
@@ -62,6 +64,18 @@ export const App: React.FC = () => {
           <StandingsView
             standings={dataset.standings}
             onSelectTeam={handleSelectTeamFromStandings}
+          />
+        )}
+
+        {activeTab === 'clubs' && (
+          <ClubView
+            key={selectedClub}
+            teams={dataset.teams}
+            clubSeries={dataset.clubSeries}
+            fixtures={dataset.fixtures}
+            standings={dataset.standings}
+            initialClub={selectedClub}
+            onOpenSimulator={handleOpenSimulator}
           />
         )}
 
