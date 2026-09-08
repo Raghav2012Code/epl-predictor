@@ -6,10 +6,33 @@
   * {
     border-color: #1f232e;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     background-color: #090a0d;
     color: #f3f5f8;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background-color: #38003c;
+    color: #f3f5f8;
+  }
+  :focus-visible {
+    outline: 2px solid #6c0c77;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars for horizontally scrollable tab bars while keeping scroll */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 

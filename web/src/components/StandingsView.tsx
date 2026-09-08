@@ -100,7 +100,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
           </div>
         </div>
 
-        <table className="w-full text-left text-xs font-sans">
+        <table className="w-full min-w-[680px] text-left text-xs font-sans">
           <thead>
             <tr className="border-b border-border bg-surface-subtle font-mono text-[11px] text-text-muted">
               <th className="py-2.5 px-3 w-12 text-center">POS</th>

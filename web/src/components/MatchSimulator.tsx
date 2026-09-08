@@ -177,9 +177,9 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
         </div>
 
         {/* Big Matchup Score Hero */}
-        <div className="grid grid-cols-12 items-center gap-4 py-4">
+        <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-4 py-4">
           {/* Home Box */}
-          <div className="col-span-4 text-center sm:text-right">
+          <div className="col-span-1 sm:col-span-4 text-center sm:text-right order-1">
             <div className="text-lg font-black text-text-primary">{home.name}</div>
             <div className="text-xs font-mono text-text-muted mt-0.5">
               Rank #{home.rank} • {home.points} Pts
@@ -190,7 +190,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
           </div>
 
           {/* Center Forecast Box */}
-          <div className="col-span-4 flex flex-col items-center justify-center">
+          <div className="col-span-1 sm:col-span-4 flex flex-col items-center justify-center order-first sm:order-2">
             <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest px-5 py-2 bg-background border border-border text-text-primary rounded-sm shadow-inner">
               {simulation.predHg} - {simulation.predAg}
             </div>
@@ -200,7 +200,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
           </div>
 
           {/* Away Box */}
-          <div className="col-span-4 text-center sm:text-left">
+          <div className="col-span-1 sm:col-span-4 text-center sm:text-left order-3">
             <div className="text-lg font-black text-text-primary">{away.name}</div>
             <div className="text-xs font-mono text-text-muted mt-0.5">
               Rank #{away.rank} • {away.points} Pts

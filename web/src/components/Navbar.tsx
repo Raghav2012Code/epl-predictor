@@ -28,112 +28,94 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Activity className="mr-1.5 h-3 w-3 text-pl-green" />
               OFFICIAL FIXTURES & DATA ENGINE
             </span>
-            <span className="text-border">|</span>
-            <span>DATA SOURCE: OPENFOOTBALL & HISTORICAL EPL STATS</span>
+            <span className="hidden sm:inline text-border">|</span>
+            <span className="hidden sm:inline">DATA SOURCE: OPENFOOTBALL & HISTORICAL EPL STATS</span>
           </div>
           <div className="flex items-center space-x-2">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-border-subtle text-[11px] font-mono text-text-secondary border border-border">
               <Cpu className="mr-1 h-2.5 w-2.5 text-pl-cyan" />
-              XGBOOST DUAL-ENGINE ACTIVE
+              RF + XGB DUAL-ENGINE ACTIVE
             </span>
           </div>
         </div>
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        {/* Brand identity */}
-        <div className="flex items-center space-x-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-pl-purple border border-pl-purpleLight shadow-inner">
-            <Trophy className="h-5 w-5 text-pl-green" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-sans font-black tracking-wider text-text-primary text-base uppercase">
-                Premier League
-              </span>
-              <span className="font-mono text-xs px-1.5 py-0.2 rounded-sm bg-pl-purple/80 border border-pl-purpleLight text-white font-semibold">
-                {season}
-              </span>
+      <div className="mx-auto max-w-7xl px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          {/* Brand identity */}
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-pl-purple to-pl-purpleLight border border-pl-purpleLight shadow-inner">
+              <Trophy className="h-5 w-5 text-pl-green" />
             </div>
-            <p className="text-[11px] text-text-muted tracking-tight">
-              Match Outcome & Expected Goals Scoreline Predictor
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center space-x-2">
+                <span className="font-sans font-black tracking-wider text-text-primary text-sm sm:text-base uppercase truncate">
+                  Premier League
+                </span>
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-pl-purple/80 border border-pl-purpleLight text-white font-semibold flex-shrink-0">
+                  {season}
+                </span>
+              </div>
+              <p className="text-[11px] text-text-muted tracking-tight truncate">
+                Match Outcome & Expected Goals Scoreline Predictor
+              </p>
+            </div>
+          </div>
+
+          {/* Search Input (desktop) */}
+          <div className="relative hidden md:block w-48 lg:w-56 flex-shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Search club..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-border bg-surface px-2.5 py-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-pl-purpleLight focus:outline-none focus:ring-1 focus:ring-pl-purpleLight font-sans"
+            />
           </div>
         </div>
 
-        {/* View Tabs */}
-        <nav className="flex items-center space-x-1 border border-border bg-surface rounded-sm p-0.5">
-          <button
-            onClick={() => setActiveTab('fixtures')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              activeTab === 'fixtures'
-                ? 'bg-pl-purple text-white shadow-sm font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            <span>Fixtures</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('simulator')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              activeTab === 'simulator'
-                ? 'bg-pl-purple text-white shadow-sm font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            <Swords className="h-3.5 w-3.5" />
-            <span>H2H Simulator</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('standings')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              activeTab === 'standings'
-                ? 'bg-pl-purple text-white shadow-sm font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            <Trophy className="h-3.5 w-3.5" />
-            <span>Table Projection</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('clubs')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              activeTab === 'clubs'
-                ? 'bg-pl-purple text-white shadow-sm font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            <Shield className="h-3.5 w-3.5" />
-            <span>Clubs</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              activeTab === 'analytics'
-                ? 'bg-pl-purple text-white shadow-sm font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            <span>Model Intelligence</span>
-          </button>
+        {/* View Tabs (horizontally scrollable on mobile) */}
+        <nav
+          aria-label="Primary views"
+          className="flex items-center gap-1 overflow-x-auto no-scrollbar border border-border bg-surface rounded-md p-1 -mx-1 px-1"
+        >
+          {(
+            [
+              { id: 'fixtures', label: 'Fixtures', Icon: Calendar },
+              { id: 'simulator', label: 'H2H Simulator', Icon: Swords },
+              { id: 'standings', label: 'Table', Icon: Trophy },
+              { id: 'clubs', label: 'Clubs', Icon: Shield },
+              { id: 'analytics', label: 'Intelligence', Icon: BarChart3 },
+            ] as const
+          ).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
+              className={`flex flex-shrink-0 items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-md transition-colors min-h-[36px] ${
+                activeTab === id
+                  ? 'bg-pl-purple text-white shadow-sm font-semibold'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="whitespace-nowrap">{label}</span>
+            </button>
+          ))}
         </nav>
 
-        {/* Search Input */}
-        <div className="relative hidden md:block w-48 lg:w-56">
+        {/* Search Input (mobile) */}
+        <div className="relative md:hidden">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
           <input
             type="text"
             placeholder="Search club..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-sm border border-border bg-surface px-2.5 py-1.5 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-pl-purpleLight focus:outline-none focus:ring-1 focus:ring-pl-purpleLight font-sans"
+            aria-label="Search club"
+            className="w-full rounded-md border border-border bg-surface px-2.5 py-2.5 pl-8 text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:border-pl-purpleLight focus:outline-none focus:ring-1 focus:ring-pl-purpleLight font-sans"
           />
         </div>
       </div>

@@ -42,7 +42,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 mx-auto max-w-7xl w-full px-4 py-6">
+      <main className="flex-1 mx-auto max-w-7xl w-full px-3 sm:px-4 py-4 sm:py-6">
         {activeTab === 'fixtures' && (
           <GameweekView
             fixtures={dataset.fixtures}
