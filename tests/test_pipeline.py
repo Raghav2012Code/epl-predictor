@@ -95,7 +95,7 @@ def test_feature_engineering_zero_leakage():
 
 
 def test_fixture_feature_extraction():
-    dates = pd.date_range("2024-01-01", periods=5, freq="7D")
+    dates = pd.date_range("2024-01-01", periods=10, freq="7D")
     records = []
     for i, d in enumerate(dates):
         records.append(
@@ -118,13 +118,17 @@ def test_fixture_feature_extraction():
             }
         )
     raw_df = pd.DataFrame(records)
-    future_date = datetime(2024, 3, 1)
+    future_date = datetime(2024, 4, 1)
     feat_row = build_fixture_features("Arsenal", "Chelsea", future_date, raw_df)
 
     assert feat_row.shape[0] == 1
     assert feat_row.shape[1] == len(get_feature_column_names())
     assert feat_row["home_roll_goals_for_3"].values[0] == 2.0
     assert feat_row["away_roll_goals_against_3"].values[0] == 2.0
+    assert "home_elo" in feat_row.columns
+    assert "away_elo" in feat_row.columns
+    assert "elo_diff" in feat_row.columns
+    assert feat_row["home_elo"].values[0] > feat_row["away_elo"].values[0]
 
 
 def test_model_training_and_inference():

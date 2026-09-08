@@ -6,6 +6,7 @@ and goal regressors (Home Goals / Away Goals) with side-by-side benchmarking.
 
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
@@ -92,9 +93,56 @@ class MatchPredictorModel:
         self.is_fitted = True
         return self
 
+    def compute_poisson_grid(self, h_exp: float, a_exp: float, max_goals: int = 6) -> Tuple[np.ndarray, np.ndarray]:
+        """Calculates normalized bivariate Poisson probability grid and outcome probabilities.
+
+        Applies Dixon-Coles adjustment for low scores (0-0, 1-0, 0-1, 1-1).
+        """
+        lh = max(0.2, float(h_exp))
+        la = max(0.2, float(a_exp))
+        rho = -0.11
+        grid = np.zeros((max_goals + 1, max_goals + 1))
+
+        for h in range(max_goals + 1):
+            for a in range(max_goals + 1):
+                p_h = (lh ** h) * math.exp(-lh) / math.factorial(h)
+                p_a = (la ** a) * math.exp(-la) / math.factorial(a)
+                tau = 1.0
+                if h == 0 and a == 0:
+                    tau = 1.0 - (lh * la * rho)
+                elif h == 0 and a == 1:
+                    tau = 1.0 + (lh * rho)
+                elif h == 1 and a == 0:
+                    tau = 1.0 + (la * rho)
+                elif h == 1 and a == 1:
+                    tau = 1.0 - rho
+                grid[h, a] = max(0.0, tau) * p_h * p_a
+
+        tot = grid.sum()
+        if tot > 0:
+            grid /= tot
+
+        p_home = float(np.sum(np.tril(grid, -1)))
+        p_draw = float(np.sum(np.diag(grid)))
+        p_away = float(np.sum(np.triu(grid, 1)))
+        return grid, np.array([p_away, p_draw, p_home])
+
     def predict_outcome_proba(self, X: pd.DataFrame) -> np.ndarray:
-        """Returns probability matrix of shape (N, 3): [p_away, p_draw, p_home]."""
-        return self.classifier.predict_proba(X)
+        """Returns calibrated probability matrix of shape (N, 3): [p_away, p_draw, p_home].
+
+        Blends multi-class tree probabilities with count Poisson probabilities for optimal calibration.
+        """
+        clf_probas = self.classifier.predict_proba(X)
+        exp_hg, exp_ag = self.predict_expected_goals(X)
+
+        blended = np.zeros_like(clf_probas)
+        for i in range(len(X)):
+            _, p_poiss = self.compute_poisson_grid(exp_hg[i], exp_ag[i])
+            p_comb = 0.60 * clf_probas[i] + 0.40 * p_poiss
+            p_comb /= p_comb.sum()
+            blended[i] = p_comb
+
+        return blended
 
     def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
         """Returns expected float goals (expected_hg, expected_ag)."""
@@ -103,38 +151,39 @@ class MatchPredictorModel:
         return exp_hg, exp_ag
 
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
-        """Forecasts integer scoreline for each match in X.
+        """Forecasts integer scoreline for each match in X using Poisson mode argmax.
 
-        Reconciles expected continuous goals with predicted class probabilities.
+        Selects the highest-probability joint scoreline (h, a) consistent with predicted outcome,
+        eliminating forced 2-1 mode collapse and yielding diverse Premier League score distributions.
         """
         exp_hg, exp_ag = self.predict_expected_goals(X)
         probas = self.predict_outcome_proba(X)
 
         scorelines: List[Tuple[int, int]] = []
+        max_goals = 6
+
         for i in range(len(X)):
-            h_exp = exp_hg[i]
-            a_exp = exp_ag[i]
-            p_away, p_draw, p_home = probas[i]
+            grid, _ = self.compute_poisson_grid(exp_hg[i], exp_ag[i], max_goals=max_goals)
+            p_a, p_d, p_h = probas[i][0], probas[i][1], probas[i][2]
 
-            # Primary integer goal estimates
-            raw_h = int(np.round(h_exp))
-            raw_a = int(np.round(a_exp))
+            # Competitive draw check: when home and away are evenly balanced and draw prob is robust
+            if abs(p_h - p_a) <= 0.16 and p_d >= 0.24:
+                fav_outcome = 1
+            else:
+                fav_outcome = int(np.argmax(probas[i]))  # 0: Away, 1: Draw, 2: Home
 
-            # Alignment with predicted outcome
-            most_likely_outcome = int(np.argmax(probas[i]))  # 0: Away, 1: Draw, 2: Home
-            if most_likely_outcome == 1:  # Draw favored
-                # If goals differ, bring them to the closest realistic draw score (1-1 or 0-0 or 2-2)
-                avg_g = int(np.round((h_exp + a_exp) / 2))
-                raw_h = min(avg_g, 2)
-                raw_a = raw_h
-            elif most_likely_outcome == 2:  # Home win favored
-                if raw_h <= raw_a:
-                    raw_h = max(raw_a + 1, 1)
-            elif most_likely_outcome == 0:  # Away win favored
-                if raw_a <= raw_h:
-                    raw_a = max(raw_h + 1, 1)
+            # Select best scoreline matching favored outcome
+            best_s = (1, 1)
+            best_p = -1.0
 
-            scorelines.append((raw_h, raw_a))
+            for h in range(max_goals + 1):
+                for a in range(max_goals + 1):
+                    cond = (h > a) if fav_outcome == 2 else ((h == a) if fav_outcome == 1 else (h < a))
+                    if cond and grid[h, a] > best_p:
+                        best_p = grid[h, a]
+                        best_s = (h, a)
+
+            scorelines.append(best_s)
 
         return scorelines
 

@@ -157,9 +157,13 @@ class PremierLeaguePredictionPipeline:
             pred_scores = self.best_model.predict_scoreline(X_match)[0]
             pred_hg, pred_ag = pred_scores
 
-            # Determine favorite outcome
-            max_idx = int(np.argmax(probas))
-            fav_outcome = OUTCOME_NAMES[max_idx]
+            # Determine favorite outcome consistent with predicted scoreline
+            if pred_hg > pred_ag:
+                fav_outcome = "Home Win"
+            elif pred_hg < pred_ag:
+                fav_outcome = "Away Win"
+            else:
+                fav_outcome = "Draw"
 
             pred_item = {
                 "gameweek": gw,
@@ -206,27 +210,6 @@ class PremierLeaguePredictionPipeline:
             else:
                 pred_item["actual_score"] = "-"
                 pred_item["status"] = "Upcoming"
-
-                # For upcoming match, simulate the result into rolling history so later weeks have form
-                sim_res = "H" if pred_hg > pred_ag else ("A" if pred_hg < pred_ag else "D")
-                sim_row = {
-                    "season": "2026-27",
-                    "date": m_date,
-                    "home_team": ht,
-                    "away_team": at,
-                    "home_goals": pred_hg,
-                    "away_goals": pred_ag,
-                    "result": sim_res,
-                    "home_shots": 12.0,
-                    "away_shots": 10.0,
-                    "home_shots_target": 4.0,
-                    "away_shots_target": 3.0,
-                    "home_corners": 5.0,
-                    "away_corners": 4.0,
-                    "home_possession": 50.0,
-                    "away_possession": 50.0,
-                }
-                rolling_history = pd.concat([rolling_history, pd.DataFrame([sim_row])], ignore_index=True)
 
             predictions.append(pred_item)
 
@@ -302,7 +285,12 @@ class PremierLeaguePredictionPipeline:
         exp_hg, exp_ag = self.best_model.predict_expected_goals(X_match)
 
         p_away, p_draw, p_home = probas[0], probas[1], probas[2]
-        fav_idx = int(np.argmax(probas))
+        if pred_scores[0] > pred_scores[1]:
+            fav_outcome = "Home Win"
+        elif pred_scores[0] < pred_scores[1]:
+            fav_outcome = "Away Win"
+        else:
+            fav_outcome = "Draw"
 
         return {
             "home_team": ht_std,
@@ -316,6 +304,6 @@ class PremierLeaguePredictionPipeline:
             "home_win_prob": round(p_home * 100, 1),
             "draw_prob": round(p_draw * 100, 1),
             "away_win_prob": round(p_away * 100, 1),
-            "predicted_outcome": OUTCOME_NAMES[fav_idx],
+            "predicted_outcome": fav_outcome,
             "model_used": self.best_model_name,
         }

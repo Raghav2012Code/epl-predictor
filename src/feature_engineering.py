@@ -15,72 +15,211 @@ import pandas as pd
 
 WINDOWS: List[int] = [3, 5, 10]
 
+# Historical baseline Elo ratings & power parameters across 2020-2026
+BASE_ELO: Dict[str, float] = {
+    # Elite Title Contenders
+    "Manchester City": 1950.0,
+    "Arsenal": 1915.0,
+    "Liverpool": 1895.0,
+    # European Contenders
+    "Chelsea": 1790.0,
+    "Newcastle": 1785.0,
+    "Aston Villa": 1780.0,
+    "Tottenham": 1770.0,
+    "Manchester United": 1760.0,
+    # Established Mid-Table
+    "West Ham": 1690.0,
+    "Brighton": 1690.0,
+    "Brentford": 1670.0,
+    "Bournemouth": 1660.0,
+    "Crystal Palace": 1650.0,
+    "Fulham": 1645.0,
+    "Wolves": 1640.0,
+    # Lower Table / Regulars
+    "Leicester": 1600.0,
+    "Everton": 1590.0,
+    "Nottingham Forest": 1575.0,
+    "Leeds": 1560.0,
+    "Southampton": 1540.0,
+    "Burnley": 1520.0,
+    # Relegation Battlers & Promoted Sides
+    "Watford": 1500.0,
+    "Norwich": 1490.0,
+    "West Brom": 1490.0,
+    "Sheffield United": 1480.0,
+    "Luton": 1480.0,
+    "Ipswich": 1475.0,
+    "Sunderland": 1460.0,
+    "Coventry": 1430.0,
+    "Hull": 1420.0,
+}
+
+CLUB_POWER_INDEX: Dict[str, Dict[str, float]] = {
+    "Manchester City": {"elo": 1950.0, "gf_baseline": 2.42, "ga_baseline": 0.86, "points_baseline": 2.30, "shots_baseline": 16.5, "target_baseline": 6.5, "poss_baseline": 65.0},
+    "Arsenal": {"elo": 1915.0, "gf_baseline": 2.18, "ga_baseline": 0.99, "points_baseline": 2.20, "shots_baseline": 15.5, "target_baseline": 5.8, "poss_baseline": 60.0},
+    "Liverpool": {"elo": 1895.0, "gf_baseline": 2.14, "ga_baseline": 1.08, "points_baseline": 2.15, "shots_baseline": 16.0, "target_baseline": 6.0, "poss_baseline": 61.0},
+    "Chelsea": {"elo": 1790.0, "gf_baseline": 1.64, "ga_baseline": 1.22, "points_baseline": 1.70, "shots_baseline": 14.5, "target_baseline": 5.2, "poss_baseline": 57.0},
+    "Newcastle": {"elo": 1785.0, "gf_baseline": 1.62, "ga_baseline": 1.32, "points_baseline": 1.68, "shots_baseline": 14.0, "target_baseline": 5.0, "poss_baseline": 53.0},
+    "Aston Villa": {"elo": 1780.0, "gf_baseline": 1.56, "ga_baseline": 1.36, "points_baseline": 1.65, "shots_baseline": 13.5, "target_baseline": 4.8, "poss_baseline": 52.0},
+    "Tottenham": {"elo": 1770.0, "gf_baseline": 1.76, "ga_baseline": 1.38, "points_baseline": 1.62, "shots_baseline": 14.5, "target_baseline": 5.3, "poss_baseline": 55.0},
+    "Manchester United": {"elo": 1760.0, "gf_baseline": 1.58, "ga_baseline": 1.27, "points_baseline": 1.60, "shots_baseline": 14.0, "target_baseline": 5.0, "poss_baseline": 53.0},
+    "West Ham": {"elo": 1690.0, "gf_baseline": 1.40, "ga_baseline": 1.45, "points_baseline": 1.35, "shots_baseline": 12.0, "target_baseline": 4.0, "poss_baseline": 45.0},
+    "Brighton": {"elo": 1690.0, "gf_baseline": 1.40, "ga_baseline": 1.33, "points_baseline": 1.38, "shots_baseline": 14.0, "target_baseline": 4.6, "poss_baseline": 56.0},
+    "Brentford": {"elo": 1670.0, "gf_baseline": 1.45, "ga_baseline": 1.49, "points_baseline": 1.32, "shots_baseline": 12.5, "target_baseline": 4.3, "poss_baseline": 46.0},
+    "Bournemouth": {"elo": 1660.0, "gf_baseline": 1.28, "ga_baseline": 1.69, "points_baseline": 1.30, "shots_baseline": 12.5, "target_baseline": 4.2, "poss_baseline": 46.0},
+    "Crystal Palace": {"elo": 1650.0, "gf_baseline": 1.22, "ga_baseline": 1.43, "points_baseline": 1.28, "shots_baseline": 11.5, "target_baseline": 3.9, "poss_baseline": 45.0},
+    "Fulham": {"elo": 1645.0, "gf_baseline": 1.25, "ga_baseline": 1.46, "points_baseline": 1.25, "shots_baseline": 12.0, "target_baseline": 4.1, "poss_baseline": 48.0},
+    "Wolves": {"elo": 1640.0, "gf_baseline": 1.20, "ga_baseline": 1.50, "points_baseline": 1.22, "shots_baseline": 11.0, "target_baseline": 3.8, "poss_baseline": 46.0},
+    "Everton": {"elo": 1590.0, "gf_baseline": 1.10, "ga_baseline": 1.44, "points_baseline": 1.05, "shots_baseline": 11.5, "target_baseline": 3.7, "poss_baseline": 42.0},
+    "Nottingham Forest": {"elo": 1575.0, "gf_baseline": 1.18, "ga_baseline": 1.74, "points_baseline": 1.00, "shots_baseline": 11.0, "target_baseline": 3.5, "poss_baseline": 41.0},
+    "Leeds": {"elo": 1560.0, "gf_baseline": 1.36, "ga_baseline": 1.81, "points_baseline": 0.98, "shots_baseline": 12.0, "target_baseline": 3.8, "poss_baseline": 47.0},
+    "Leicester": {"elo": 1560.0, "gf_baseline": 1.25, "ga_baseline": 1.75, "points_baseline": 0.95, "shots_baseline": 11.5, "target_baseline": 3.6, "poss_baseline": 46.0},
+    "Southampton": {"elo": 1530.0, "gf_baseline": 1.10, "ga_baseline": 1.85, "points_baseline": 0.90, "shots_baseline": 11.0, "target_baseline": 3.5, "poss_baseline": 44.0},
+    "Burnley": {"elo": 1520.0, "gf_baseline": 1.05, "ga_baseline": 1.85, "points_baseline": 0.88, "shots_baseline": 10.5, "target_baseline": 3.2, "poss_baseline": 43.0},
+    "Ipswich": {"elo": 1475.0, "gf_baseline": 1.13, "ga_baseline": 1.94, "points_baseline": 0.85, "shots_baseline": 10.0, "target_baseline": 3.1, "poss_baseline": 42.0},
+    "Sunderland": {"elo": 1460.0, "gf_baseline": 1.05, "ga_baseline": 1.82, "points_baseline": 0.82, "shots_baseline": 9.8, "target_baseline": 3.0, "poss_baseline": 42.0},
+    "Coventry": {"elo": 1430.0, "gf_baseline": 0.97, "ga_baseline": 1.86, "points_baseline": 0.78, "shots_baseline": 9.5, "target_baseline": 2.9, "poss_baseline": 41.0},
+    "Hull": {"elo": 1420.0, "gf_baseline": 0.94, "ga_baseline": 1.89, "points_baseline": 0.75, "shots_baseline": 9.2, "target_baseline": 2.8, "poss_baseline": 40.0},
+}
+
+
+def compute_dynamic_elo(
+    matches_df: pd.DataFrame,
+    initial_ratings: Optional[Dict[str, float]] = None,
+    home_adv: float = 65.0,
+    k_base: float = 20.0,
+) -> Tuple[List[float], List[float], List[float], Dict[str, float]]:
+    """Calculates chronological pre-match Elo ratings with zero leakage.
+
+    Returns:
+        home_elos: Pre-match Elo for home team for each row.
+        away_elos: Pre-match Elo for away team for each row.
+        elo_diffs: Pre-match (home_elo + home_adv - away_elo) for each row.
+        current_ratings: Final Elo state after all matches played.
+    """
+    ratings: Dict[str, float] = dict(initial_ratings) if initial_ratings else dict(BASE_ELO)
+
+    n_matches = len(matches_df)
+    if n_matches == 0:
+        return [], [], [], ratings
+
+    home_elos: List[float] = [0.0] * n_matches
+    away_elos: List[float] = [0.0] * n_matches
+    elo_diffs: List[float] = [0.0] * n_matches
+
+    ht_arr = matches_df["home_team"].values
+    at_arr = matches_df["away_team"].values
+    has_goals = "home_goals" in matches_df.columns and "away_goals" in matches_df.columns
+    hg_arr = matches_df["home_goals"].values if has_goals else None
+    ag_arr = matches_df["away_goals"].values if has_goals else None
+
+    for i in range(n_matches):
+        ht = ht_arr[i]
+        at = at_arr[i]
+
+        rh = ratings.get(ht, BASE_ELO.get(ht, 1420.0))
+        ra = ratings.get(at, BASE_ELO.get(at, 1420.0))
+
+        # Record pre-match ratings
+        home_elos[i] = rh
+        away_elos[i] = ra
+        elo_diffs[i] = (rh + home_adv) - ra
+
+        # If match was played with valid score, update Elo for subsequent matches
+        if has_goals:
+            hg = hg_arr[i]
+            ag = ag_arr[i]
+            if pd.notna(hg) and pd.notna(ag):
+                hg_val = float(hg)
+                ag_val = float(ag)
+
+                dr = (rh + home_adv) - ra
+                eh = 1.0 / (1.0 + 10.0 ** (-dr / 400.0))
+                ea = 1.0 - eh
+
+                sh = 1.0 if hg_val > ag_val else (0.5 if hg_val == ag_val else 0.0)
+                sa = 1.0 - sh
+
+                margin = abs(hg_val - ag_val)
+                g_mult = 1.0 if margin <= 1 else (1.5 if margin == 2 else 1.75 + (margin - 3) / 8.0)
+                k = k_base * g_mult
+
+                ratings[ht] = rh + k * (sh - eh)
+                ratings[at] = ra + k * (sa - ea)
+
+    return home_elos, away_elos, elo_diffs, ratings
+
 
 def transform_matches_to_team_perspective(df: pd.DataFrame) -> pd.DataFrame:
     """Transforms match results into a row-per-team dataset sorted chronologically.
 
     Each match generates two rows: one for the home team and one for the away team.
     """
+    if df.empty:
+        return pd.DataFrame()
+
     df = df.copy().sort_values(by="date").reset_index(drop=True)
+    n = len(df)
+    m_ids = df.index.values
 
-    home_rows = []
-    away_rows = []
-
-    for idx, row in df.iterrows():
-        match_date = row["date"]
-        hg = row["home_goals"]
-        ag = row["away_goals"]
-        res = row["result"]
-
-        # Points
-        h_pts = 3 if res == "H" else (1 if res == "D" else 0)
-        a_pts = 3 if res == "A" else (1 if res == "D" else 0)
-
-        home_rows.append(
-            {
-                "match_id": idx,
-                "date": match_date,
-                "team": row["home_team"],
-                "opponent": row["away_team"],
-                "is_home": 1,
-                "goals_for": hg,
-                "goals_against": ag,
-                "goal_diff": hg - ag,
-                "shots_for": row.get("home_shots", 12.0),
-                "shots_against": row.get("away_shots", 10.0),
-                "shots_target_for": row.get("home_shots_target", 4.0),
-                "shots_target_against": row.get("away_shots_target", 3.0),
-                "possession": row.get("home_possession", 50.0),
-                "points": h_pts,
-                "win": 1 if res == "H" else 0,
-                "draw": 1 if res == "D" else 0,
-                "loss": 1 if res == "A" else 0,
-            }
+    # Determine match results if not already present
+    if "result" in df.columns:
+        res = df["result"]
+    else:
+        res = np.where(
+            df["home_goals"] > df["away_goals"],
+            "H",
+            np.where(df["home_goals"] < df["away_goals"], "A", "D"),
         )
 
-        away_rows.append(
-            {
-                "match_id": idx,
-                "date": match_date,
-                "team": row["away_team"],
-                "opponent": row["home_team"],
-                "is_home": 0,
-                "goals_for": ag,
-                "goals_against": hg,
-                "goal_diff": ag - hg,
-                "shots_for": row.get("away_shots", 10.0),
-                "shots_against": row.get("home_shots", 12.0),
-                "shots_target_for": row.get("away_shots_target", 3.0),
-                "shots_target_against": row.get("home_shots_target", 4.0),
-                "possession": row.get("away_possession", 50.0),
-                "points": a_pts,
-                "win": 1 if res == "A" else 0,
-                "draw": 1 if res == "D" else 0,
-                "loss": 1 if res == "H" else 0,
-            }
-        )
+    h_pts = np.where(res == "H", 3, np.where(res == "D", 1, 0))
+    a_pts = np.where(res == "A", 3, np.where(res == "D", 1, 0))
 
-    team_df = pd.DataFrame(home_rows + away_rows)
+    home_df = pd.DataFrame(
+        {
+            "match_id": m_ids,
+            "date": df["date"],
+            "team": df["home_team"],
+            "opponent": df["away_team"],
+            "is_home": 1,
+            "goals_for": df["home_goals"],
+            "goals_against": df["away_goals"],
+            "goal_diff": df["home_goals"] - df["away_goals"],
+            "shots_for": df.get("home_shots", 12.0),
+            "shots_against": df.get("away_shots", 10.0),
+            "shots_target_for": df.get("home_shots_target", 4.0),
+            "shots_target_against": df.get("away_shots_target", 3.0),
+            "possession": df.get("home_possession", 50.0),
+            "points": h_pts,
+            "win": np.where(res == "H", 1, 0),
+            "draw": np.where(res == "D", 1, 0),
+            "loss": np.where(res == "A", 1, 0),
+        }
+    )
+
+    away_df = pd.DataFrame(
+        {
+            "match_id": m_ids,
+            "date": df["date"],
+            "team": df["away_team"],
+            "opponent": df["home_team"],
+            "is_home": 0,
+            "goals_for": df["away_goals"],
+            "goals_against": df["home_goals"],
+            "goal_diff": df["away_goals"] - df["home_goals"],
+            "shots_for": df.get("away_shots", 10.0),
+            "shots_against": df.get("home_shots", 12.0),
+            "shots_target_for": df.get("away_shots_target", 3.0),
+            "shots_target_against": df.get("home_shots_target", 4.0),
+            "possession": df.get("away_possession", 50.0),
+            "points": a_pts,
+            "win": np.where(res == "A", 1, 0),
+            "draw": np.where(res == "D", 1, 0),
+            "loss": np.where(res == "H", 1, 0),
+        }
+    )
+
+    team_df = pd.concat([home_df, away_df], ignore_index=True)
     team_df = team_df.sort_values(by=["date", "match_id"]).reset_index(drop=True)
     return team_df
 
@@ -201,10 +340,16 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
     home_subset = home_feats[["match_id"] + feat_cols].rename(columns=home_rename)
     away_subset = away_feats[["match_id"] + feat_cols].rename(columns=away_rename)
 
-    # 2. Compute H2H features
+    # 2. Compute dynamic Elo ratings
+    home_elos, away_elos, elo_diffs, _ = compute_dynamic_elo(raw_matches)
+    raw_matches["home_elo"] = home_elos
+    raw_matches["away_elo"] = away_elos
+    raw_matches["elo_diff"] = elo_diffs
+
+    # 3. Compute H2H features
     matches_with_h2h = compute_head_to_head_features(raw_matches)
 
-    # 3. Merge together
+    # 4. Merge together
     merged = matches_with_h2h.merge(home_subset, on="match_id", how="left")
     merged = merged.merge(away_subset, on="match_id", how="left")
 
@@ -237,6 +382,9 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
 def get_feature_column_names() -> List[str]:
     """Returns the ordered list of predictive feature column names."""
     cols: List[str] = []
+
+    # Elo rating features
+    cols.extend(["home_elo", "away_elo", "elo_diff"])
 
     # Home & Away rolling metrics
     for side in ["home", "away"]:
@@ -283,7 +431,17 @@ def build_fixture_features(
         row["away_rest_days"] = 7.0
         row["home_roll_possession_5"] = 50.0
         row["away_roll_possession_5"] = 50.0
-        return pd.DataFrame([row])
+        h_base = BASE_ELO.get(home_team, 1420.0)
+        a_base = BASE_ELO.get(away_team, 1420.0)
+        row["home_elo"] = h_base
+        row["away_elo"] = a_base
+        row["elo_diff"] = (h_base + 65.0) - a_base
+        return pd.DataFrame([row])[feature_cols]
+
+    # Compute current dynamic Elo from history up to match date
+    _, _, _, current_ratings = compute_dynamic_elo(history)
+    h_elo = current_ratings.get(home_team, BASE_ELO.get(home_team, 1420.0))
+    a_elo = current_ratings.get(away_team, BASE_ELO.get(away_team, 1420.0))
 
     # Convert to team perspective
     team_df = transform_matches_to_team_perspective(history)
@@ -292,44 +450,73 @@ def build_fixture_features(
         sub = team_df[team_df["team"] == team_name]
         stats: Dict[str, float] = {}
 
+        p_info = CLUB_POWER_INDEX.get(team_name, {
+            "gf_baseline": 1.10,
+            "ga_baseline": 1.65,
+            "points_baseline": 1.0,
+            "shots_baseline": 11.0,
+            "target_baseline": 3.5,
+            "poss_baseline": 45.0,
+        })
+
         if sub.empty:
-            # Newly promoted team fallback to bottom-half average
-            last_date = match_date
             stats["rest_days"] = 7.0
             for w in WINDOWS:
-                stats[f"roll_goals_for_{w}"] = 1.0
-                stats[f"roll_goals_against_{w}"] = 1.6
-                stats[f"roll_goal_diff_{w}"] = -0.6
-                stats[f"roll_shots_for_{w}"] = 10.0
-                stats[f"roll_shots_target_for_{w}"] = 3.0
-                stats[f"roll_possession_{w}"] = 42.0
-                stats[f"roll_points_{w}"] = 0.9
-            stats["venue_roll_goals_for_5"] = 1.0
-            stats["venue_roll_goals_against_5"] = 1.6
-            stats["venue_roll_points_5"] = 0.9
+                stats[f"roll_goals_for_{w}"] = p_info["gf_baseline"]
+                stats[f"roll_goals_against_{w}"] = p_info["ga_baseline"]
+                stats[f"roll_goal_diff_{w}"] = p_info["gf_baseline"] - p_info["ga_baseline"]
+                stats[f"roll_shots_for_{w}"] = p_info["shots_baseline"]
+                stats[f"roll_shots_target_for_{w}"] = p_info["target_baseline"]
+                stats[f"roll_possession_{w}"] = p_info["poss_baseline"]
+                stats[f"roll_points_{w}"] = p_info["points_baseline"]
+            stats["venue_roll_goals_for_5"] = p_info["gf_baseline"]
+            stats["venue_roll_goals_against_5"] = p_info["ga_baseline"]
+            stats["venue_roll_points_5"] = p_info["points_baseline"]
             return stats
 
         last_date = sub["date"].max()
         rest = (match_date - last_date).total_seconds() / (24 * 3600)
         stats["rest_days"] = float(np.clip(rest, 1.0, 30.0))
 
+        # Bayesian shrinkage for small sample sizes (N < 8 matches)
+        k = len(sub)
+        prior_w = max(0.0, (8.0 - k) / 8.0)
+        obs_w = 1.0 - prior_w
+
         # Rolling overall
         for w in WINDOWS:
             recent_w = sub.tail(w)
-            stats[f"roll_goals_for_{w}"] = float(recent_w["goals_for"].mean())
-            stats[f"roll_goals_against_{w}"] = float(recent_w["goals_against"].mean())
-            stats[f"roll_goal_diff_{w}"] = float(recent_w["goal_diff"].mean())
-            stats[f"roll_shots_for_{w}"] = float(recent_w["shots_for"].mean())
-            stats[f"roll_shots_target_for_{w}"] = float(recent_w["shots_target_for"].mean())
-            stats[f"roll_possession_{w}"] = float(recent_w["possession"].mean())
-            stats[f"roll_points_{w}"] = float(recent_w["points"].mean())
+            obs_gf = float(recent_w["goals_for"].mean())
+            obs_ga = float(recent_w["goals_against"].mean())
+            obs_pts = float(recent_w["points"].mean())
+            obs_shots = float(recent_w["shots_for"].mean())
+            obs_tgt = float(recent_w["shots_target_for"].mean())
+            obs_poss = float(recent_w["possession"].mean())
+
+            gf_shrunk = prior_w * p_info["gf_baseline"] + obs_w * obs_gf
+            ga_shrunk = prior_w * p_info["ga_baseline"] + obs_w * obs_ga
+            pts_shrunk = prior_w * p_info["points_baseline"] + obs_w * obs_pts
+            shots_shrunk = prior_w * p_info["shots_baseline"] + obs_w * obs_shots
+            tgt_shrunk = prior_w * p_info["target_baseline"] + obs_w * obs_tgt
+            poss_shrunk = prior_w * p_info["poss_baseline"] + obs_w * obs_poss
+
+            stats[f"roll_goals_for_{w}"] = gf_shrunk
+            stats[f"roll_goals_against_{w}"] = ga_shrunk
+            stats[f"roll_goal_diff_{w}"] = gf_shrunk - ga_shrunk
+            stats[f"roll_shots_for_{w}"] = shots_shrunk
+            stats[f"roll_shots_target_for_{w}"] = tgt_shrunk
+            stats[f"roll_possession_{w}"] = poss_shrunk
+            stats[f"roll_points_{w}"] = pts_shrunk
 
         # Venue specific
         venue_sub = sub[sub["is_home"] == is_home].tail(5)
         if not venue_sub.empty:
-            stats["venue_roll_goals_for_5"] = float(venue_sub["goals_for"].mean())
-            stats["venue_roll_goals_against_5"] = float(venue_sub["goals_against"].mean())
-            stats["venue_roll_points_5"] = float(venue_sub["points"].mean())
+            v_k = len(venue_sub)
+            v_prior_w = max(0.0, (5.0 - v_k) / 5.0)
+            v_obs_w = 1.0 - v_prior_w
+            stats["venue_roll_goals_for_5"] = float(v_prior_w * p_info["gf_baseline"] + v_obs_w * venue_sub["goals_for"].mean())
+            stats["venue_roll_goals_against_5"] = float(v_prior_w * p_info["ga_baseline"] + v_obs_w * venue_sub["goals_against"].mean())
+            stats["venue_roll_points_5"] = float(v_prior_w * p_info["points_baseline"] + v_obs_w * venue_sub["points"].mean())
         else:
             stats["venue_roll_goals_for_5"] = stats["roll_goals_for_5"]
             stats["venue_roll_goals_against_5"] = stats["roll_goals_against_5"]
@@ -341,6 +528,11 @@ def build_fixture_features(
     a_stats = extract_latest_team_stats(away_team, is_home=0)
 
     feature_dict: Dict[str, float] = {}
+
+    # Elo features
+    feature_dict["home_elo"] = h_elo
+    feature_dict["away_elo"] = a_elo
+    feature_dict["elo_diff"] = (h_elo + 65.0) - a_elo
 
     for k, v in h_stats.items():
         feature_dict[f"home_{k}"] = v
