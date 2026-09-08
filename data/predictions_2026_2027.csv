@@ -1,381 +1,381 @@
 gameweek,date,time,home_team,away_team,home_win_prob,draw_prob,away_win_prob,predicted_outcome,predicted_score,pred_home_goals,pred_away_goals,actual_score,status
-1,2026-08-21,20:00,Arsenal,Coventry,63.6,25.3,11.1,Home Win,2 - 0,2,0,3 - 0,Played
-1,2026-08-22,12:30,Hull,Manchester United,10.7,23.6,65.8,Away Win,0 - 2,0,2,2 - 0,Played
-1,2026-08-22,15:00,Ipswich,Sunderland,19.3,31.8,48.9,Away Win,0 - 1,0,1,2 - 1,Played
-1,2026-08-22,15:00,Nottingham Forest,Leeds,45.9,29.8,24.3,Home Win,2 - 1,2,1,0 - 1,Played
-1,2026-08-22,15:00,Everton,Crystal Palace,41.8,34.3,23.8,Home Win,1 - 0,1,0,2 - 0,Played
-1,2026-08-22,17:30,Brentford,Tottenham,35.3,35.7,29.0,Draw,1 - 1,1,1,3 - 0,Played
-1,2026-08-23,14:00,Manchester City,Bournemouth,63.3,22.4,14.3,Home Win,2 - 0,2,0,2 - 1,Played
-1,2026-08-23,15:00,Brighton,Aston Villa,38.5,27.9,33.6,Draw,1 - 1,1,1,4 - 0,Played
-1,2026-08-23,16:30,Newcastle,Liverpool,26.3,33.0,40.7,Draw,1 - 1,1,1,2 - 2,Played
-1,2026-08-24,20:00,Fulham,Chelsea,38.8,32.1,29.0,Draw,1 - 1,1,1,2 - 3,Played
-2,2026-08-28,20:00,Crystal Palace,Manchester City,16.0,28.1,55.9,Away Win,1 - 2,1,2,1 - 4,Played
-2,2026-08-29,12:30,Liverpool,Nottingham Forest,52.3,25.5,22.2,Home Win,2 - 0,2,0,2 - 2,Played
-2,2026-08-29,15:00,Bournemouth,Everton,49.1,28.1,22.8,Home Win,2 - 1,2,1,1 - 1,Played
-2,2026-08-29,15:00,Coventry,Hull,35.7,30.9,33.4,Draw,1 - 1,1,1,0 - 1,Played
-2,2026-08-29,17:30,Tottenham,Newcastle,29.2,28.5,42.3,Draw,1 - 1,1,1,0 - 2,Played
-2,2026-08-30,14:00,Sunderland,Fulham,27.2,31.3,41.5,Draw,1 - 1,1,1,1 - 0,Played
-2,2026-08-30,15:00,Chelsea,Brighton,30.8,34.6,34.6,Draw,1 - 1,1,1,4 - 3,Played
-2,2026-08-30,15:00,Leeds,Brentford,31.8,32.9,35.3,Draw,1 - 1,1,1,1 - 1,Played
-2,2026-08-30,16:30,Manchester United,Ipswich,59.8,25.1,15.1,Home Win,2 - 0,2,0,5 - 2,Played
-2,2026-08-31,20:00,Aston Villa,Arsenal,26.1,29.6,44.3,Away Win,0 - 1,0,1,0 - 1,Played
-3,2026-09-04,20:00,Ipswich,Liverpool,11.4,21.4,67.2,Away Win,0 - 2,0,2,-,Upcoming
-3,2026-09-05,12:30,Newcastle,Bournemouth,36.5,29.2,34.3,Draw,1 - 1,1,1,-,Upcoming
-3,2026-09-05,15:00,Nottingham Forest,Tottenham,48.5,27.3,24.2,Home Win,2 - 1,2,1,-,Upcoming
-3,2026-09-05,15:00,Manchester City,Coventry,64.0,24.2,11.8,Home Win,2 - 0,2,0,-,Upcoming
-3,2026-09-05,15:00,Brighton,Leeds,50.5,28.1,21.4,Home Win,2 - 0,2,0,-,Upcoming
-3,2026-09-05,15:00,Brentford,Sunderland,46.5,32.5,21.0,Home Win,1 - 0,1,0,-,Upcoming
-3,2026-09-05,15:00,Fulham,Crystal Palace,41.8,34.2,24.0,Home Win,1 - 0,1,0,-,Upcoming
-3,2026-09-05,17:30,Hull,Aston Villa,15.9,26.7,57.4,Away Win,0 - 2,0,2,-,Upcoming
-3,2026-09-06,14:00,Everton,Manchester United,27.6,30.9,41.4,Draw,1 - 1,1,1,-,Upcoming
-3,2026-09-06,16:30,Arsenal,Chelsea,57.7,25.3,17.0,Home Win,2 - 0,2,0,-,Upcoming
-4,2026-09-12,15:00,Crystal Palace,Ipswich,55.5,28.5,16.0,Home Win,2 - 0,2,0,-,Upcoming
-4,2026-09-12,15:00,Liverpool,Fulham,53.1,26.9,20.0,Home Win,2 - 0,2,0,-,Upcoming
-4,2026-09-12,15:00,Aston Villa,Nottingham Forest,49.5,27.2,23.3,Home Win,2 - 1,2,1,-,Upcoming
-4,2026-09-12,15:00,Bournemouth,Brentford,45.2,29.7,25.1,Home Win,1 - 0,1,0,-,Upcoming
-4,2026-09-12,15:00,Chelsea,Hull,54.8,27.9,17.3,Home Win,2 - 0,2,0,-,Upcoming
-4,2026-09-12,17:30,Tottenham,Everton,34.4,32.2,33.4,Draw,1 - 1,1,1,-,Upcoming
-4,2026-09-12,20:00,Sunderland,Arsenal,15.3,26.8,57.9,Away Win,0 - 2,0,2,-,Upcoming
-4,2026-09-13,14:00,Coventry,Brighton,13.7,27.5,58.8,Away Win,0 - 2,0,2,-,Upcoming
-4,2026-09-13,16:30,Manchester United,Manchester City,30.2,28.0,41.8,Draw,1 - 1,1,1,-,Upcoming
-4,2026-09-14,20:00,Leeds,Newcastle,30.6,32.3,37.1,Draw,1 - 1,1,1,-,Upcoming
-5,2026-09-18,20:00,Brentford,Chelsea,36.0,35.7,28.3,Draw,1 - 1,1,1,-,Upcoming
-5,2026-09-19,12:30,Tottenham,Aston Villa,26.4,32.0,41.6,Draw,1 - 1,1,1,-,Upcoming
-5,2026-09-19,15:00,Everton,Ipswich,52.1,30.3,17.6,Home Win,2 - 0,2,0,-,Upcoming
-5,2026-09-19,15:00,Leeds,Crystal Palace,37.7,35.8,26.5,Draw,1 - 1,1,1,-,Upcoming
-5,2026-09-19,15:00,Brighton,Arsenal,25.9,28.4,45.7,Away Win,1 - 2,1,2,-,Upcoming
-5,2026-09-19,15:00,Newcastle,Hull,56.3,28.0,15.7,Home Win,2 - 0,2,0,-,Upcoming
-5,2026-09-19,17:30,Nottingham Forest,Coventry,54.0,29.1,16.9,Home Win,2 - 0,2,0,-,Upcoming
-5,2026-09-20,14:00,Bournemouth,Liverpool,33.5,30.7,35.8,Draw,1 - 1,1,1,-,Upcoming
-5,2026-09-20,15:00,Manchester City,Sunderland,65.0,20.5,14.5,Home Win,2 - 1,2,1,-,Upcoming
-5,2026-09-20,16:30,Fulham,Manchester United,27.1,29.6,43.3,Away Win,0 - 1,0,1,-,Upcoming
-6,2026-10-10,12:30,Arsenal,Leeds,62.9,22.7,14.4,Home Win,2 - 0,2,0,-,Upcoming
-6,2026-10-10,15:00,Sunderland,Brighton,27.4,32.5,40.1,Draw,1 - 1,1,1,-,Upcoming
-6,2026-10-10,15:00,Chelsea,Bournemouth,37.1,32.5,30.4,Draw,1 - 1,1,1,-,Upcoming
-6,2026-10-10,15:00,Ipswich,Fulham,18.7,31.1,50.2,Away Win,1 - 2,1,2,-,Upcoming
-6,2026-10-10,15:00,Aston Villa,Brentford,50.3,27.0,22.6,Home Win,1 - 0,1,0,-,Upcoming
-6,2026-10-10,17:30,Manchester United,Tottenham,51.4,27.5,21.0,Home Win,2 - 1,2,1,-,Upcoming
-6,2026-10-11,14:00,Hull,Everton,17.1,30.5,52.4,Away Win,0 - 2,0,2,-,Upcoming
-6,2026-10-11,15:00,Crystal Palace,Nottingham Forest,25.1,31.8,43.1,Away Win,1 - 2,1,2,-,Upcoming
-6,2026-10-11,16:30,Liverpool,Manchester City,28.9,26.5,44.6,Draw,1 - 1,1,1,-,Upcoming
-6,2026-10-12,20:00,Coventry,Newcastle,14.9,28.3,56.8,Away Win,0 - 2,0,2,-,Upcoming
-7,2026-10-17,12:30,Everton,Chelsea,32.3,31.8,35.9,Draw,1 - 1,1,1,-,Upcoming
-7,2026-10-17,15:00,Fulham,Hull,53.9,28.7,17.4,Home Win,2 - 0,2,0,-,Upcoming
-7,2026-10-17,15:00,Manchester City,Ipswich,67.6,20.1,12.3,Home Win,2 - 0,2,0,-,Upcoming
-7,2026-10-17,15:00,Brentford,Liverpool,25.5,34.2,40.2,Draw,1 - 1,1,1,-,Upcoming
-7,2026-10-17,17:30,Newcastle,Aston Villa,36.7,31.2,32.1,Draw,1 - 1,1,1,-,Upcoming
-7,2026-10-18,14:00,Bournemouth,Sunderland,49.2,30.2,20.6,Home Win,2 - 0,2,0,-,Upcoming
-7,2026-10-18,15:00,Leeds,Manchester United,24.7,30.5,44.7,Away Win,1 - 2,1,2,-,Upcoming
-7,2026-10-18,15:00,Brighton,Crystal Palace,51.2,29.6,19.2,Home Win,2 - 1,2,1,-,Upcoming
-7,2026-10-18,16:30,Nottingham Forest,Arsenal,20.7,28.1,51.2,Away Win,1 - 2,1,2,-,Upcoming
-7,2026-10-19,20:00,Tottenham,Coventry,56.3,27.4,16.3,Home Win,2 - 0,2,0,-,Upcoming
-8,2026-10-23,20:00,Ipswich,Nottingham Forest,15.7,29.8,54.5,Away Win,0 - 2,0,2,-,Upcoming
-8,2026-10-24,12:30,Aston Villa,Manchester City,26.5,29.3,44.1,Away Win,0 - 1,0,1,-,Upcoming
-8,2026-10-24,15:00,Liverpool,Brighton,52.3,25.4,22.3,Home Win,2 - 1,2,1,-,Upcoming
-8,2026-10-24,15:00,Arsenal,Everton,57.3,24.2,18.4,Home Win,2 - 0,2,0,-,Upcoming
-8,2026-10-24,15:00,Coventry,Fulham,15.9,29.9,54.2,Away Win,0 - 2,0,2,-,Upcoming
-8,2026-10-24,17:30,Chelsea,Tottenham,49.9,31.4,18.7,Home Win,1 - 0,1,0,-,Upcoming
-8,2026-10-25,14:00,Crystal Palace,Newcastle,26.8,31.6,41.6,Draw,1 - 1,1,1,-,Upcoming
-8,2026-10-25,15:00,Manchester United,Bournemouth,47.7,27.8,24.5,Home Win,2 - 1,2,1,-,Upcoming
-8,2026-10-25,15:00,Hull,Brentford,17.6,29.5,52.8,Away Win,0 - 2,0,2,-,Upcoming
-8,2026-10-25,16:30,Sunderland,Leeds,31.9,32.3,35.8,Draw,1 - 1,1,1,-,Upcoming
-9,2026-10-31,12:30,Chelsea,Manchester United,30.2,31.0,38.8,Draw,1 - 1,1,1,-,Upcoming
-9,2026-10-31,15:00,Manchester City,Brighton,57.6,24.3,18.1,Home Win,2 - 1,2,1,-,Upcoming
-9,2026-10-31,15:00,Bournemouth,Leeds,49.9,29.0,21.1,Home Win,2 - 0,2,0,-,Upcoming
-9,2026-10-31,15:00,Coventry,Sunderland,19.5,34.5,46.0,Away Win,0 - 1,0,1,-,Upcoming
-9,2026-10-31,15:00,Hull,Ipswich,34.8,36.6,28.6,Draw,1 - 1,1,1,-,Upcoming
-9,2026-10-31,15:00,Brentford,Nottingham Forest,37.0,32.3,30.8,Draw,1 - 1,1,1,-,Upcoming
-9,2026-10-31,17:30,Tottenham,Crystal Palace,34.8,33.7,31.4,Draw,1 - 1,1,1,-,Upcoming
-9,2026-11-01,14:00,Aston Villa,Fulham,51.6,27.8,20.6,Home Win,2 - 0,2,0,-,Upcoming
-9,2026-11-01,16:30,Liverpool,Arsenal,29.0,26.2,44.8,Draw,1 - 1,1,1,-,Upcoming
-9,2026-11-02,20:00,Newcastle,Everton,39.1,32.8,28.1,Draw,1 - 1,1,1,-,Upcoming
-10,2026-11-07,15:00,Arsenal,Hull,60.7,26.1,13.2,Home Win,2 - 0,2,0,-,Upcoming
-10,2026-11-07,15:00,Nottingham Forest,Manchester City,20.4,28.7,50.9,Away Win,1 - 2,1,2,-,Upcoming
-10,2026-11-07,15:00,Leeds,Tottenham,40.4,33.8,25.8,Draw,1 - 1,1,1,-,Upcoming
-10,2026-11-07,15:00,Fulham,Newcastle,35.6,30.7,33.7,Draw,1 - 1,1,1,-,Upcoming
-10,2026-11-07,15:00,Everton,Coventry,54.2,30.3,15.5,Home Win,2 - 0,2,0,-,Upcoming
-10,2026-11-07,15:00,Crystal Palace,Liverpool,19.3,32.9,47.8,Away Win,0 - 1,0,1,-,Upcoming
-10,2026-11-07,15:00,Sunderland,Chelsea,29.3,34.3,36.4,Draw,1 - 1,1,1,-,Upcoming
-10,2026-11-07,15:00,Ipswich,Bournemouth,15.4,29.6,55.0,Away Win,0 - 2,0,2,-,Upcoming
-10,2026-11-07,15:00,Brighton,Brentford,48.2,27.2,24.5,Home Win,1 - 0,1,0,-,Upcoming
-10,2026-11-07,15:00,Manchester United,Aston Villa,47.3,28.6,24.1,Home Win,2 - 1,2,1,-,Upcoming
-11,2026-11-21,15:00,Chelsea,Leeds,45.1,31.2,23.8,Home Win,1 - 0,1,0,-,Upcoming
-11,2026-11-21,15:00,Manchester City,Fulham,61.1,23.8,15.2,Home Win,2 - 1,2,1,-,Upcoming
-11,2026-11-21,15:00,Aston Villa,Sunderland,53.7,27.3,19.0,Home Win,2 - 0,2,0,-,Upcoming
-11,2026-11-21,15:00,Liverpool,Manchester United,42.7,27.8,29.6,Draw,1 - 1,1,1,-,Upcoming
-11,2026-11-21,15:00,Hull,Brighton,16.5,29.4,54.1,Away Win,0 - 2,0,2,-,Upcoming
-11,2026-11-21,15:00,Bournemouth,Nottingham Forest,47.4,28.6,24.0,Home Win,2 - 1,2,1,-,Upcoming
-11,2026-11-21,15:00,Tottenham,Ipswich,55.7,26.6,17.7,Home Win,2 - 0,2,0,-,Upcoming
-11,2026-11-21,15:00,Brentford,Everton,37.1,33.9,29.0,Draw,1 - 1,1,1,-,Upcoming
-11,2026-11-21,15:00,Coventry,Crystal Palace,17.1,35.6,47.4,Away Win,1 - 2,1,2,-,Upcoming
-11,2026-11-21,15:00,Newcastle,Arsenal,23.3,28.6,48.1,Away Win,1 - 2,1,2,-,Upcoming
-12,2026-11-28,15:00,Leeds,Coventry,51.7,30.9,17.4,Home Win,2 - 0,2,0,-,Upcoming
-12,2026-11-28,15:00,Ipswich,Aston Villa,14.6,27.0,58.4,Away Win,0 - 2,0,2,-,Upcoming
-12,2026-11-28,15:00,Arsenal,Manchester City,38.1,33.8,28.1,Draw,1 - 1,1,1,-,Upcoming
-12,2026-11-28,15:00,Manchester United,Brentford,52.7,27.0,20.3,Home Win,2 - 0,2,0,-,Upcoming
-12,2026-11-28,15:00,Everton,Liverpool,26.2,34.8,39.0,Draw,1 - 1,1,1,-,Upcoming
-12,2026-11-28,15:00,Fulham,Bournemouth,32.7,30.5,36.8,Draw,1 - 1,1,1,-,Upcoming
-12,2026-11-28,15:00,Nottingham Forest,Chelsea,35.1,31.4,33.4,Draw,1 - 1,1,1,-,Upcoming
-12,2026-11-28,15:00,Brighton,Newcastle,46.7,28.4,24.9,Home Win,2 - 1,2,1,-,Upcoming
-12,2026-11-28,15:00,Sunderland,Tottenham,35.7,35.3,28.9,Draw,1 - 1,1,1,-,Upcoming
-12,2026-11-28,15:00,Crystal Palace,Hull,52.5,31.5,16.1,Home Win,2 - 0,2,0,-,Upcoming
-13,2026-12-02,20:00,Tottenham,Fulham,28.3,31.1,40.6,Draw,1 - 1,1,1,-,Upcoming
-13,2026-12-02,15:00,Liverpool,Sunderland,58.1,24.2,17.8,Home Win,2 - 0,2,0,-,Upcoming
-13,2026-12-02,15:00,Hull,Nottingham Forest,16.5,30.0,53.5,Away Win,0 - 2,0,2,-,Upcoming
-13,2026-12-02,15:00,Chelsea,Crystal Palace,45.4,33.2,21.5,Home Win,1 - 0,1,0,-,Upcoming
-13,2026-12-02,15:00,Aston Villa,Everton,49.0,27.3,23.7,Home Win,2 - 1,2,1,-,Upcoming
-13,2026-12-02,15:00,Brentford,Arsenal,18.3,30.1,51.7,Away Win,1 - 2,1,2,-,Upcoming
-13,2026-12-02,15:00,Coventry,Ipswich,28.3,36.1,35.7,Draw,1 - 1,1,1,-,Upcoming
-13,2026-12-02,15:00,Manchester City,Leeds,63.1,22.1,14.8,Home Win,2 - 0,2,0,-,Upcoming
-13,2026-12-02,15:00,Newcastle,Manchester United,30.4,32.4,37.2,Draw,1 - 1,1,1,-,Upcoming
-13,2026-12-02,15:00,Bournemouth,Brighton,44.0,30.2,25.8,Home Win,2 - 1,2,1,-,Upcoming
-14,2026-12-05,15:00,Tottenham,Arsenal,15.4,25.1,59.5,Away Win,0 - 2,0,2,-,Upcoming
-14,2026-12-05,15:00,Manchester United,Coventry,60.3,26.8,12.9,Home Win,2 - 0,2,0,-,Upcoming
-14,2026-12-05,15:00,Leeds,Ipswich,49.6,30.9,19.5,Home Win,2 - 1,2,1,-,Upcoming
-14,2026-12-05,15:00,Newcastle,Sunderland,47.7,31.2,21.1,Home Win,2 - 0,2,0,-,Upcoming
-14,2026-12-05,15:00,Chelsea,Liverpool,30.7,31.9,37.4,Draw,1 - 1,1,1,-,Upcoming
-14,2026-12-05,15:00,Brentford,Manchester City,20.2,32.2,47.6,Away Win,0 - 1,0,1,-,Upcoming
-14,2026-12-05,15:00,Bournemouth,Hull,57.1,27.4,15.4,Home Win,2 - 0,2,0,-,Upcoming
-14,2026-12-05,15:00,Aston Villa,Crystal Palace,51.5,29.7,18.8,Home Win,2 - 0,2,0,-,Upcoming
-14,2026-12-05,15:00,Nottingham Forest,Brighton,35.0,31.6,33.5,Draw,1 - 1,1,1,-,Upcoming
-14,2026-12-05,15:00,Everton,Fulham,38.4,34.4,27.2,Draw,1 - 1,1,1,-,Upcoming
-15,2026-12-12,15:00,Sunderland,Nottingham Forest,29.1,28.4,42.5,Draw,1 - 1,1,1,-,Upcoming
-15,2026-12-12,15:00,Crystal Palace,Manchester United,20.7,32.7,46.6,Away Win,1 - 2,1,2,-,Upcoming
-15,2026-12-12,15:00,Hull,Tottenham,21.0,35.7,43.2,Away Win,0 - 1,0,1,-,Upcoming
-15,2026-12-12,15:00,Brighton,Everton,45.8,28.0,26.2,Home Win,2 - 1,2,1,-,Upcoming
-15,2026-12-12,15:00,Ipswich,Newcastle,14.8,28.0,57.1,Away Win,0 - 2,0,2,-,Upcoming
-15,2026-12-12,15:00,Coventry,Aston Villa,11.9,24.7,63.4,Away Win,0 - 2,0,2,-,Upcoming
-15,2026-12-12,15:00,Arsenal,Bournemouth,55.7,24.6,19.7,Home Win,2 - 1,2,1,-,Upcoming
-15,2026-12-12,15:00,Manchester City,Chelsea,60.0,24.0,16.0,Home Win,2 - 1,2,1,-,Upcoming
-15,2026-12-12,15:00,Liverpool,Leeds,57.8,24.7,17.5,Home Win,2 - 0,2,0,-,Upcoming
-15,2026-12-12,15:00,Fulham,Brentford,38.4,32.2,29.4,Draw,1 - 1,1,1,-,Upcoming
-16,2026-12-19,15:00,Leeds,Fulham,32.2,34.6,33.3,Draw,1 - 1,1,1,-,Upcoming
-16,2026-12-19,15:00,Brighton,Ipswich,54.7,28.8,16.5,Home Win,2 - 0,2,0,-,Upcoming
-16,2026-12-19,15:00,Nottingham Forest,Everton,36.9,31.6,31.5,Draw,1 - 1,1,1,-,Upcoming
-16,2026-12-19,15:00,Brentford,Newcastle,40.2,33.2,26.6,Draw,1 - 1,1,1,-,Upcoming
-16,2026-12-19,15:00,Manchester City,Hull,65.1,23.2,11.7,Home Win,2 - 0,2,0,-,Upcoming
-16,2026-12-19,15:00,Sunderland,Crystal Palace,32.1,36.7,31.2,Draw,1 - 1,1,1,-,Upcoming
-16,2026-12-19,15:00,Bournemouth,Coventry,58.4,27.6,14.0,Home Win,2 - 0,2,0,-,Upcoming
-16,2026-12-19,15:00,Arsenal,Manchester United,54.8,25.6,19.6,Home Win,2 - 1,2,1,-,Upcoming
-16,2026-12-19,15:00,Liverpool,Tottenham,57.7,25.0,17.3,Home Win,2 - 0,2,0,-,Upcoming
-16,2026-12-19,15:00,Chelsea,Aston Villa,38.8,32.5,28.8,Draw,1 - 1,1,1,-,Upcoming
-17,2026-12-26,15:00,Aston Villa,Leeds,54.7,25.7,19.6,Home Win,2 - 0,2,0,-,Upcoming
-17,2026-12-26,15:00,Manchester United,Nottingham Forest,48.0,27.5,24.5,Home Win,2 - 1,2,1,-,Upcoming
-17,2026-12-26,15:00,Crystal Palace,Arsenal,17.3,30.0,52.7,Away Win,0 - 1,0,1,-,Upcoming
-17,2026-12-26,15:00,Everton,Sunderland,42.9,34.4,22.7,Home Win,1 - 0,1,0,-,Upcoming
-17,2026-12-26,15:00,Coventry,Chelsea,14.1,29.1,56.8,Away Win,0 - 2,0,2,-,Upcoming
-17,2026-12-26,15:00,Newcastle,Manchester City,23.1,28.6,48.3,Away Win,0 - 1,0,1,-,Upcoming
-17,2026-12-26,15:00,Fulham,Brighton,32.8,34.0,33.2,Draw,1 - 1,1,1,-,Upcoming
-17,2026-12-26,15:00,Tottenham,Bournemouth,27.1,30.2,42.7,Draw,1 - 1,1,1,-,Upcoming
-17,2026-12-26,15:00,Hull,Liverpool,11.9,25.9,62.2,Away Win,0 - 2,0,2,-,Upcoming
-17,2026-12-26,15:00,Ipswich,Brentford,17.2,26.9,55.9,Away Win,0 - 2,0,2,-,Upcoming
-18,2026-12-30,20:00,Fulham,Arsenal,18.6,26.8,54.6,Away Win,0 - 2,0,2,-,Upcoming
-18,2026-12-30,15:00,Coventry,Brentford,16.9,28.1,55.0,Away Win,0 - 2,0,2,-,Upcoming
-18,2026-12-30,15:00,Aston Villa,Liverpool,34.2,29.4,36.4,Draw,1 - 1,1,1,-,Upcoming
-18,2026-12-30,15:00,Newcastle,Nottingham Forest,43.3,30.0,26.6,Home Win,2 - 1,2,1,-,Upcoming
-18,2026-12-30,15:00,Hull,Leeds,18.1,31.8,50.2,Away Win,0 - 1,0,1,-,Upcoming
-18,2026-12-30,15:00,Manchester United,Sunderland,54.7,26.6,18.7,Home Win,2 - 1,2,1,-,Upcoming
-18,2026-12-30,15:00,Ipswich,Chelsea,17.1,27.6,55.3,Away Win,0 - 2,0,2,-,Upcoming
-18,2026-12-30,15:00,Tottenham,Brighton,26.1,29.7,44.2,Away Win,0 - 1,0,1,-,Upcoming
-18,2026-12-30,15:00,Everton,Manchester City,19.7,30.5,49.8,Away Win,0 - 1,0,1,-,Upcoming
-18,2026-12-30,15:00,Crystal Palace,Bournemouth,23.0,33.5,43.5,Away Win,0 - 1,0,1,-,Upcoming
-19,2027-01-02,15:00,Bournemouth,Aston Villa,39.4,30.8,29.8,Draw,1 - 1,1,1,-,Upcoming
-19,2027-01-02,15:00,Brentford,Crystal Palace,41.8,36.7,21.5,Home Win,1 - 0,1,0,-,Upcoming
-19,2027-01-02,15:00,Leeds,Everton,32.3,32.8,34.9,Draw,1 - 1,1,1,-,Upcoming
-19,2027-01-02,15:00,Arsenal,Ipswich,65.9,20.9,13.2,Home Win,2 - 1,2,1,-,Upcoming
-19,2027-01-02,15:00,Sunderland,Hull,48.5,32.6,18.9,Home Win,2 - 0,2,0,-,Upcoming
-19,2027-01-02,15:00,Liverpool,Coventry,63.1,24.2,12.7,Home Win,2 - 0,2,0,-,Upcoming
-19,2027-01-02,15:00,Chelsea,Newcastle,41.5,32.2,26.3,Draw,1 - 1,1,1,-,Upcoming
-19,2027-01-02,15:00,Nottingham Forest,Fulham,36.7,32.1,31.2,Draw,1 - 1,1,1,-,Upcoming
-19,2027-01-02,15:00,Brighton,Manchester United,34.6,28.3,37.0,Draw,1 - 1,1,1,-,Upcoming
-19,2027-01-02,15:00,Manchester City,Tottenham,59.2,23.6,17.2,Home Win,2 - 1,2,1,-,Upcoming
-20,2027-01-06,20:00,Arsenal,Brentford,59.7,23.9,16.4,Home Win,2 - 0,2,0,-,Upcoming
-20,2027-01-06,15:00,Leeds,Manchester City,17.3,28.6,54.1,Away Win,1 - 2,1,2,-,Upcoming
-20,2027-01-06,15:00,Manchester United,Newcastle,51.3,27.2,21.5,Home Win,2 - 1,2,1,-,Upcoming
-20,2027-01-06,15:00,Brighton,Bournemouth,41.8,26.6,31.6,Draw,1 - 1,1,1,-,Upcoming
-20,2027-01-06,15:00,Nottingham Forest,Hull,52.8,29.5,17.6,Home Win,2 - 0,2,0,-,Upcoming
-20,2027-01-06,15:00,Fulham,Tottenham,48.8,28.6,22.6,Home Win,1 - 0,1,0,-,Upcoming
-20,2027-01-06,15:00,Everton,Aston Villa,31.5,31.3,37.2,Draw,1 - 1,1,1,-,Upcoming
-20,2027-01-06,15:00,Sunderland,Liverpool,25.5,31.5,43.1,Away Win,0 - 1,0,1,-,Upcoming
-20,2027-01-06,15:00,Crystal Palace,Chelsea,27.0,32.8,40.1,Draw,1 - 1,1,1,-,Upcoming
-20,2027-01-06,15:00,Ipswich,Coventry,46.0,31.2,22.8,Home Win,1 - 0,1,0,-,Upcoming
-21,2027-01-16,15:00,Bournemouth,Ipswich,55.3,28.0,16.6,Home Win,2 - 0,2,0,-,Upcoming
-21,2027-01-16,15:00,Manchester City,Nottingham Forest,59.4,23.0,17.6,Home Win,2 - 1,2,1,-,Upcoming
-21,2027-01-16,15:00,Chelsea,Sunderland,46.6,31.0,22.4,Home Win,1 - 0,1,0,-,Upcoming
-21,2027-01-16,15:00,Brentford,Brighton,31.6,35.3,33.0,Draw,1 - 1,1,1,-,Upcoming
-21,2027-01-16,15:00,Aston Villa,Manchester United,35.4,28.9,35.7,Draw,1 - 1,1,1,-,Upcoming
-21,2027-01-16,15:00,Tottenham,Leeds,35.7,31.3,33.0,Draw,1 - 1,1,1,-,Upcoming
-21,2027-01-16,15:00,Coventry,Everton,14.9,26.3,58.8,Away Win,0 - 2,0,2,-,Upcoming
-21,2027-01-16,15:00,Liverpool,Crystal Palace,55.9,27.2,17.0,Home Win,2 - 0,2,0,-,Upcoming
-21,2027-01-16,15:00,Hull,Arsenal,10.9,26.2,62.9,Away Win,0 - 2,0,2,-,Upcoming
-21,2027-01-16,15:00,Newcastle,Fulham,41.9,32.7,25.4,Home Win,1 - 0,1,0,-,Upcoming
-22,2027-01-23,15:00,Ipswich,Hull,41.3,32.3,26.4,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Everton,Brentford,35.0,31.5,33.4,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Sunderland,Coventry,51.1,31.5,17.5,Home Win,2 - 0,2,0,-,Upcoming
-22,2027-01-23,15:00,Nottingham Forest,Bournemouth,32.2,28.6,39.2,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Arsenal,Newcastle,60.6,23.3,16.1,Home Win,2 - 0,2,0,-,Upcoming
-22,2027-01-23,15:00,Leeds,Chelsea,29.2,32.7,38.1,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Fulham,Aston Villa,30.1,31.0,38.9,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Manchester United,Liverpool,41.4,28.0,30.7,Draw,1 - 1,1,1,-,Upcoming
-22,2027-01-23,15:00,Brighton,Manchester City,26.9,29.4,43.7,Away Win,0 - 1,0,1,-,Upcoming
-22,2027-01-23,15:00,Crystal Palace,Tottenham,45.3,30.5,24.2,Home Win,1 - 0,1,0,-,Upcoming
-23,2027-01-30,15:00,Tottenham,Sunderland,35.6,31.7,32.7,Draw,1 - 1,1,1,-,Upcoming
-23,2027-01-30,15:00,Brentford,Manchester United,24.9,31.7,43.4,Away Win,1 - 2,1,2,-,Upcoming
-23,2027-01-30,15:00,Newcastle,Brighton,36.0,33.0,31.0,Draw,1 - 1,1,1,-,Upcoming
-23,2027-01-30,15:00,Hull,Crystal Palace,21.3,39.1,39.6,Away Win,0 - 1,0,1,-,Upcoming
-23,2027-01-30,15:00,Coventry,Leeds,15.8,31.6,52.6,Away Win,0 - 1,0,1,-,Upcoming
-23,2027-01-30,15:00,Bournemouth,Fulham,48.8,28.9,22.3,Home Win,2 - 0,2,0,-,Upcoming
-23,2027-01-30,15:00,Chelsea,Nottingham Forest,41.9,32.1,26.0,Draw,1 - 1,1,1,-,Upcoming
-23,2027-01-30,15:00,Liverpool,Everton,54.0,24.9,21.1,Home Win,2 - 1,2,1,-,Upcoming
-23,2027-01-30,15:00,Manchester City,Arsenal,36.8,30.3,32.9,Draw,1 - 1,1,1,-,Upcoming
-23,2027-01-30,15:00,Aston Villa,Ipswich,55.3,28.0,16.7,Home Win,2 - 0,2,0,-,Upcoming
-24,2027-02-06,15:00,Arsenal,Liverpool,54.2,24.6,21.2,Home Win,2 - 1,2,1,-,Upcoming
-24,2027-02-06,15:00,Brighton,Hull,57.6,26.3,16.1,Home Win,2 - 0,2,0,-,Upcoming
-24,2027-02-06,15:00,Sunderland,Aston Villa,26.3,32.9,40.9,Draw,1 - 1,1,1,-,Upcoming
-24,2027-02-06,15:00,Crystal Palace,Coventry,55.6,29.5,14.9,Home Win,2 - 0,2,0,-,Upcoming
-24,2027-02-06,15:00,Ipswich,Tottenham,21.9,31.4,46.7,Away Win,0 - 1,0,1,-,Upcoming
-24,2027-02-06,15:00,Everton,Newcastle,34.8,30.6,34.5,Draw,1 - 1,1,1,-,Upcoming
-24,2027-02-06,15:00,Fulham,Manchester City,18.1,26.9,55.0,Away Win,0 - 1,0,1,-,Upcoming
-24,2027-02-06,15:00,Leeds,Bournemouth,29.8,30.7,39.5,Draw,1 - 1,1,1,-,Upcoming
-24,2027-02-06,15:00,Manchester United,Chelsea,54.2,27.0,18.8,Home Win,2 - 0,2,0,-,Upcoming
-24,2027-02-06,15:00,Nottingham Forest,Brentford,39.5,31.2,29.3,Draw,1 - 1,1,1,-,Upcoming
-25,2027-02-10,20:00,Everton,Leeds,42.6,31.7,25.7,Home Win,1 - 0,1,0,-,Upcoming
-25,2027-02-10,15:00,Coventry,Liverpool,9.5,24.1,66.4,Away Win,0 - 2,0,2,-,Upcoming
-25,2027-02-10,15:00,Hull,Sunderland,20.4,34.8,44.8,Away Win,0 - 1,0,1,-,Upcoming
-25,2027-02-10,15:00,Aston Villa,Bournemouth,46.9,27.0,26.2,Home Win,2 - 1,2,1,-,Upcoming
-25,2027-02-10,15:00,Crystal Palace,Brentford,30.4,33.9,35.6,Draw,1 - 1,1,1,-,Upcoming
-25,2027-02-10,15:00,Newcastle,Chelsea,41.9,31.9,26.2,Draw,1 - 1,1,1,-,Upcoming
-25,2027-02-10,15:00,Fulham,Nottingham Forest,34.4,30.5,35.0,Draw,1 - 1,1,1,-,Upcoming
-25,2027-02-10,15:00,Tottenham,Manchester City,15.6,31.1,53.3,Away Win,0 - 1,0,1,-,Upcoming
-25,2027-02-10,15:00,Manchester United,Brighton,49.7,27.6,22.7,Home Win,2 - 1,2,1,-,Upcoming
-25,2027-02-10,15:00,Ipswich,Arsenal,12.0,25.9,62.1,Away Win,0 - 2,0,2,-,Upcoming
-26,2027-02-20,15:00,Manchester City,Newcastle,60.6,23.3,16.1,Home Win,2 - 1,2,1,-,Upcoming
-26,2027-02-20,15:00,Bournemouth,Crystal Palace,50.3,31.1,18.6,Home Win,2 - 0,2,0,-,Upcoming
-26,2027-02-20,15:00,Brentford,Coventry,52.1,31.2,16.7,Home Win,2 - 0,2,0,-,Upcoming
-26,2027-02-20,15:00,Chelsea,Ipswich,53.8,30.1,16.1,Home Win,2 - 0,2,0,-,Upcoming
-26,2027-02-20,15:00,Liverpool,Hull,62.6,23.8,13.6,Home Win,2 - 0,2,0,-,Upcoming
-26,2027-02-20,15:00,Arsenal,Fulham,61.6,23.8,14.6,Home Win,2 - 0,2,0,-,Upcoming
-26,2027-02-20,15:00,Nottingham Forest,Manchester United,30.6,32.8,36.6,Draw,1 - 1,1,1,-,Upcoming
-26,2027-02-20,15:00,Brighton,Tottenham,48.6,31.5,19.9,Home Win,2 - 1,2,1,-,Upcoming
-26,2027-02-20,15:00,Sunderland,Everton,32.1,33.3,34.6,Draw,1 - 1,1,1,-,Upcoming
-26,2027-02-20,15:00,Leeds,Aston Villa,27.4,32.8,39.7,Draw,1 - 1,1,1,-,Upcoming
-27,2027-02-27,15:00,Crystal Palace,Sunderland,38.1,36.6,25.2,Draw,1 - 1,1,1,-,Upcoming
-27,2027-02-27,15:00,Manchester United,Arsenal,28.6,28.4,43.0,Draw,1 - 1,1,1,-,Upcoming
-27,2027-02-27,15:00,Ipswich,Brighton,14.8,27.1,58.1,Away Win,0 - 2,0,2,-,Upcoming
-27,2027-02-27,15:00,Coventry,Bournemouth,12.1,27.5,60.5,Away Win,0 - 2,0,2,-,Upcoming
-27,2027-02-27,15:00,Everton,Nottingham Forest,39.8,31.2,29.0,Draw,1 - 1,1,1,-,Upcoming
-27,2027-02-27,15:00,Fulham,Leeds,42.6,29.6,27.8,Draw,1 - 1,1,1,-,Upcoming
-27,2027-02-27,15:00,Aston Villa,Chelsea,47.3,29.2,23.5,Home Win,1 - 0,1,0,-,Upcoming
-27,2027-02-27,15:00,Tottenham,Liverpool,23.8,28.4,47.8,Away Win,0 - 1,0,1,-,Upcoming
-27,2027-02-27,15:00,Newcastle,Brentford,42.5,31.0,26.5,Home Win,1 - 0,1,0,-,Upcoming
-27,2027-02-27,15:00,Hull,Manchester City,10.1,25.4,64.5,Away Win,0 - 2,0,2,-,Upcoming
-28,2027-03-03,20:00,Nottingham Forest,Newcastle,34.8,31.3,33.9,Draw,1 - 1,1,1,-,Upcoming
-28,2027-03-03,15:00,Bournemouth,Tottenham,50.0,28.6,21.5,Home Win,2 - 0,2,0,-,Upcoming
-28,2027-03-03,15:00,Manchester City,Everton,59.7,23.2,17.1,Home Win,2 - 1,2,1,-,Upcoming
-28,2027-03-03,15:00,Arsenal,Crystal Palace,61.9,25.4,12.7,Home Win,2 - 0,2,0,-,Upcoming
-28,2027-03-03,15:00,Leeds,Hull,49.5,32.5,18.0,Home Win,2 - 0,2,0,-,Upcoming
-28,2027-03-03,15:00,Sunderland,Manchester United,24.7,30.0,45.3,Away Win,0 - 1,0,1,-,Upcoming
-28,2027-03-03,15:00,Liverpool,Aston Villa,50.6,25.8,23.6,Home Win,2 - 1,2,1,-,Upcoming
-28,2027-03-03,15:00,Brighton,Fulham,45.2,30.5,24.3,Home Win,2 - 1,2,1,-,Upcoming
-28,2027-03-03,15:00,Brentford,Ipswich,53.9,29.7,16.4,Home Win,2 - 0,2,0,-,Upcoming
-28,2027-03-03,15:00,Chelsea,Coventry,56.2,28.3,15.5,Home Win,2 - 0,2,0,-,Upcoming
-29,2027-03-13,15:00,Leeds,Brighton,28.4,33.0,38.6,Draw,1 - 1,1,1,-,Upcoming
-29,2027-03-13,15:00,Tottenham,Nottingham Forest,27.2,28.6,44.2,Away Win,1 - 2,1,2,-,Upcoming
-29,2027-03-13,15:00,Crystal Palace,Fulham,28.8,33.5,37.8,Draw,1 - 1,1,1,-,Upcoming
-29,2027-03-13,15:00,Liverpool,Ipswich,64.1,22.3,13.6,Home Win,2 - 0,2,0,-,Upcoming
-29,2027-03-13,15:00,Coventry,Manchester City,10.4,25.9,63.7,Away Win,0 - 2,0,2,-,Upcoming
-29,2027-03-13,15:00,Bournemouth,Newcastle,46.8,28.7,24.5,Home Win,1 - 0,1,0,-,Upcoming
-29,2027-03-13,15:00,Chelsea,Arsenal,23.2,30.2,46.6,Away Win,1 - 2,1,2,-,Upcoming
-29,2027-03-13,15:00,Aston Villa,Hull,59.2,25.9,14.9,Home Win,2 - 0,2,0,-,Upcoming
-29,2027-03-13,15:00,Manchester United,Everton,51.3,26.8,21.9,Home Win,2 - 1,2,1,-,Upcoming
-29,2027-03-13,15:00,Sunderland,Brentford,29.8,33.2,37.0,Draw,1 - 1,1,1,-,Upcoming
-30,2027-03-20,15:00,Brentford,Bournemouth,37.0,30.1,32.9,Draw,1 - 1,1,1,-,Upcoming
-30,2027-03-20,15:00,Brighton,Coventry,58.7,27.0,14.3,Home Win,2 - 0,2,0,-,Upcoming
-30,2027-03-20,15:00,Manchester City,Manchester United,56.3,24.0,19.7,Home Win,2 - 1,2,1,-,Upcoming
-30,2027-03-20,15:00,Ipswich,Crystal Palace,22.3,37.6,40.1,Away Win,0 - 1,0,1,-,Upcoming
-30,2027-03-20,15:00,Arsenal,Sunderland,62.7,23.0,14.4,Home Win,2 - 0,2,0,-,Upcoming
-30,2027-03-20,15:00,Fulham,Liverpool,27.9,30.4,41.7,Draw,1 - 1,1,1,-,Upcoming
-30,2027-03-20,15:00,Hull,Chelsea,15.8,29.2,55.0,Away Win,0 - 2,0,2,-,Upcoming
-30,2027-03-20,15:00,Nottingham Forest,Aston Villa,33.6,30.0,36.4,Draw,1 - 1,1,1,-,Upcoming
-30,2027-03-20,15:00,Everton,Tottenham,44.1,32.8,23.1,Home Win,1 - 0,1,0,-,Upcoming
-30,2027-03-20,15:00,Newcastle,Leeds,49.2,28.3,22.5,Home Win,2 - 0,2,0,-,Upcoming
-31,2027-04-10,15:00,Sunderland,Ipswich,47.5,32.6,19.9,Home Win,2 - 0,2,0,-,Upcoming
-31,2027-04-10,15:00,Leeds,Nottingham Forest,32.1,31.5,36.5,Draw,1 - 1,1,1,-,Upcoming
-31,2027-04-10,15:00,Manchester United,Hull,59.5,25.8,14.7,Home Win,2 - 0,2,0,-,Upcoming
-31,2027-04-10,15:00,Chelsea,Fulham,43.6,31.6,24.8,Home Win,1 - 0,1,0,-,Upcoming
-31,2027-04-10,15:00,Liverpool,Newcastle,55.6,24.2,20.2,Home Win,2 - 0,2,0,-,Upcoming
-31,2027-04-10,15:00,Coventry,Arsenal,9.9,27.0,63.1,Away Win,0 - 2,0,2,-,Upcoming
-31,2027-04-10,15:00,Bournemouth,Manchester City,24.4,29.5,46.1,Away Win,0 - 1,0,1,-,Upcoming
-31,2027-04-10,15:00,Crystal Palace,Everton,28.1,33.9,38.0,Draw,1 - 1,1,1,-,Upcoming
-31,2027-04-10,15:00,Tottenham,Brentford,32.3,33.5,34.2,Draw,1 - 1,1,1,-,Upcoming
-31,2027-04-10,15:00,Aston Villa,Brighton,44.2,29.0,26.7,Home Win,2 - 1,2,1,-,Upcoming
-32,2027-04-17,15:00,Brighton,Chelsea,47.2,29.7,23.1,Home Win,2 - 1,2,1,-,Upcoming
-32,2027-04-17,15:00,Fulham,Sunderland,47.9,28.9,23.2,Home Win,1 - 0,1,0,-,Upcoming
-32,2027-04-17,15:00,Brentford,Leeds,45.0,31.5,23.5,Home Win,1 - 0,1,0,-,Upcoming
-32,2027-04-17,15:00,Nottingham Forest,Liverpool,28.7,32.4,38.9,Draw,1 - 1,1,1,-,Upcoming
-32,2027-04-17,15:00,Hull,Coventry,42.8,34.1,23.1,Home Win,1 - 0,1,0,-,Upcoming
-32,2027-04-17,15:00,Arsenal,Aston Villa,53.6,25.6,20.8,Home Win,2 - 1,2,1,-,Upcoming
-32,2027-04-17,15:00,Ipswich,Manchester United,15.5,26.9,57.6,Away Win,0 - 2,0,2,-,Upcoming
-32,2027-04-17,15:00,Manchester City,Crystal Palace,62.9,24.3,12.9,Home Win,2 - 0,2,0,-,Upcoming
-32,2027-04-17,15:00,Newcastle,Tottenham,51.8,28.8,19.4,Home Win,2 - 0,2,0,-,Upcoming
-32,2027-04-17,15:00,Everton,Bournemouth,31.5,29.6,38.9,Draw,1 - 1,1,1,-,Upcoming
-33,2027-04-24,15:00,Chelsea,Manchester City,23.3,30.2,46.5,Away Win,1 - 2,1,2,-,Upcoming
-33,2027-04-24,15:00,Bournemouth,Arsenal,27.5,26.9,45.7,Away Win,0 - 1,0,1,-,Upcoming
-33,2027-04-24,15:00,Tottenham,Hull,54.0,28.9,17.1,Home Win,2 - 0,2,0,-,Upcoming
-33,2027-04-24,15:00,Manchester United,Crystal Palace,50.9,32.2,17.0,Home Win,2 - 1,2,1,-,Upcoming
-33,2027-04-24,15:00,Everton,Brighton,32.5,32.4,35.1,Draw,1 - 1,1,1,-,Upcoming
-33,2027-04-24,15:00,Nottingham Forest,Sunderland,47.1,30.0,22.9,Home Win,2 - 1,2,1,-,Upcoming
-33,2027-04-24,15:00,Newcastle,Ipswich,56.9,27.7,15.4,Home Win,2 - 0,2,0,-,Upcoming
-33,2027-04-24,15:00,Aston Villa,Coventry,61.7,25.2,13.1,Home Win,2 - 0,2,0,-,Upcoming
-33,2027-04-24,15:00,Brentford,Fulham,36.5,36.6,26.9,Draw,1 - 1,1,1,-,Upcoming
-33,2027-04-24,15:00,Leeds,Liverpool,23.0,33.5,43.4,Away Win,1 - 2,1,2,-,Upcoming
-34,2027-05-01,15:00,Sunderland,Newcastle,29.4,33.2,37.4,Draw,1 - 1,1,1,-,Upcoming
-34,2027-05-01,15:00,Brighton,Nottingham Forest,43.6,28.7,27.7,Draw,1 - 1,1,1,-,Upcoming
-34,2027-05-01,15:00,Coventry,Manchester United,11.0,27.3,61.7,Away Win,0 - 2,0,2,-,Upcoming
-34,2027-05-01,15:00,Hull,Bournemouth,16.6,30.7,52.7,Away Win,0 - 2,0,2,-,Upcoming
-34,2027-05-01,15:00,Manchester City,Brentford,62.6,22.3,15.1,Home Win,2 - 0,2,0,-,Upcoming
-34,2027-05-01,15:00,Fulham,Everton,35.3,31.1,33.7,Draw,1 - 1,1,1,-,Upcoming
-34,2027-05-01,15:00,Liverpool,Chelsea,56.2,24.7,19.2,Home Win,2 - 0,2,0,-,Upcoming
-34,2027-05-01,15:00,Arsenal,Tottenham,63.0,22.6,14.4,Home Win,2 - 1,2,1,-,Upcoming
-34,2027-05-01,15:00,Crystal Palace,Aston Villa,26.2,34.5,39.3,Draw,1 - 1,1,1,-,Upcoming
-34,2027-05-01,15:00,Ipswich,Leeds,19.4,33.1,47.5,Away Win,0 - 1,0,1,-,Upcoming
-35,2027-05-08,15:00,Manchester City,Liverpool,57.9,22.9,19.2,Home Win,2 - 1,2,1,-,Upcoming
-35,2027-05-08,15:00,Leeds,Arsenal,17.4,29.1,53.5,Away Win,1 - 2,1,2,-,Upcoming
-35,2027-05-08,15:00,Fulham,Ipswich,53.5,29.1,17.5,Home Win,2 - 0,2,0,-,Upcoming
-35,2027-05-08,15:00,Nottingham Forest,Crystal Palace,44.9,32.6,22.5,Home Win,2 - 1,2,1,-,Upcoming
-35,2027-05-08,15:00,Brentford,Aston Villa,33.4,33.6,33.1,Draw,1 - 1,1,1,-,Upcoming
-35,2027-05-08,15:00,Newcastle,Coventry,57.2,27.5,15.3,Home Win,2 - 0,2,0,-,Upcoming
-35,2027-05-08,15:00,Brighton,Sunderland,51.1,30.1,18.8,Home Win,2 - 1,2,1,-,Upcoming
-35,2027-05-08,15:00,Tottenham,Chelsea,27.9,31.0,41.1,Draw,1 - 1,1,1,-,Upcoming
-35,2027-05-08,15:00,Everton,Hull,52.1,31.3,16.6,Home Win,2 - 0,2,0,-,Upcoming
-35,2027-05-08,15:00,Bournemouth,Manchester United,35.7,30.7,33.7,Draw,1 - 1,1,1,-,Upcoming
-36,2027-05-15,15:00,Hull,Fulham,17.7,32.6,49.7,Away Win,0 - 1,0,1,-,Upcoming
-36,2027-05-15,15:00,Manchester United,Leeds,55.9,25.8,18.3,Home Win,2 - 0,2,0,-,Upcoming
-36,2027-05-15,15:00,Crystal Palace,Brighton,23.9,33.0,43.1,Away Win,1 - 2,1,2,-,Upcoming
-36,2027-05-15,15:00,Aston Villa,Newcastle,47.7,28.2,24.1,Home Win,1 - 0,1,0,-,Upcoming
-36,2027-05-15,15:00,Chelsea,Everton,45.3,30.8,23.9,Home Win,2 - 1,2,1,-,Upcoming
-36,2027-05-15,15:00,Coventry,Tottenham,19.7,34.3,46.0,Away Win,0 - 1,0,1,-,Upcoming
-36,2027-05-15,15:00,Sunderland,Bournemouth,27.2,33.0,39.8,Draw,1 - 1,1,1,-,Upcoming
-36,2027-05-15,15:00,Liverpool,Brentford,57.9,22.9,19.2,Home Win,2 - 0,2,0,-,Upcoming
-36,2027-05-15,15:00,Ipswich,Manchester City,10.7,25.2,64.1,Away Win,0 - 2,0,2,-,Upcoming
-36,2027-05-15,15:00,Arsenal,Nottingham Forest,58.9,23.2,17.9,Home Win,2 - 1,2,1,-,Upcoming
-37,2027-05-23,15:00,Brentford,Hull,52.4,30.6,17.0,Home Win,2 - 0,2,0,-,Upcoming
-37,2027-05-23,15:00,Newcastle,Crystal Palace,47.1,32.6,20.2,Home Win,2 - 0,2,0,-,Upcoming
-37,2027-05-23,15:00,Tottenham,Manchester United,24.0,33.7,42.3,Away Win,0 - 1,0,1,-,Upcoming
-37,2027-05-23,15:00,Leeds,Sunderland,40.7,34.5,24.8,Draw,1 - 1,1,1,-,Upcoming
-37,2027-05-23,15:00,Brighton,Liverpool,35.5,30.2,34.3,Draw,1 - 1,1,1,-,Upcoming
-37,2027-05-23,15:00,Nottingham Forest,Ipswich,53.6,28.5,17.9,Home Win,2 - 1,2,1,-,Upcoming
-37,2027-05-23,15:00,Bournemouth,Chelsea,45.9,31.4,22.7,Home Win,1 - 0,1,0,-,Upcoming
-37,2027-05-23,15:00,Fulham,Coventry,55.9,27.8,16.3,Home Win,2 - 0,2,0,-,Upcoming
-37,2027-05-23,15:00,Everton,Arsenal,19.9,30.4,49.7,Away Win,1 - 2,1,2,-,Upcoming
-37,2027-05-23,15:00,Manchester City,Aston Villa,57.3,24.2,18.5,Home Win,2 - 1,2,1,-,Upcoming
-38,2027-05-30,16:00,Ipswich,Everton,16.0,28.2,55.8,Away Win,0 - 2,0,2,-,Upcoming
-38,2027-05-30,15:00,Arsenal,Brighton,54.4,25.6,20.0,Home Win,2 - 1,2,1,-,Upcoming
-38,2027-05-30,15:00,Liverpool,Bournemouth,55.7,24.9,19.4,Home Win,2 - 0,2,0,-,Upcoming
-38,2027-05-30,15:00,Coventry,Nottingham Forest,15.3,29.5,55.1,Away Win,0 - 2,0,2,-,Upcoming
-38,2027-05-30,15:00,Aston Villa,Tottenham,49.6,28.8,21.6,Home Win,2 - 0,2,0,-,Upcoming
-38,2027-05-30,15:00,Hull,Newcastle,16.4,28.6,55.1,Away Win,0 - 2,0,2,-,Upcoming
-38,2027-05-30,15:00,Manchester United,Fulham,51.7,28.0,20.4,Home Win,2 - 0,2,0,-,Upcoming
-38,2027-05-30,15:00,Sunderland,Manchester City,16.5,26.9,56.7,Away Win,0 - 2,0,2,-,Upcoming
-38,2027-05-30,15:00,Chelsea,Brentford,44.2,31.3,24.4,Home Win,1 - 0,1,0,-,Upcoming
-38,2027-05-30,15:00,Crystal Palace,Leeds,35.6,32.1,32.3,Draw,1 - 1,1,1,-,Upcoming
+1,2026-08-21,20:00,Arsenal,Coventry,64.6,24.5,10.9,Home Win,2 - 0,2,0,3 - 0,Played
+1,2026-08-22,12:30,Hull,Manchester United,10.9,24.3,64.8,Away Win,0 - 2,0,2,2 - 0,Played
+1,2026-08-22,15:00,Ipswich,Sunderland,19.4,30.6,49.9,Away Win,0 - 1,0,1,2 - 1,Played
+1,2026-08-22,15:00,Nottingham Forest,Leeds,41.4,30.6,28.0,Draw,1 - 1,1,1,0 - 1,Played
+1,2026-08-22,15:00,Everton,Crystal Palace,42.1,31.4,26.5,Draw,1 - 1,1,1,2 - 0,Played
+1,2026-08-22,17:30,Brentford,Tottenham,33.6,35.8,30.6,Draw,1 - 1,1,1,3 - 0,Played
+1,2026-08-23,14:00,Manchester City,Bournemouth,63.8,21.2,15.1,Home Win,2 - 0,2,0,2 - 1,Played
+1,2026-08-23,15:00,Brighton,Aston Villa,36.5,27.2,36.3,Draw,1 - 1,1,1,4 - 0,Played
+1,2026-08-23,16:30,Newcastle,Liverpool,28.1,31.6,40.3,Draw,1 - 1,1,1,2 - 2,Played
+1,2026-08-24,20:00,Fulham,Chelsea,38.1,31.2,30.7,Draw,1 - 1,1,1,2 - 3,Played
+2,2026-08-28,20:00,Crystal Palace,Manchester City,16.3,27.1,56.6,Away Win,0 - 1,0,1,1 - 4,Played
+2,2026-08-29,12:30,Liverpool,Nottingham Forest,53.3,24.3,22.5,Home Win,2 - 1,2,1,2 - 2,Played
+2,2026-08-29,15:00,Bournemouth,Everton,48.7,28.5,22.8,Home Win,2 - 1,2,1,1 - 1,Played
+2,2026-08-29,15:00,Coventry,Hull,30.4,30.8,38.7,Draw,1 - 1,1,1,0 - 1,Played
+2,2026-08-29,17:30,Tottenham,Newcastle,31.1,28.4,40.5,Draw,1 - 1,1,1,0 - 2,Played
+2,2026-08-30,14:00,Sunderland,Fulham,26.8,30.7,42.4,Draw,1 - 1,1,1,1 - 0,Played
+2,2026-08-30,15:00,Chelsea,Brighton,33.5,34.9,31.6,Draw,1 - 1,1,1,4 - 3,Played
+2,2026-08-30,15:00,Leeds,Brentford,31.5,32.1,36.5,Draw,1 - 1,1,1,1 - 1,Played
+2,2026-08-30,16:30,Manchester United,Ipswich,59.1,25.1,15.8,Home Win,2 - 0,2,0,5 - 2,Played
+2,2026-08-31,20:00,Aston Villa,Arsenal,27.5,29.3,43.2,Draw,1 - 1,1,1,0 - 1,Played
+3,2026-09-04,20:00,Ipswich,Liverpool,10.8,22.8,66.4,Away Win,0 - 3,0,3,-,Upcoming
+3,2026-09-05,12:30,Newcastle,Bournemouth,43.1,30.2,26.7,Home Win,1 - 0,1,0,-,Upcoming
+3,2026-09-05,15:00,Nottingham Forest,Tottenham,46.8,27.2,26.0,Home Win,2 - 1,2,1,-,Upcoming
+3,2026-09-05,15:00,Manchester City,Coventry,63.1,24.4,12.4,Home Win,2 - 0,2,0,-,Upcoming
+3,2026-09-05,15:00,Brighton,Leeds,49.9,28.3,21.8,Home Win,2 - 0,2,0,-,Upcoming
+3,2026-09-05,15:00,Brentford,Sunderland,43.9,32.4,23.6,Home Win,1 - 0,1,0,-,Upcoming
+3,2026-09-05,15:00,Fulham,Crystal Palace,40.6,32.8,26.6,Draw,1 - 1,1,1,-,Upcoming
+3,2026-09-05,17:30,Hull,Aston Villa,19.2,30.6,50.3,Away Win,1 - 2,1,2,-,Upcoming
+3,2026-09-06,14:00,Everton,Manchester United,25.4,30.7,44.0,Away Win,1 - 2,1,2,-,Upcoming
+3,2026-09-06,16:30,Arsenal,Chelsea,59.6,24.8,15.6,Home Win,2 - 0,2,0,-,Upcoming
+4,2026-09-12,15:00,Crystal Palace,Ipswich,55.8,25.8,18.4,Home Win,2 - 0,2,0,-,Upcoming
+4,2026-09-12,15:00,Liverpool,Fulham,53.6,26.3,20.1,Home Win,2 - 0,2,0,-,Upcoming
+4,2026-09-12,15:00,Aston Villa,Nottingham Forest,50.1,27.0,22.9,Home Win,2 - 1,2,1,-,Upcoming
+4,2026-09-12,15:00,Bournemouth,Brentford,44.0,28.5,27.5,Home Win,1 - 0,1,0,-,Upcoming
+4,2026-09-12,15:00,Chelsea,Hull,52.6,29.6,17.8,Home Win,2 - 0,2,0,-,Upcoming
+4,2026-09-12,17:30,Tottenham,Everton,36.8,31.7,31.5,Draw,1 - 1,1,1,-,Upcoming
+4,2026-09-12,20:00,Sunderland,Arsenal,15.3,27.6,57.1,Away Win,0 - 2,0,2,-,Upcoming
+4,2026-09-13,14:00,Coventry,Brighton,14.7,29.8,55.5,Away Win,0 - 1,0,1,-,Upcoming
+4,2026-09-13,16:30,Manchester United,Manchester City,30.4,30.0,39.6,Draw,1 - 1,1,1,-,Upcoming
+4,2026-09-14,20:00,Leeds,Newcastle,29.5,31.5,39.0,Draw,1 - 1,1,1,-,Upcoming
+5,2026-09-18,20:00,Brentford,Chelsea,32.3,33.8,33.9,Draw,1 - 1,1,1,-,Upcoming
+5,2026-09-19,12:30,Tottenham,Aston Villa,30.7,31.1,38.3,Draw,1 - 1,1,1,-,Upcoming
+5,2026-09-19,15:00,Everton,Ipswich,51.0,29.8,19.2,Home Win,2 - 0,2,0,-,Upcoming
+5,2026-09-19,15:00,Leeds,Crystal Palace,35.0,36.1,28.8,Draw,1 - 1,1,1,-,Upcoming
+5,2026-09-19,15:00,Brighton,Arsenal,23.1,28.2,48.7,Away Win,1 - 2,1,2,-,Upcoming
+5,2026-09-19,15:00,Newcastle,Hull,57.3,26.9,15.8,Home Win,2 - 0,2,0,-,Upcoming
+5,2026-09-19,17:30,Nottingham Forest,Coventry,52.6,28.9,18.5,Home Win,2 - 0,2,0,-,Upcoming
+5,2026-09-20,14:00,Bournemouth,Liverpool,30.2,30.6,39.2,Draw,1 - 1,1,1,-,Upcoming
+5,2026-09-20,15:00,Manchester City,Sunderland,66.4,20.2,13.4,Home Win,2 - 1,2,1,-,Upcoming
+5,2026-09-20,16:30,Fulham,Manchester United,26.2,30.3,43.5,Away Win,0 - 1,0,1,-,Upcoming
+6,2026-10-10,12:30,Arsenal,Leeds,61.4,24.2,14.4,Home Win,2 - 0,2,0,-,Upcoming
+6,2026-10-10,15:00,Sunderland,Brighton,26.6,32.4,41.1,Draw,1 - 1,1,1,-,Upcoming
+6,2026-10-10,15:00,Chelsea,Bournemouth,41.8,33.4,24.8,Home Win,1 - 0,1,0,-,Upcoming
+6,2026-10-10,15:00,Ipswich,Fulham,19.2,30.8,50.0,Away Win,0 - 1,0,1,-,Upcoming
+6,2026-10-10,15:00,Aston Villa,Brentford,50.1,27.1,22.8,Home Win,1 - 0,1,0,-,Upcoming
+6,2026-10-10,17:30,Manchester United,Tottenham,51.3,26.6,22.1,Home Win,2 - 1,2,1,-,Upcoming
+6,2026-10-11,14:00,Hull,Everton,22.2,33.6,44.2,Away Win,0 - 1,0,1,-,Upcoming
+6,2026-10-11,15:00,Crystal Palace,Nottingham Forest,25.5,30.4,44.1,Away Win,1 - 2,1,2,-,Upcoming
+6,2026-10-11,16:30,Liverpool,Manchester City,29.0,27.0,44.0,Draw,1 - 1,1,1,-,Upcoming
+6,2026-10-12,20:00,Coventry,Newcastle,15.0,27.4,57.6,Away Win,0 - 2,0,2,-,Upcoming
+7,2026-10-17,12:30,Everton,Chelsea,29.1,33.5,37.4,Draw,1 - 1,1,1,-,Upcoming
+7,2026-10-17,15:00,Fulham,Hull,52.3,28.8,18.9,Home Win,2 - 0,2,0,-,Upcoming
+7,2026-10-17,15:00,Manchester City,Ipswich,68.6,19.9,11.4,Home Win,2 - 0,2,0,-,Upcoming
+7,2026-10-17,15:00,Brentford,Liverpool,26.7,34.9,38.5,Draw,1 - 1,1,1,-,Upcoming
+7,2026-10-17,17:30,Newcastle,Aston Villa,37.9,30.1,31.9,Draw,1 - 1,1,1,-,Upcoming
+7,2026-10-18,14:00,Bournemouth,Sunderland,46.7,30.3,23.0,Home Win,2 - 1,2,1,-,Upcoming
+7,2026-10-18,15:00,Leeds,Manchester United,23.3,30.8,45.9,Away Win,0 - 1,0,1,-,Upcoming
+7,2026-10-18,15:00,Brighton,Crystal Palace,48.0,30.8,21.1,Home Win,2 - 1,2,1,-,Upcoming
+7,2026-10-18,16:30,Nottingham Forest,Arsenal,16.9,28.1,55.0,Away Win,0 - 2,0,2,-,Upcoming
+7,2026-10-19,20:00,Tottenham,Coventry,54.0,28.9,17.2,Home Win,2 - 0,2,0,-,Upcoming
+8,2026-10-23,20:00,Ipswich,Nottingham Forest,18.7,29.8,51.5,Away Win,0 - 1,0,1,-,Upcoming
+8,2026-10-24,12:30,Aston Villa,Manchester City,27.2,30.3,42.6,Draw,1 - 1,1,1,-,Upcoming
+8,2026-10-24,15:00,Liverpool,Brighton,52.8,25.8,21.4,Home Win,2 - 1,2,1,-,Upcoming
+8,2026-10-24,15:00,Arsenal,Everton,58.3,24.7,16.9,Home Win,2 - 0,2,0,-,Upcoming
+8,2026-10-24,15:00,Coventry,Fulham,16.0,30.0,53.9,Away Win,0 - 2,0,2,-,Upcoming
+8,2026-10-24,17:30,Chelsea,Tottenham,45.4,32.2,22.5,Home Win,1 - 0,1,0,-,Upcoming
+8,2026-10-25,14:00,Crystal Palace,Newcastle,25.8,31.6,42.6,Away Win,1 - 2,1,2,-,Upcoming
+8,2026-10-25,15:00,Manchester United,Bournemouth,46.8,27.5,25.7,Home Win,2 - 1,2,1,-,Upcoming
+8,2026-10-25,15:00,Hull,Brentford,19.5,28.4,52.1,Away Win,1 - 2,1,2,-,Upcoming
+8,2026-10-25,16:30,Sunderland,Leeds,31.7,31.8,36.5,Draw,1 - 1,1,1,-,Upcoming
+9,2026-10-31,12:30,Chelsea,Manchester United,30.3,31.1,38.7,Draw,1 - 1,1,1,-,Upcoming
+9,2026-10-31,15:00,Manchester City,Brighton,56.1,24.3,19.6,Home Win,2 - 1,2,1,-,Upcoming
+9,2026-10-31,15:00,Bournemouth,Leeds,48.9,28.2,22.9,Home Win,2 - 0,2,0,-,Upcoming
+9,2026-10-31,15:00,Coventry,Sunderland,19.7,33.0,47.3,Away Win,0 - 1,0,1,-,Upcoming
+9,2026-10-31,15:00,Hull,Ipswich,37.3,38.9,23.8,Draw,1 - 1,1,1,-,Upcoming
+9,2026-10-31,15:00,Brentford,Nottingham Forest,35.7,33.5,30.8,Draw,1 - 1,1,1,-,Upcoming
+9,2026-10-31,17:30,Tottenham,Crystal Palace,36.8,34.0,29.3,Draw,1 - 1,1,1,-,Upcoming
+9,2026-11-01,14:00,Aston Villa,Fulham,52.2,27.0,20.9,Home Win,2 - 0,2,0,-,Upcoming
+9,2026-11-01,16:30,Liverpool,Arsenal,29.8,24.7,45.5,Draw,1 - 1,1,1,-,Upcoming
+9,2026-11-02,20:00,Newcastle,Everton,45.2,28.9,25.9,Home Win,2 - 1,2,1,-,Upcoming
+10,2026-11-07,15:00,Arsenal,Hull,63.6,23.3,13.2,Home Win,2 - 0,2,0,-,Upcoming
+10,2026-11-07,15:00,Nottingham Forest,Manchester City,18.7,27.5,53.8,Away Win,0 - 2,0,2,-,Upcoming
+10,2026-11-07,15:00,Leeds,Tottenham,33.5,33.8,32.7,Draw,1 - 1,1,1,-,Upcoming
+10,2026-11-07,15:00,Fulham,Newcastle,34.4,31.2,34.4,Draw,1 - 1,1,1,-,Upcoming
+10,2026-11-07,15:00,Everton,Coventry,53.0,29.7,17.3,Home Win,2 - 0,2,0,-,Upcoming
+10,2026-11-07,15:00,Crystal Palace,Liverpool,18.8,30.9,50.3,Away Win,0 - 1,0,1,-,Upcoming
+10,2026-11-07,15:00,Sunderland,Chelsea,29.4,34.7,35.8,Draw,1 - 1,1,1,-,Upcoming
+10,2026-11-07,15:00,Ipswich,Bournemouth,16.1,28.5,55.3,Away Win,0 - 2,0,2,-,Upcoming
+10,2026-11-07,15:00,Brighton,Brentford,46.9,28.3,24.8,Home Win,1 - 0,1,0,-,Upcoming
+10,2026-11-07,15:00,Manchester United,Aston Villa,46.5,29.0,24.5,Home Win,2 - 1,2,1,-,Upcoming
+11,2026-11-21,15:00,Chelsea,Leeds,44.6,31.3,24.1,Home Win,1 - 0,1,0,-,Upcoming
+11,2026-11-21,15:00,Manchester City,Fulham,60.9,24.1,15.0,Home Win,2 - 0,2,0,-,Upcoming
+11,2026-11-21,15:00,Aston Villa,Sunderland,54.4,26.3,19.4,Home Win,2 - 0,2,0,-,Upcoming
+11,2026-11-21,15:00,Liverpool,Manchester United,43.5,26.7,29.8,Draw,1 - 1,1,1,-,Upcoming
+11,2026-11-21,15:00,Hull,Brighton,18.6,31.8,49.7,Away Win,1 - 2,1,2,-,Upcoming
+11,2026-11-21,15:00,Bournemouth,Nottingham Forest,45.3,27.9,26.8,Home Win,2 - 1,2,1,-,Upcoming
+11,2026-11-21,15:00,Tottenham,Ipswich,53.4,28.4,18.2,Home Win,2 - 0,2,0,-,Upcoming
+11,2026-11-21,15:00,Brentford,Everton,35.8,34.7,29.5,Draw,1 - 1,1,1,-,Upcoming
+11,2026-11-21,15:00,Coventry,Crystal Palace,19.5,35.5,44.9,Away Win,0 - 2,0,2,-,Upcoming
+11,2026-11-21,15:00,Newcastle,Arsenal,23.7,29.6,46.7,Away Win,1 - 2,1,2,-,Upcoming
+12,2026-11-28,15:00,Leeds,Coventry,49.1,31.7,19.3,Home Win,2 - 0,2,0,-,Upcoming
+12,2026-11-28,15:00,Ipswich,Aston Villa,14.9,25.7,59.5,Away Win,0 - 2,0,2,-,Upcoming
+12,2026-11-28,15:00,Arsenal,Manchester City,37.1,32.4,30.5,Draw,1 - 1,1,1,-,Upcoming
+12,2026-11-28,15:00,Manchester United,Brentford,53.3,25.1,21.6,Home Win,2 - 0,2,0,-,Upcoming
+12,2026-11-28,15:00,Everton,Liverpool,23.4,32.8,43.8,Away Win,0 - 1,0,1,-,Upcoming
+12,2026-11-28,15:00,Fulham,Bournemouth,31.1,28.6,40.3,Draw,1 - 1,1,1,-,Upcoming
+12,2026-11-28,15:00,Nottingham Forest,Chelsea,32.1,32.3,35.6,Draw,1 - 1,1,1,-,Upcoming
+12,2026-11-28,15:00,Brighton,Newcastle,42.9,28.9,28.2,Draw,1 - 1,1,1,-,Upcoming
+12,2026-11-28,15:00,Sunderland,Tottenham,30.3,34.1,35.6,Draw,1 - 1,1,1,-,Upcoming
+12,2026-11-28,15:00,Crystal Palace,Hull,50.8,33.0,16.2,Home Win,2 - 0,2,0,-,Upcoming
+13,2026-12-02,20:00,Tottenham,Fulham,29.7,31.0,39.3,Draw,1 - 1,1,1,-,Upcoming
+13,2026-12-02,15:00,Liverpool,Sunderland,59.5,22.8,17.7,Home Win,2 - 0,2,0,-,Upcoming
+13,2026-12-02,15:00,Hull,Nottingham Forest,22.0,32.4,45.6,Away Win,1 - 2,1,2,-,Upcoming
+13,2026-12-02,15:00,Chelsea,Crystal Palace,46.3,33.0,20.6,Home Win,1 - 0,1,0,-,Upcoming
+13,2026-12-02,15:00,Aston Villa,Everton,49.2,26.9,23.9,Home Win,2 - 1,2,1,-,Upcoming
+13,2026-12-02,15:00,Brentford,Arsenal,19.4,29.5,51.1,Away Win,1 - 2,1,2,-,Upcoming
+13,2026-12-02,15:00,Coventry,Ipswich,26.5,36.0,37.5,Draw,1 - 1,1,1,-,Upcoming
+13,2026-12-02,15:00,Manchester City,Leeds,62.6,23.2,14.2,Home Win,2 - 0,2,0,-,Upcoming
+13,2026-12-02,15:00,Newcastle,Manchester United,33.4,30.5,36.1,Draw,1 - 1,1,1,-,Upcoming
+13,2026-12-02,15:00,Bournemouth,Brighton,39.0,31.6,29.4,Draw,1 - 1,1,1,-,Upcoming
+14,2026-12-05,15:00,Tottenham,Arsenal,18.2,26.7,55.1,Away Win,0 - 2,0,2,-,Upcoming
+14,2026-12-05,15:00,Manchester United,Coventry,59.7,25.8,14.5,Home Win,2 - 0,2,0,-,Upcoming
+14,2026-12-05,15:00,Leeds,Ipswich,48.1,31.0,20.8,Home Win,2 - 0,2,0,-,Upcoming
+14,2026-12-05,15:00,Newcastle,Sunderland,48.1,29.4,22.4,Home Win,2 - 0,2,0,-,Upcoming
+14,2026-12-05,15:00,Chelsea,Liverpool,30.2,31.9,37.8,Draw,1 - 1,1,1,-,Upcoming
+14,2026-12-05,15:00,Brentford,Manchester City,21.9,34.1,44.0,Away Win,0 - 1,0,1,-,Upcoming
+14,2026-12-05,15:00,Bournemouth,Hull,55.3,27.5,17.1,Home Win,2 - 0,2,0,-,Upcoming
+14,2026-12-05,15:00,Aston Villa,Crystal Palace,50.4,30.9,18.7,Home Win,2 - 0,2,0,-,Upcoming
+14,2026-12-05,15:00,Nottingham Forest,Brighton,32.5,31.1,36.4,Draw,1 - 1,1,1,-,Upcoming
+14,2026-12-05,15:00,Everton,Fulham,36.4,33.9,29.7,Draw,1 - 1,1,1,-,Upcoming
+15,2026-12-12,15:00,Sunderland,Nottingham Forest,28.2,30.3,41.4,Draw,1 - 1,1,1,-,Upcoming
+15,2026-12-12,15:00,Crystal Palace,Manchester United,20.7,32.6,46.7,Away Win,0 - 1,0,1,-,Upcoming
+15,2026-12-12,15:00,Hull,Tottenham,21.5,35.2,43.3,Away Win,0 - 1,0,1,-,Upcoming
+15,2026-12-12,15:00,Brighton,Everton,46.3,27.5,26.1,Home Win,2 - 1,2,1,-,Upcoming
+15,2026-12-12,15:00,Ipswich,Newcastle,15.0,26.0,59.0,Away Win,0 - 2,0,2,-,Upcoming
+15,2026-12-12,15:00,Coventry,Aston Villa,12.9,26.8,60.2,Away Win,0 - 2,0,2,-,Upcoming
+15,2026-12-12,15:00,Arsenal,Bournemouth,55.6,25.0,19.4,Home Win,2 - 1,2,1,-,Upcoming
+15,2026-12-12,15:00,Manchester City,Chelsea,61.3,23.3,15.4,Home Win,2 - 0,2,0,-,Upcoming
+15,2026-12-12,15:00,Liverpool,Leeds,56.7,25.1,18.2,Home Win,2 - 0,2,0,-,Upcoming
+15,2026-12-12,15:00,Fulham,Brentford,38.6,30.6,30.9,Draw,1 - 1,1,1,-,Upcoming
+16,2026-12-19,15:00,Leeds,Fulham,28.9,32.0,39.1,Draw,1 - 1,1,1,-,Upcoming
+16,2026-12-19,15:00,Brighton,Ipswich,52.0,28.9,19.0,Home Win,2 - 0,2,0,-,Upcoming
+16,2026-12-19,15:00,Nottingham Forest,Everton,34.5,31.3,34.1,Draw,1 - 1,1,1,-,Upcoming
+16,2026-12-19,15:00,Brentford,Newcastle,35.6,31.3,33.1,Draw,1 - 1,1,1,-,Upcoming
+16,2026-12-19,15:00,Manchester City,Hull,65.4,21.5,13.1,Home Win,2 - 0,2,0,-,Upcoming
+16,2026-12-19,15:00,Sunderland,Crystal Palace,29.9,36.6,33.5,Draw,1 - 1,1,1,-,Upcoming
+16,2026-12-19,15:00,Bournemouth,Coventry,56.1,27.6,16.3,Home Win,2 - 0,2,0,-,Upcoming
+16,2026-12-19,15:00,Arsenal,Manchester United,53.3,25.8,20.9,Home Win,2 - 1,2,1,-,Upcoming
+16,2026-12-19,15:00,Liverpool,Tottenham,56.0,25.8,18.1,Home Win,2 - 0,2,0,-,Upcoming
+16,2026-12-19,15:00,Chelsea,Aston Villa,38.0,31.8,30.2,Draw,1 - 1,1,1,-,Upcoming
+17,2026-12-26,15:00,Aston Villa,Leeds,54.1,26.3,19.6,Home Win,2 - 0,2,0,-,Upcoming
+17,2026-12-26,15:00,Manchester United,Nottingham Forest,47.2,26.8,26.0,Home Win,2 - 1,2,1,-,Upcoming
+17,2026-12-26,15:00,Crystal Palace,Arsenal,16.2,28.3,55.5,Away Win,0 - 1,0,1,-,Upcoming
+17,2026-12-26,15:00,Everton,Sunderland,42.2,34.1,23.7,Home Win,2 - 1,2,1,-,Upcoming
+17,2026-12-26,15:00,Coventry,Chelsea,15.6,29.0,55.4,Away Win,0 - 2,0,2,-,Upcoming
+17,2026-12-26,15:00,Newcastle,Manchester City,23.9,30.9,45.1,Away Win,0 - 1,0,1,-,Upcoming
+17,2026-12-26,15:00,Fulham,Brighton,32.2,33.5,34.3,Draw,1 - 1,1,1,-,Upcoming
+17,2026-12-26,15:00,Tottenham,Bournemouth,28.6,28.8,42.6,Draw,1 - 1,1,1,-,Upcoming
+17,2026-12-26,15:00,Hull,Liverpool,12.3,27.1,60.6,Away Win,0 - 3,0,3,-,Upcoming
+17,2026-12-26,15:00,Ipswich,Brentford,18.1,25.6,56.3,Away Win,0 - 2,0,2,-,Upcoming
+18,2026-12-30,20:00,Fulham,Arsenal,18.0,26.3,55.6,Away Win,0 - 2,0,2,-,Upcoming
+18,2026-12-30,15:00,Coventry,Brentford,17.4,27.3,55.3,Away Win,0 - 2,0,2,-,Upcoming
+18,2026-12-30,15:00,Aston Villa,Liverpool,36.1,29.0,34.9,Draw,1 - 1,1,1,-,Upcoming
+18,2026-12-30,15:00,Newcastle,Nottingham Forest,47.6,27.6,24.7,Home Win,2 - 1,2,1,-,Upcoming
+18,2026-12-30,15:00,Hull,Leeds,22.3,32.1,45.7,Away Win,1 - 2,1,2,-,Upcoming
+18,2026-12-30,15:00,Manchester United,Sunderland,56.4,25.2,18.4,Home Win,2 - 1,2,1,-,Upcoming
+18,2026-12-30,15:00,Ipswich,Chelsea,17.9,28.2,53.9,Away Win,0 - 2,0,2,-,Upcoming
+18,2026-12-30,15:00,Tottenham,Brighton,29.1,28.6,42.3,Draw,1 - 1,1,1,-,Upcoming
+18,2026-12-30,15:00,Everton,Manchester City,16.7,29.5,53.8,Away Win,0 - 1,0,1,-,Upcoming
+18,2026-12-30,15:00,Crystal Palace,Bournemouth,24.7,31.6,43.7,Away Win,1 - 2,1,2,-,Upcoming
+19,2027-01-02,15:00,Bournemouth,Aston Villa,35.2,29.1,35.7,Draw,1 - 1,1,1,-,Upcoming
+19,2027-01-02,15:00,Brentford,Crystal Palace,40.6,37.8,21.6,Home Win,1 - 0,1,0,-,Upcoming
+19,2027-01-02,15:00,Leeds,Everton,30.5,32.1,37.5,Draw,1 - 1,1,1,-,Upcoming
+19,2027-01-02,15:00,Arsenal,Ipswich,66.8,20.2,13.0,Home Win,2 - 1,2,1,-,Upcoming
+19,2027-01-02,15:00,Sunderland,Hull,48.3,32.5,19.1,Home Win,2 - 0,2,0,-,Upcoming
+19,2027-01-02,15:00,Liverpool,Coventry,62.8,23.7,13.5,Home Win,2 - 0,2,0,-,Upcoming
+19,2027-01-02,15:00,Chelsea,Newcastle,42.6,32.5,24.9,Home Win,1 - 0,1,0,-,Upcoming
+19,2027-01-02,15:00,Nottingham Forest,Fulham,36.0,30.7,33.3,Draw,1 - 1,1,1,-,Upcoming
+19,2027-01-02,15:00,Brighton,Manchester United,34.0,30.2,35.7,Draw,1 - 1,1,1,-,Upcoming
+19,2027-01-02,15:00,Manchester City,Tottenham,59.2,22.9,17.9,Home Win,2 - 1,2,1,-,Upcoming
+20,2027-01-06,20:00,Arsenal,Brentford,60.3,24.3,15.4,Home Win,2 - 0,2,0,-,Upcoming
+20,2027-01-06,15:00,Leeds,Manchester City,16.6,29.4,53.9,Away Win,0 - 2,0,2,-,Upcoming
+20,2027-01-06,15:00,Manchester United,Newcastle,50.7,25.8,23.5,Home Win,2 - 1,2,1,-,Upcoming
+20,2027-01-06,15:00,Brighton,Bournemouth,40.2,28.0,31.8,Draw,1 - 1,1,1,-,Upcoming
+20,2027-01-06,15:00,Nottingham Forest,Hull,50.5,30.0,19.5,Home Win,2 - 0,2,0,-,Upcoming
+20,2027-01-06,15:00,Fulham,Tottenham,44.9,29.3,25.8,Home Win,1 - 0,1,0,-,Upcoming
+20,2027-01-06,15:00,Everton,Aston Villa,30.2,30.9,38.9,Draw,1 - 1,1,1,-,Upcoming
+20,2027-01-06,15:00,Sunderland,Liverpool,22.6,31.5,45.9,Away Win,0 - 1,0,1,-,Upcoming
+20,2027-01-06,15:00,Crystal Palace,Chelsea,25.7,33.6,40.8,Draw,1 - 1,1,1,-,Upcoming
+20,2027-01-06,15:00,Ipswich,Coventry,45.1,31.0,24.0,Home Win,1 - 0,1,0,-,Upcoming
+21,2027-01-16,15:00,Bournemouth,Ipswich,52.1,29.5,18.4,Home Win,2 - 0,2,0,-,Upcoming
+21,2027-01-16,15:00,Manchester City,Nottingham Forest,58.5,23.8,17.6,Home Win,2 - 1,2,1,-,Upcoming
+21,2027-01-16,15:00,Chelsea,Sunderland,43.6,31.8,24.7,Home Win,1 - 0,1,0,-,Upcoming
+21,2027-01-16,15:00,Brentford,Brighton,30.3,35.3,34.4,Draw,1 - 1,1,1,-,Upcoming
+21,2027-01-16,15:00,Aston Villa,Manchester United,35.8,29.3,34.9,Draw,1 - 1,1,1,-,Upcoming
+21,2027-01-16,15:00,Tottenham,Leeds,36.8,31.4,31.8,Draw,1 - 1,1,1,-,Upcoming
+21,2027-01-16,15:00,Coventry,Everton,15.7,26.9,57.4,Away Win,0 - 2,0,2,-,Upcoming
+21,2027-01-16,15:00,Liverpool,Crystal Palace,55.7,28.3,16.0,Home Win,2 - 0,2,0,-,Upcoming
+21,2027-01-16,15:00,Hull,Arsenal,12.8,26.5,60.7,Away Win,0 - 2,0,2,-,Upcoming
+21,2027-01-16,15:00,Newcastle,Fulham,43.6,30.8,25.6,Home Win,1 - 0,1,0,-,Upcoming
+22,2027-01-23,15:00,Ipswich,Hull,41.2,33.2,25.6,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Everton,Brentford,33.2,30.3,36.4,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Sunderland,Coventry,47.0,32.7,20.3,Home Win,2 - 0,2,0,-,Upcoming
+22,2027-01-23,15:00,Nottingham Forest,Bournemouth,31.2,28.8,40.0,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Arsenal,Newcastle,60.9,23.3,15.8,Home Win,2 - 0,2,0,-,Upcoming
+22,2027-01-23,15:00,Leeds,Chelsea,29.2,33.4,37.4,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Fulham,Aston Villa,28.6,30.5,40.9,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Manchester United,Liverpool,39.4,27.2,33.4,Draw,1 - 1,1,1,-,Upcoming
+22,2027-01-23,15:00,Brighton,Manchester City,23.9,29.5,46.6,Away Win,0 - 1,0,1,-,Upcoming
+22,2027-01-23,15:00,Crystal Palace,Tottenham,36.7,32.6,30.6,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Tottenham,Sunderland,37.3,33.9,28.8,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Brentford,Manchester United,26.4,33.8,39.9,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Newcastle,Brighton,38.9,31.5,29.6,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Hull,Crystal Palace,23.6,39.8,36.6,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Coventry,Leeds,18.7,30.3,51.0,Away Win,0 - 1,0,1,-,Upcoming
+23,2027-01-30,15:00,Bournemouth,Fulham,46.5,28.7,24.8,Home Win,2 - 1,2,1,-,Upcoming
+23,2027-01-30,15:00,Chelsea,Nottingham Forest,43.0,31.8,25.2,Home Win,2 - 1,2,1,-,Upcoming
+23,2027-01-30,15:00,Liverpool,Everton,55.0,24.6,20.4,Home Win,2 - 1,2,1,-,Upcoming
+23,2027-01-30,15:00,Manchester City,Arsenal,37.0,31.2,31.8,Draw,1 - 1,1,1,-,Upcoming
+23,2027-01-30,15:00,Aston Villa,Ipswich,56.5,26.6,16.9,Home Win,2 - 0,2,0,-,Upcoming
+24,2027-02-06,15:00,Arsenal,Liverpool,52.6,24.9,22.5,Home Win,2 - 1,2,1,-,Upcoming
+24,2027-02-06,15:00,Brighton,Hull,53.9,28.6,17.5,Home Win,2 - 0,2,0,-,Upcoming
+24,2027-02-06,15:00,Sunderland,Aston Villa,26.4,32.9,40.7,Draw,1 - 1,1,1,-,Upcoming
+24,2027-02-06,15:00,Crystal Palace,Coventry,55.1,27.9,17.0,Home Win,2 - 0,2,0,-,Upcoming
+24,2027-02-06,15:00,Ipswich,Tottenham,21.1,29.9,49.0,Away Win,0 - 1,0,1,-,Upcoming
+24,2027-02-06,15:00,Everton,Newcastle,32.0,31.0,37.0,Draw,1 - 1,1,1,-,Upcoming
+24,2027-02-06,15:00,Fulham,Manchester City,17.8,29.0,53.2,Away Win,0 - 1,0,1,-,Upcoming
+24,2027-02-06,15:00,Leeds,Bournemouth,27.6,30.2,42.2,Draw,1 - 1,1,1,-,Upcoming
+24,2027-02-06,15:00,Manchester United,Chelsea,53.0,25.7,21.3,Home Win,2 - 0,2,0,-,Upcoming
+24,2027-02-06,15:00,Nottingham Forest,Brentford,36.5,30.2,33.3,Draw,1 - 1,1,1,-,Upcoming
+25,2027-02-10,20:00,Everton,Leeds,40.8,32.7,26.5,Draw,1 - 1,1,1,-,Upcoming
+25,2027-02-10,15:00,Coventry,Liverpool,10.4,24.4,65.2,Away Win,0 - 2,0,2,-,Upcoming
+25,2027-02-10,15:00,Hull,Sunderland,23.3,36.1,40.5,Away Win,1 - 2,1,2,-,Upcoming
+25,2027-02-10,15:00,Aston Villa,Bournemouth,48.8,28.0,23.2,Home Win,1 - 0,1,0,-,Upcoming
+25,2027-02-10,15:00,Crystal Palace,Brentford,31.7,32.7,35.6,Draw,1 - 1,1,1,-,Upcoming
+25,2027-02-10,15:00,Newcastle,Chelsea,48.1,29.9,22.0,Home Win,1 - 0,1,0,-,Upcoming
+25,2027-02-10,15:00,Fulham,Nottingham Forest,32.0,30.2,37.8,Draw,1 - 1,1,1,-,Upcoming
+25,2027-02-10,15:00,Tottenham,Manchester City,19.2,33.0,47.8,Away Win,0 - 2,0,2,-,Upcoming
+25,2027-02-10,15:00,Manchester United,Brighton,49.2,28.2,22.6,Home Win,2 - 1,2,1,-,Upcoming
+25,2027-02-10,15:00,Ipswich,Arsenal,11.4,25.7,62.9,Away Win,0 - 2,0,2,-,Upcoming
+26,2027-02-20,15:00,Manchester City,Newcastle,61.9,22.9,15.2,Home Win,2 - 0,2,0,-,Upcoming
+26,2027-02-20,15:00,Bournemouth,Crystal Palace,48.6,30.3,21.1,Home Win,2 - 0,2,0,-,Upcoming
+26,2027-02-20,15:00,Brentford,Coventry,50.6,31.6,17.9,Home Win,2 - 0,2,0,-,Upcoming
+26,2027-02-20,15:00,Chelsea,Ipswich,50.4,30.8,18.8,Home Win,1 - 0,1,0,-,Upcoming
+26,2027-02-20,15:00,Liverpool,Hull,61.0,24.6,14.4,Home Win,2 - 0,2,0,-,Upcoming
+26,2027-02-20,15:00,Arsenal,Fulham,62.5,23.1,14.4,Home Win,2 - 0,2,0,-,Upcoming
+26,2027-02-20,15:00,Nottingham Forest,Manchester United,27.9,31.1,41.0,Draw,1 - 1,1,1,-,Upcoming
+26,2027-02-20,15:00,Brighton,Tottenham,47.9,29.0,23.1,Home Win,2 - 1,2,1,-,Upcoming
+26,2027-02-20,15:00,Sunderland,Everton,31.2,32.8,36.0,Draw,1 - 1,1,1,-,Upcoming
+26,2027-02-20,15:00,Leeds,Aston Villa,26.9,32.5,40.7,Draw,1 - 1,1,1,-,Upcoming
+27,2027-02-27,15:00,Crystal Palace,Sunderland,40.6,33.3,26.1,Draw,1 - 1,1,1,-,Upcoming
+27,2027-02-27,15:00,Manchester United,Arsenal,29.3,28.5,42.2,Draw,1 - 1,1,1,-,Upcoming
+27,2027-02-27,15:00,Ipswich,Brighton,15.8,26.2,58.0,Away Win,0 - 2,0,2,-,Upcoming
+27,2027-02-27,15:00,Coventry,Bournemouth,15.7,29.1,55.3,Away Win,0 - 1,0,1,-,Upcoming
+27,2027-02-27,15:00,Everton,Nottingham Forest,38.0,30.9,31.1,Draw,1 - 1,1,1,-,Upcoming
+27,2027-02-27,15:00,Fulham,Leeds,41.6,30.0,28.4,Draw,1 - 1,1,1,-,Upcoming
+27,2027-02-27,15:00,Aston Villa,Chelsea,48.3,28.5,23.3,Home Win,1 - 0,1,0,-,Upcoming
+27,2027-02-27,15:00,Tottenham,Liverpool,24.0,29.0,47.1,Away Win,0 - 1,0,1,-,Upcoming
+27,2027-02-27,15:00,Newcastle,Brentford,45.9,29.5,24.6,Home Win,1 - 0,1,0,-,Upcoming
+27,2027-02-27,15:00,Hull,Manchester City,12.9,26.7,60.4,Away Win,0 - 2,0,2,-,Upcoming
+28,2027-03-03,20:00,Nottingham Forest,Newcastle,32.6,30.4,37.0,Draw,1 - 1,1,1,-,Upcoming
+28,2027-03-03,15:00,Bournemouth,Tottenham,46.4,28.9,24.7,Home Win,1 - 0,1,0,-,Upcoming
+28,2027-03-03,15:00,Manchester City,Everton,60.2,23.3,16.6,Home Win,2 - 1,2,1,-,Upcoming
+28,2027-03-03,15:00,Arsenal,Crystal Palace,65.4,23.3,11.3,Home Win,2 - 0,2,0,-,Upcoming
+28,2027-03-03,15:00,Leeds,Hull,49.7,31.3,19.0,Home Win,2 - 0,2,0,-,Upcoming
+28,2027-03-03,15:00,Sunderland,Manchester United,24.0,30.7,45.3,Away Win,0 - 1,0,1,-,Upcoming
+28,2027-03-03,15:00,Liverpool,Aston Villa,53.9,24.1,21.9,Home Win,2 - 1,2,1,-,Upcoming
+28,2027-03-03,15:00,Brighton,Fulham,44.1,29.0,26.9,Home Win,2 - 1,2,1,-,Upcoming
+28,2027-03-03,15:00,Brentford,Ipswich,49.5,32.2,18.3,Home Win,2 - 0,2,0,-,Upcoming
+28,2027-03-03,15:00,Chelsea,Coventry,55.0,27.8,17.2,Home Win,2 - 0,2,0,-,Upcoming
+29,2027-03-13,15:00,Leeds,Brighton,26.8,32.9,40.3,Draw,1 - 1,1,1,-,Upcoming
+29,2027-03-13,15:00,Tottenham,Nottingham Forest,30.9,29.8,39.3,Draw,1 - 1,1,1,-,Upcoming
+29,2027-03-13,15:00,Crystal Palace,Fulham,26.1,31.3,42.6,Away Win,1 - 2,1,2,-,Upcoming
+29,2027-03-13,15:00,Liverpool,Ipswich,66.0,20.6,13.4,Home Win,2 - 0,2,0,-,Upcoming
+29,2027-03-13,15:00,Coventry,Manchester City,10.8,26.3,62.9,Away Win,0 - 2,0,2,-,Upcoming
+29,2027-03-13,15:00,Bournemouth,Newcastle,44.5,28.4,27.1,Home Win,1 - 0,1,0,-,Upcoming
+29,2027-03-13,15:00,Chelsea,Arsenal,22.9,31.9,45.2,Away Win,1 - 2,1,2,-,Upcoming
+29,2027-03-13,15:00,Aston Villa,Hull,58.9,26.6,14.5,Home Win,2 - 0,2,0,-,Upcoming
+29,2027-03-13,15:00,Manchester United,Everton,51.4,27.0,21.6,Home Win,2 - 1,2,1,-,Upcoming
+29,2027-03-13,15:00,Sunderland,Brentford,30.1,32.1,37.8,Draw,1 - 1,1,1,-,Upcoming
+30,2027-03-20,15:00,Brentford,Bournemouth,33.9,32.2,34.0,Draw,1 - 1,1,1,-,Upcoming
+30,2027-03-20,15:00,Brighton,Coventry,55.9,27.8,16.3,Home Win,2 - 0,2,0,-,Upcoming
+30,2027-03-20,15:00,Manchester City,Manchester United,55.5,24.7,19.8,Home Win,2 - 1,2,1,-,Upcoming
+30,2027-03-20,15:00,Ipswich,Crystal Palace,22.7,35.1,42.1,Away Win,0 - 1,0,1,-,Upcoming
+30,2027-03-20,15:00,Arsenal,Sunderland,64.7,22.0,13.4,Home Win,2 - 0,2,0,-,Upcoming
+30,2027-03-20,15:00,Fulham,Liverpool,24.9,30.1,45.0,Away Win,0 - 1,0,1,-,Upcoming
+30,2027-03-20,15:00,Hull,Chelsea,17.4,30.6,52.0,Away Win,0 - 2,0,2,-,Upcoming
+30,2027-03-20,15:00,Nottingham Forest,Aston Villa,29.8,29.3,40.9,Draw,1 - 1,1,1,-,Upcoming
+30,2027-03-20,15:00,Everton,Tottenham,41.8,30.1,28.1,Draw,1 - 1,1,1,-,Upcoming
+30,2027-03-20,15:00,Newcastle,Leeds,49.7,28.3,21.9,Home Win,2 - 0,2,0,-,Upcoming
+31,2027-04-10,15:00,Sunderland,Ipswich,46.0,31.1,22.9,Home Win,2 - 1,2,1,-,Upcoming
+31,2027-04-10,15:00,Leeds,Nottingham Forest,29.5,30.8,39.7,Draw,1 - 1,1,1,-,Upcoming
+31,2027-04-10,15:00,Manchester United,Hull,58.5,25.4,16.1,Home Win,2 - 0,2,0,-,Upcoming
+31,2027-04-10,15:00,Chelsea,Fulham,42.4,33.5,24.1,Home Win,1 - 0,1,0,-,Upcoming
+31,2027-04-10,15:00,Liverpool,Newcastle,57.6,23.6,18.8,Home Win,2 - 0,2,0,-,Upcoming
+31,2027-04-10,15:00,Coventry,Arsenal,11.1,28.0,60.9,Away Win,0 - 2,0,2,-,Upcoming
+31,2027-04-10,15:00,Bournemouth,Manchester City,21.9,32.1,46.0,Away Win,0 - 1,0,1,-,Upcoming
+31,2027-04-10,15:00,Crystal Palace,Everton,28.1,32.0,39.9,Draw,1 - 1,1,1,-,Upcoming
+31,2027-04-10,15:00,Tottenham,Brentford,35.1,32.4,32.5,Draw,1 - 1,1,1,-,Upcoming
+31,2027-04-10,15:00,Aston Villa,Brighton,44.2,29.1,26.7,Home Win,1 - 0,1,0,-,Upcoming
+32,2027-04-17,15:00,Brighton,Chelsea,42.6,30.9,26.5,Home Win,2 - 1,2,1,-,Upcoming
+32,2027-04-17,15:00,Fulham,Sunderland,46.4,29.3,24.3,Home Win,1 - 0,1,0,-,Upcoming
+32,2027-04-17,15:00,Brentford,Leeds,42.4,32.9,24.8,Home Win,1 - 0,1,0,-,Upcoming
+32,2027-04-17,15:00,Nottingham Forest,Liverpool,26.3,31.2,42.5,Away Win,0 - 1,0,1,-,Upcoming
+32,2027-04-17,15:00,Hull,Coventry,43.2,34.9,21.9,Home Win,1 - 0,1,0,-,Upcoming
+32,2027-04-17,15:00,Arsenal,Aston Villa,55.1,24.8,20.1,Home Win,2 - 1,2,1,-,Upcoming
+32,2027-04-17,15:00,Ipswich,Manchester United,14.2,27.7,58.1,Away Win,0 - 2,0,2,-,Upcoming
+32,2027-04-17,15:00,Manchester City,Crystal Palace,63.4,24.4,12.2,Home Win,2 - 0,2,0,-,Upcoming
+32,2027-04-17,15:00,Newcastle,Tottenham,47.4,30.4,22.2,Home Win,1 - 0,1,0,-,Upcoming
+32,2027-04-17,15:00,Everton,Bournemouth,29.8,29.0,41.2,Draw,1 - 1,1,1,-,Upcoming
+33,2027-04-24,15:00,Chelsea,Manchester City,22.9,31.9,45.2,Away Win,0 - 1,0,1,-,Upcoming
+33,2027-04-24,15:00,Bournemouth,Arsenal,24.5,28.1,47.4,Away Win,0 - 1,0,1,-,Upcoming
+33,2027-04-24,15:00,Tottenham,Hull,53.6,28.3,18.1,Home Win,2 - 0,2,0,-,Upcoming
+33,2027-04-24,15:00,Manchester United,Crystal Palace,50.9,30.8,18.3,Home Win,2 - 1,2,1,-,Upcoming
+33,2027-04-24,15:00,Everton,Brighton,30.7,31.6,37.8,Draw,1 - 1,1,1,-,Upcoming
+33,2027-04-24,15:00,Nottingham Forest,Sunderland,47.1,27.6,25.4,Home Win,2 - 1,2,1,-,Upcoming
+33,2027-04-24,15:00,Newcastle,Ipswich,54.4,28.2,17.4,Home Win,2 - 0,2,0,-,Upcoming
+33,2027-04-24,15:00,Aston Villa,Coventry,60.2,25.6,14.1,Home Win,2 - 0,2,0,-,Upcoming
+33,2027-04-24,15:00,Brentford,Fulham,36.3,36.7,27.0,Draw,1 - 1,1,1,-,Upcoming
+33,2027-04-24,15:00,Leeds,Liverpool,22.2,31.4,46.5,Away Win,0 - 1,0,1,-,Upcoming
+34,2027-05-01,15:00,Sunderland,Newcastle,29.9,32.1,38.1,Draw,1 - 1,1,1,-,Upcoming
+34,2027-05-01,15:00,Brighton,Nottingham Forest,44.2,27.6,28.3,Draw,1 - 1,1,1,-,Upcoming
+34,2027-05-01,15:00,Coventry,Manchester United,11.8,29.5,58.7,Away Win,0 - 2,0,2,-,Upcoming
+34,2027-05-01,15:00,Hull,Bournemouth,19.0,31.0,50.0,Away Win,1 - 2,1,2,-,Upcoming
+34,2027-05-01,15:00,Manchester City,Brentford,62.4,22.9,14.7,Home Win,2 - 0,2,0,-,Upcoming
+34,2027-05-01,15:00,Fulham,Everton,34.9,30.2,34.9,Draw,1 - 1,1,1,-,Upcoming
+34,2027-05-01,15:00,Liverpool,Chelsea,55.8,25.2,19.0,Home Win,2 - 0,2,0,-,Upcoming
+34,2027-05-01,15:00,Arsenal,Tottenham,61.6,23.6,14.8,Home Win,2 - 0,2,0,-,Upcoming
+34,2027-05-01,15:00,Crystal Palace,Aston Villa,26.8,31.4,41.8,Draw,1 - 1,1,1,-,Upcoming
+34,2027-05-01,15:00,Ipswich,Leeds,20.8,30.9,48.3,Away Win,0 - 1,0,1,-,Upcoming
+35,2027-05-08,15:00,Manchester City,Liverpool,54.6,25.0,20.4,Home Win,2 - 1,2,1,-,Upcoming
+35,2027-05-08,15:00,Leeds,Arsenal,16.8,28.0,55.2,Away Win,0 - 2,0,2,-,Upcoming
+35,2027-05-08,15:00,Fulham,Ipswich,51.8,27.6,20.6,Home Win,2 - 0,2,0,-,Upcoming
+35,2027-05-08,15:00,Nottingham Forest,Crystal Palace,38.2,33.4,28.4,Draw,1 - 1,1,1,-,Upcoming
+35,2027-05-08,15:00,Brentford,Aston Villa,31.3,33.8,34.9,Draw,1 - 1,1,1,-,Upcoming
+35,2027-05-08,15:00,Newcastle,Coventry,58.3,26.3,15.4,Home Win,2 - 0,2,0,-,Upcoming
+35,2027-05-08,15:00,Brighton,Sunderland,50.7,28.7,20.6,Home Win,2 - 1,2,1,-,Upcoming
+35,2027-05-08,15:00,Tottenham,Chelsea,29.5,30.2,40.3,Draw,1 - 1,1,1,-,Upcoming
+35,2027-05-08,15:00,Everton,Hull,50.5,31.5,17.9,Home Win,2 - 0,2,0,-,Upcoming
+35,2027-05-08,15:00,Bournemouth,Manchester United,32.6,30.3,37.2,Draw,1 - 1,1,1,-,Upcoming
+36,2027-05-15,15:00,Hull,Fulham,21.4,34.4,44.2,Away Win,0 - 1,0,1,-,Upcoming
+36,2027-05-15,15:00,Manchester United,Leeds,53.7,27.5,18.7,Home Win,2 - 0,2,0,-,Upcoming
+36,2027-05-15,15:00,Crystal Palace,Brighton,24.5,31.6,43.9,Away Win,1 - 2,1,2,-,Upcoming
+36,2027-05-15,15:00,Aston Villa,Newcastle,49.1,27.6,23.2,Home Win,1 - 0,1,0,-,Upcoming
+36,2027-05-15,15:00,Chelsea,Everton,43.7,31.6,24.7,Home Win,1 - 0,1,0,-,Upcoming
+36,2027-05-15,15:00,Coventry,Tottenham,18.2,31.6,50.2,Away Win,0 - 1,0,1,-,Upcoming
+36,2027-05-15,15:00,Sunderland,Bournemouth,27.4,31.3,41.3,Draw,1 - 1,1,1,-,Upcoming
+36,2027-05-15,15:00,Liverpool,Brentford,58.7,23.0,18.3,Home Win,2 - 0,2,0,-,Upcoming
+36,2027-05-15,15:00,Ipswich,Manchester City,10.9,24.4,64.7,Away Win,0 - 2,0,2,-,Upcoming
+36,2027-05-15,15:00,Arsenal,Nottingham Forest,58.6,23.4,18.0,Home Win,2 - 1,2,1,-,Upcoming
+37,2027-05-23,15:00,Brentford,Hull,49.1,32.1,18.7,Home Win,1 - 0,1,0,-,Upcoming
+37,2027-05-23,15:00,Newcastle,Crystal Palace,48.9,31.7,19.4,Home Win,2 - 0,2,0,-,Upcoming
+37,2027-05-23,15:00,Tottenham,Manchester United,25.3,31.9,42.8,Away Win,0 - 1,0,1,-,Upcoming
+37,2027-05-23,15:00,Leeds,Sunderland,40.8,33.3,25.9,Draw,1 - 1,1,1,-,Upcoming
+37,2027-05-23,15:00,Brighton,Liverpool,34.8,28.9,36.2,Draw,1 - 1,1,1,-,Upcoming
+37,2027-05-23,15:00,Nottingham Forest,Ipswich,53.7,26.6,19.8,Home Win,2 - 0,2,0,-,Upcoming
+37,2027-05-23,15:00,Bournemouth,Chelsea,44.0,30.1,26.0,Home Win,1 - 0,1,0,-,Upcoming
+37,2027-05-23,15:00,Fulham,Coventry,53.6,28.2,18.1,Home Win,2 - 0,2,0,-,Upcoming
+37,2027-05-23,15:00,Everton,Arsenal,16.2,29.2,54.6,Away Win,0 - 2,0,2,-,Upcoming
+37,2027-05-23,15:00,Manchester City,Aston Villa,56.7,24.5,18.8,Home Win,2 - 1,2,1,-,Upcoming
+38,2027-05-30,16:00,Ipswich,Everton,19.9,29.6,50.5,Away Win,0 - 1,0,1,-,Upcoming
+38,2027-05-30,15:00,Arsenal,Brighton,54.5,25.2,20.3,Home Win,2 - 1,2,1,-,Upcoming
+38,2027-05-30,15:00,Liverpool,Bournemouth,57.0,24.2,18.8,Home Win,2 - 0,2,0,-,Upcoming
+38,2027-05-30,15:00,Coventry,Nottingham Forest,17.1,29.8,53.1,Away Win,0 - 1,0,1,-,Upcoming
+38,2027-05-30,15:00,Aston Villa,Tottenham,47.9,27.9,24.2,Home Win,2 - 0,2,0,-,Upcoming
+38,2027-05-30,15:00,Hull,Newcastle,18.8,28.3,52.9,Away Win,1 - 2,1,2,-,Upcoming
+38,2027-05-30,15:00,Manchester United,Fulham,50.4,28.5,21.1,Home Win,2 - 1,2,1,-,Upcoming
+38,2027-05-30,15:00,Sunderland,Manchester City,16.1,28.2,55.7,Away Win,0 - 2,0,2,-,Upcoming
+38,2027-05-30,15:00,Chelsea,Brentford,44.8,31.6,23.5,Home Win,1 - 0,1,0,-,Upcoming
+38,2027-05-30,15:00,Crystal Palace,Leeds,38.5,32.7,28.8,Draw,1 - 1,1,1,-,Upcoming

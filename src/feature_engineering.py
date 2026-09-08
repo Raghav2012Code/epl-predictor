@@ -88,34 +88,80 @@ def compute_dynamic_elo(
     initial_ratings: Optional[Dict[str, float]] = None,
     home_adv: float = 65.0,
     k_base: float = 20.0,
-) -> Tuple[List[float], List[float], List[float], Dict[str, float]]:
-    """Calculates chronological pre-match Elo ratings with zero leakage.
+) -> Tuple[
+    List[float],
+    List[float],
+    List[float],
+    Dict[str, List[float]],
+    Dict[str, float],
+    Dict[str, List[float]],
+]:
+    """Calculates chronological pre-match Elo ratings and momentum trajectories with zero leakage.
+
+    Features:
+        - Dynamic streak momentum acceleration: Teams on active streaks receive amplified K updates.
+        - Inter-season regression to the mean (15% reversion to base Elo, streak reset).
+        - Multi-window Elo velocity (3-match and 5-match rolling rate of change).
+        - Non-linear goal margin scaling.
 
     Returns:
         home_elos: Pre-match Elo for home team for each row.
         away_elos: Pre-match Elo for away team for each row.
         elo_diffs: Pre-match (home_elo + home_adv - away_elo) for each row.
+        momentum_dict: Pre-match 3-match and 5-match Elo momentum features.
         current_ratings: Final Elo state after all matches played.
+        rating_histories: Chronological history of pre-match Elo ratings per club.
     """
     ratings: Dict[str, float] = dict(initial_ratings) if initial_ratings else dict(BASE_ELO)
+    rating_histories: Dict[str, List[float]] = {t: [] for t in BASE_ELO.keys()}
+    streaks: Dict[str, int] = {t: 0 for t in BASE_ELO.keys()}
 
     n_matches = len(matches_df)
     if n_matches == 0:
-        return [], [], [], ratings
+        empty_mom = {
+            "home_elo_momentum_3": [],
+            "away_elo_momentum_3": [],
+            "diff_elo_momentum_3": [],
+            "home_elo_momentum_5": [],
+            "away_elo_momentum_5": [],
+            "diff_elo_momentum_5": [],
+        }
+        return [], [], [], empty_mom, ratings, rating_histories
 
     home_elos: List[float] = [0.0] * n_matches
     away_elos: List[float] = [0.0] * n_matches
     elo_diffs: List[float] = [0.0] * n_matches
 
+    h_mom_3: List[float] = [0.0] * n_matches
+    a_mom_3: List[float] = [0.0] * n_matches
+    diff_mom_3: List[float] = [0.0] * n_matches
+
+    h_mom_5: List[float] = [0.0] * n_matches
+    a_mom_5: List[float] = [0.0] * n_matches
+    diff_mom_5: List[float] = [0.0] * n_matches
+
     ht_arr = matches_df["home_team"].values
     at_arr = matches_df["away_team"].values
+    season_arr = matches_df["season"].values if "season" in matches_df.columns else None
     has_goals = "home_goals" in matches_df.columns and "away_goals" in matches_df.columns
     hg_arr = matches_df["home_goals"].values if has_goals else None
     ag_arr = matches_df["away_goals"].values if has_goals else None
 
+    last_season = season_arr[0] if season_arr is not None and len(season_arr) > 0 else None
+
     for i in range(n_matches):
         ht = ht_arr[i]
         at = at_arr[i]
+
+        # Handle off-season mean reversion between seasons
+        if season_arr is not None:
+            curr_season = season_arr[i]
+            if curr_season != last_season:
+                for team in ratings:
+                    base = BASE_ELO.get(team, 1420.0)
+                    ratings[team] = 0.85 * ratings[team] + 0.15 * base
+                    streaks[team] = 0
+                last_season = curr_season
 
         rh = ratings.get(ht, BASE_ELO.get(ht, 1420.0))
         ra = ratings.get(at, BASE_ELO.get(at, 1420.0))
@@ -124,6 +170,30 @@ def compute_dynamic_elo(
         home_elos[i] = rh
         away_elos[i] = ra
         elo_diffs[i] = (rh + home_adv) - ra
+
+        # Compute pre-match Elo momentum (rate of change over past matches)
+        h_hist = rating_histories.get(ht, [])
+        a_hist = rating_histories.get(at, [])
+
+        h_m3 = (rh - h_hist[-3]) if len(h_hist) >= 3 else (rh - BASE_ELO.get(ht, 1420.0))
+        a_m3 = (ra - a_hist[-3]) if len(a_hist) >= 3 else (ra - BASE_ELO.get(at, 1420.0))
+        h_mom_3[i] = round(h_m3, 2)
+        a_mom_3[i] = round(a_m3, 2)
+        diff_mom_3[i] = round(h_m3 - a_m3, 2)
+
+        h_m5 = (rh - h_hist[-5]) if len(h_hist) >= 5 else (rh - BASE_ELO.get(ht, 1420.0))
+        a_m5 = (ra - a_hist[-5]) if len(a_hist) >= 5 else (ra - BASE_ELO.get(at, 1420.0))
+        h_mom_5[i] = round(h_m5, 2)
+        a_mom_5[i] = round(a_m5, 2)
+        diff_mom_5[i] = round(h_m5 - a_m5, 2)
+
+        # Update rating history before match is played (zero-leakage)
+        if ht not in rating_histories:
+            rating_histories[ht] = []
+        if at not in rating_histories:
+            rating_histories[at] = []
+        rating_histories[ht].append(rh)
+        rating_histories[at].append(ra)
 
         # If match was played with valid score, update Elo for subsequent matches
         if has_goals:
@@ -142,12 +212,50 @@ def compute_dynamic_elo(
 
                 margin = abs(hg_val - ag_val)
                 g_mult = 1.0 if margin <= 1 else (1.5 if margin == 2 else 1.75 + (margin - 3) / 8.0)
-                k = k_base * g_mult
 
-                ratings[ht] = rh + k * (sh - eh)
-                ratings[at] = ra + k * (sa - ea)
+                # Streak momentum multiplier
+                h_streak = streaks.get(ht, 0)
+                a_streak = streaks.get(at, 0)
 
-    return home_elos, away_elos, elo_diffs, ratings
+                h_streak_mult = 1.0
+                if sh == 1.0 and h_streak >= 2:
+                    h_streak_mult += min(0.35, 0.08 * (h_streak - 1))
+                elif sh == 0.0 and h_streak <= -2:
+                    h_streak_mult += min(0.35, 0.08 * (abs(h_streak) - 1))
+
+                a_streak_mult = 1.0
+                if sa == 1.0 and a_streak >= 2:
+                    a_streak_mult += min(0.35, 0.08 * (a_streak - 1))
+                elif sa == 0.0 and a_streak <= -2:
+                    a_streak_mult += min(0.35, 0.08 * (abs(a_streak) - 1))
+
+                k_h = k_base * g_mult * h_streak_mult
+                k_a = k_base * g_mult * a_streak_mult
+
+                ratings[ht] = rh + k_h * (sh - eh)
+                ratings[at] = ra + k_a * (sa - ea)
+
+                # Update streaks
+                if sh == 1.0:
+                    streaks[ht] = h_streak + 1 if h_streak > 0 else 1
+                    streaks[at] = a_streak - 1 if a_streak < 0 else -1
+                elif sa == 1.0:
+                    streaks[at] = a_streak + 1 if a_streak > 0 else 1
+                    streaks[ht] = h_streak - 1 if h_streak < 0 else -1
+                else:
+                    streaks[ht] = 0
+                    streaks[at] = 0
+
+    momentum_dict = {
+        "home_elo_momentum_3": h_mom_3,
+        "away_elo_momentum_3": a_mom_3,
+        "diff_elo_momentum_3": diff_mom_3,
+        "home_elo_momentum_5": h_mom_5,
+        "away_elo_momentum_5": a_mom_5,
+        "diff_elo_momentum_5": diff_mom_5,
+    }
+
+    return home_elos, away_elos, elo_diffs, momentum_dict, ratings, rating_histories
 
 
 def transform_matches_to_team_perspective(df: pd.DataFrame) -> pd.DataFrame:
@@ -340,11 +448,13 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
     home_subset = home_feats[["match_id"] + feat_cols].rename(columns=home_rename)
     away_subset = away_feats[["match_id"] + feat_cols].rename(columns=away_rename)
 
-    # 2. Compute dynamic Elo ratings
-    home_elos, away_elos, elo_diffs, _ = compute_dynamic_elo(raw_matches)
+    # 2. Compute dynamic Elo ratings and momentum features
+    home_elos, away_elos, elo_diffs, elo_mom, _, _ = compute_dynamic_elo(raw_matches)
     raw_matches["home_elo"] = home_elos
     raw_matches["away_elo"] = away_elos
     raw_matches["elo_diff"] = elo_diffs
+    for k, vals in elo_mom.items():
+        raw_matches[k] = vals
 
     # 3. Compute H2H features
     matches_with_h2h = compute_head_to_head_features(raw_matches)
@@ -383,8 +493,18 @@ def get_feature_column_names() -> List[str]:
     """Returns the ordered list of predictive feature column names."""
     cols: List[str] = []
 
-    # Elo rating features
-    cols.extend(["home_elo", "away_elo", "elo_diff"])
+    # Elo rating and momentum features
+    cols.extend([
+        "home_elo",
+        "away_elo",
+        "elo_diff",
+        "home_elo_momentum_3",
+        "away_elo_momentum_3",
+        "diff_elo_momentum_3",
+        "home_elo_momentum_5",
+        "away_elo_momentum_5",
+        "diff_elo_momentum_5",
+    ])
 
     # Home & Away rolling metrics
     for side in ["home", "away"]:
@@ -436,12 +556,25 @@ def build_fixture_features(
         row["home_elo"] = h_base
         row["away_elo"] = a_base
         row["elo_diff"] = (h_base + 65.0) - a_base
+        row["home_elo_momentum_3"] = 0.0
+        row["away_elo_momentum_3"] = 0.0
+        row["diff_elo_momentum_3"] = 0.0
+        row["home_elo_momentum_5"] = 0.0
+        row["away_elo_momentum_5"] = 0.0
+        row["diff_elo_momentum_5"] = 0.0
         return pd.DataFrame([row])[feature_cols]
 
-    # Compute current dynamic Elo from history up to match date
-    _, _, _, current_ratings = compute_dynamic_elo(history)
+    # Compute current dynamic Elo and rating history up to match date
+    _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
     h_elo = current_ratings.get(home_team, BASE_ELO.get(home_team, 1420.0))
     a_elo = current_ratings.get(away_team, BASE_ELO.get(away_team, 1420.0))
+
+    h_hist = rating_histories.get(home_team, [])
+    a_hist = rating_histories.get(away_team, [])
+    h_m3 = (h_elo - h_hist[-3]) if len(h_hist) >= 3 else (h_elo - BASE_ELO.get(home_team, 1420.0))
+    a_m3 = (a_elo - a_hist[-3]) if len(a_hist) >= 3 else (a_elo - BASE_ELO.get(away_team, 1420.0))
+    h_m5 = (h_elo - h_hist[-5]) if len(h_hist) >= 5 else (h_elo - BASE_ELO.get(home_team, 1420.0))
+    a_m5 = (a_elo - a_hist[-5]) if len(a_hist) >= 5 else (a_elo - BASE_ELO.get(away_team, 1420.0))
 
     # Convert to team perspective
     team_df = transform_matches_to_team_perspective(history)
@@ -529,10 +662,16 @@ def build_fixture_features(
 
     feature_dict: Dict[str, float] = {}
 
-    # Elo features
+    # Elo and momentum features
     feature_dict["home_elo"] = h_elo
     feature_dict["away_elo"] = a_elo
     feature_dict["elo_diff"] = (h_elo + 65.0) - a_elo
+    feature_dict["home_elo_momentum_3"] = round(h_m3, 2)
+    feature_dict["away_elo_momentum_3"] = round(a_m3, 2)
+    feature_dict["diff_elo_momentum_3"] = round(h_m3 - a_m3, 2)
+    feature_dict["home_elo_momentum_5"] = round(h_m5, 2)
+    feature_dict["away_elo_momentum_5"] = round(a_m5, 2)
+    feature_dict["diff_elo_momentum_5"] = round(h_m5 - a_m5, 2)
 
     for k, v in h_stats.items():
         feature_dict[f"home_{k}"] = v

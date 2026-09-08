@@ -128,7 +128,16 @@ def test_fixture_feature_extraction():
     assert "home_elo" in feat_row.columns
     assert "away_elo" in feat_row.columns
     assert "elo_diff" in feat_row.columns
+    assert "home_elo_momentum_3" in feat_row.columns
+    assert "away_elo_momentum_3" in feat_row.columns
+    assert "diff_elo_momentum_3" in feat_row.columns
+    assert "home_elo_momentum_5" in feat_row.columns
+    assert "away_elo_momentum_5" in feat_row.columns
+    assert "diff_elo_momentum_5" in feat_row.columns
     assert feat_row["home_elo"].values[0] > feat_row["away_elo"].values[0]
+    # Arsenal won 10 in a row vs Chelsea in records, so home momentum is positive
+    assert feat_row["home_elo_momentum_3"].values[0] > 0
+    assert feat_row["diff_elo_momentum_3"].values[0] > 0
 
 
 def test_model_training_and_inference():
