@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a0a33"/>
+      <stop offset="0.55" stop-color="#38003c"/>
+      <stop offset="1" stop-color="#6c0c77"/>
+    </linearGradient>
+  </defs>
+  <!-- App tile -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tile)"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="13" fill="none" stroke="#6c0c77" stroke-width="1.5" opacity="0.9"/>
+  <!-- Pitch mark, Lucide stroke language: round caps, geometric -->
+  <g fill="none" stroke="#00ff85" stroke-width="3.5" stroke-linecap="round">
+    <!-- Touchline -->
+    <rect x="14" y="12" width="36" height="40" rx="2"/>
+    <!-- Halfway line -->
+    <line x1="14" y1="32" x2="50" y2="32"/>
+    <!-- Centre circle -->
+    <circle cx="32" cy="32" r="8.5"/>
+  </g>
+  <!-- Match ball: centre spot -->
+  <circle cx="32" cy="32" r="4" fill="#f3f5f8"/>
+  <circle cx="32" cy="32" r="4" fill="none" stroke="#38003c" stroke-width="1" opacity="0.55"/>
+</svg>
