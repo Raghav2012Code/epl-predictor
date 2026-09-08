@@ -115,6 +115,26 @@ pip install -r requirements.txt
 
 ---
 
+## 🌐 Interactive Web Dashboard
+
+A broadcast-grade dark mode dashboard built in **React 18, TypeScript, Tailwind CSS, and Lucide Icons**. Features live 2026/27 fixture forecasts, an interactive H2H arena with real-time What-If scenario sandbox sliders, projected league standings, and ML diagnostics.
+
+### Launching the Dashboard:
+```powershell
+cd web
+npm install
+npm run dev
+```
+Open **`http://localhost:5173`** in your browser.
+
+### Key Views:
+* **Fixtures & Predictions**: Filter all 38 gameweeks, view live probability bars, predicted scores, and click any fixture to open the match intelligence drawer.
+* **H2H Arena & What-If Sandbox**: Pick any two clubs with live expected goals ($xG$), outcome odds, and real-time sliders to tweak rest fatigue and form momentum.
+* **Table Projection**: Projected 38-game Premier League table with European/relegation zones.
+* **Model Intelligence**: Benchmarks, feature importance rankings, and full-resolution diagnostic visualizer.
+
+---
+
 ## 💻 CLI Usage
 
 ### Run the Full Pipeline

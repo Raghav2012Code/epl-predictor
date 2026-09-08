@@ -21,10 +21,13 @@ elegant-franklin/
 │   ├── predictions_2026_2027.csv  # 380 fixture forecasts with probabilities and scorelines
 │   └── predictions_2026_2027.md   # Markdown table of predictions by gameweek
 ├── visuals/                       # Generated Matplotlib diagnostic charts (PNG)
-│   ├── feature_importance.png
-│   ├── confusion_matrix.png
-│   ├── model_metrics_comparison.png
-│   └── goal_error_distribution.png
+├── web/                           # Standalone React 18 + TS + Tailwind CSS dashboard
+│   ├── src/
+│   │   ├── components/            # Navbar, GameweekView, MatchSimulator, Standings, Analytics
+│   │   ├── data/eplData.json      # Serialized 380 fixtures, teams, benchmarks
+│   │   └── types/                 # TypeScript data contracts
+│   └── package.json
+├── export_web_data.py             # Serializer from Python pipeline to web/src/data/eplData.json
 ├── src/
 │   ├── __init__.py
 │   ├── data_loader.py             # Ingestion, openfootball text parser, alias normalization
