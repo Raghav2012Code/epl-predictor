@@ -4,15 +4,15 @@
 
 @layer base {
   * {
-    border-color: #1e222b;
+    border-color: #1a1f2c;
   }
   html {
     scroll-behavior: smooth;
   }
   body {
-    background-color: #090a0f;
+    background-color: #08090c;
     color: #f8fafc;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
@@ -20,8 +20,8 @@
     color: #08090b;
   }
   :focus-visible {
-    outline: 2px solid #00ff85;
-    outline-offset: 2px;
+    outline: 1px solid #00ff85;
+    outline-offset: 1px;
   }
 }
 
@@ -34,19 +34,25 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+  .hairline-border {
+    border-color: #1a1f2c;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-/* Custom crisp dark scrollbar */
+/* Custom crisp dark terminal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0f;
+  background: #08090c;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e222b;
-  border-radius: 2px;
+  background: #1a1f2c;
+  border-radius: 0px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #00ff85;
