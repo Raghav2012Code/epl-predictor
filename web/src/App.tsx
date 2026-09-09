@@ -115,7 +115,7 @@ export const App: React.FC = () => {
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
 
-            <span className="text-border">|</span>
+            <span className="text-text-muted/40">|</span>
 
             <span className="inline-flex items-center text-text-muted text-[11px]">
               <Terminal className="mr-1 h-3 w-3 text-brand-accent" />

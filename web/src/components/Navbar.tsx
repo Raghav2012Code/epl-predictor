@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Activity className="mr-1.5 h-3 w-3 text-brand-accent" />
               OFFICIAL FIXTURES & DATA ENGINE
             </span>
-            <span className="hidden sm:inline text-border">|</span>
+            <span className="hidden sm:inline text-text-muted/40">|</span>
             <span className="hidden sm:inline">DATA SOURCE: OPENFOOTBALL & HISTORICAL EPL STATS</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -71,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               placeholder="Search club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search club"
               className="w-full rounded-md border border-border bg-surface px-2.5 py-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary font-sans"
             />
           </div>

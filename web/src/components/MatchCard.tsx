@@ -53,7 +53,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         {/* Home Club */}
         <div className="col-span-5 flex items-center space-x-2">
           <div
-            className="h-7 w-1 rounded-none flex-shrink-0"
+            className="h-7 w-1 rounded-none flex-shrink-0 ring-1 ring-white/15"
             style={{ backgroundColor: fixture.homeColor }}
           />
           <div className="min-w-0">
@@ -87,7 +87,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             </div>
           </div>
           <div
-            className="h-7 w-1 rounded-none flex-shrink-0"
+            className="h-7 w-1 rounded-none flex-shrink-0 ring-1 ring-white/15"
             style={{ backgroundColor: fixture.awayColor }}
           />
         </div>

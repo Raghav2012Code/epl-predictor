@@ -48,6 +48,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
           <button
             onClick={() => setCurrentGW((prev) => Math.max(1, prev - 1))}
             disabled={currentGW === 1}
+            aria-label="Previous gameweek"
             className="flex h-7 w-7 items-center justify-center rounded-sm border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:bg-surface-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -73,6 +74,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
           <button
             onClick={() => setCurrentGW((prev) => Math.min(38, prev + 1))}
             disabled={currentGW === 38}
+            aria-label="Next gameweek"
             className="flex h-7 w-7 items-center justify-center rounded-sm border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:bg-surface-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
@@ -149,6 +151,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             </div>
             <button
               onClick={() => setSelectedFixture(null)}
+              aria-label="Close match intelligence drawer"
               className="rounded-sm border border-border p-1 text-text-muted hover:text-text-primary hover:bg-surface-hover"
             >
               <X className="h-4 w-4" />

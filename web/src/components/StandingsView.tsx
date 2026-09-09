@@ -186,7 +186,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                   <td className="py-2.5 px-3 font-sans font-bold text-text-primary">
                     <div className="flex items-center space-x-2">
                       <div
-                        className="w-1.5 h-3 flex-shrink-0"
+                        className="w-1.5 h-3 flex-shrink-0 ring-1 ring-white/15"
                         style={{ backgroundColor: row.color }}
                       />
                       <span className="group-hover:text-brand-accent transition-colors truncate">
