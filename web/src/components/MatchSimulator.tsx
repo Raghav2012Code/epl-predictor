@@ -336,6 +336,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   max="14"
                   value={homeRestDays}
                   onChange={(e) => setHomeRestDays(Number(e.target.value))}
+                  aria-label={`${home.name} rest days`}
                   className="w-full accent-brand-primary cursor-pointer bg-background"
                 />
               </div>
@@ -352,6 +353,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   max="14"
                   value={awayRestDays}
                   onChange={(e) => setAwayRestDays(Number(e.target.value))}
+                  aria-label={`${away.name} rest days`}
                   className="w-full accent-brand-accent cursor-pointer bg-background"
                 />
               </div>
@@ -360,7 +362,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{home.name} Form Momentum:</span>
-                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-red-300' : 'text-text-muted'}`}>
                     {homeFormBoost > 0 ? `+${homeFormBoost}%` : `${homeFormBoost}%`}
                   </span>
                 </div>
@@ -371,6 +373,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   step="5"
                   value={homeFormBoost}
                   onChange={(e) => setHomeFormBoost(Number(e.target.value))}
+                  aria-label={`${home.name} form momentum boost`}
                   className="w-full accent-brand-primary cursor-pointer bg-background"
                 />
               </div>
@@ -379,7 +382,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{away.name} Form Momentum:</span>
-                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-red-300' : 'text-text-muted'}`}>
                     {awayFormBoost > 0 ? `+${awayFormBoost}%` : `${awayFormBoost}%`}
                   </span>
                 </div>
@@ -390,6 +393,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   step="5"
                   value={awayFormBoost}
                   onChange={(e) => setAwayFormBoost(Number(e.target.value))}
+                  aria-label={`${away.name} form momentum boost`}
                   className="w-full accent-brand-accent cursor-pointer bg-background"
                 />
               </div>

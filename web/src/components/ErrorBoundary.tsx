@@ -94,7 +94,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 </button>
 
                 {showDetails && (
-                  <div className="mt-2 p-3 bg-background border border-border-subtle rounded-sm font-mono text-[11px] text-red-400 overflow-x-auto space-y-2 max-h-56">
+                  <div className="mt-2 p-3 bg-background border border-border-subtle rounded-sm font-mono text-[11px] text-red-300 overflow-x-auto space-y-2 max-h-56">
                     <div className="font-bold">{error.toString()}</div>
                     {errorInfo?.componentStack && (
                       <pre className="text-[10px] text-text-muted whitespace-pre-wrap">
