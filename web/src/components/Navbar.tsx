@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Activity className="mr-1.5 h-3 w-3 text-brand-accent" />
               OFFICIAL FIXTURES & DATA ENGINE
             </span>
-            <span className="hidden sm:inline text-text-muted/40">|</span>
+            <span className="hidden sm:inline text-text-muted" aria-hidden="true">|</span>
             <span className="hidden sm:inline">DATA SOURCE: OPENFOOTBALL & HISTORICAL EPL STATS</span>
           </div>
           <div className="flex items-center space-x-2">

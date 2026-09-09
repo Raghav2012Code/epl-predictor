@@ -391,7 +391,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             </div>
             <div className="text-xs text-text-muted font-mono flex items-center justify-between gap-2 flex-wrap">
               <span>{currentChart.caption}</span>
-              <span className="text-[10px] text-text-muted/60">Source: {currentChart.src}</span>
+              <span className="text-[10px] text-text-muted">Source: {currentChart.src}</span>
             </div>
           </div>
         )}
