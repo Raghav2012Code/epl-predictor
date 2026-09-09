@@ -104,12 +104,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           />
           <div
             style={{ width: `${fixture.drawProb}%` }}
-            className="bg-slate-600 transition-all"
+            className="bg-zinc-700 transition-all"
             title={`Draw: ${fixture.drawProb}%`}
           />
           <div
             style={{ width: `${fixture.awayWinProb}%` }}
-            className="bg-sky-400 transition-all"
+            className="bg-zinc-400 transition-all"
             title={`Away Win: ${fixture.awayWinProb}%`}
           />
         </div>
@@ -118,8 +118,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="flex items-center justify-between mt-1 text-[9px] font-mono">
           <div className="flex items-center space-x-2">
             <span className="text-brand-accent font-bold">H {fixture.homeWinProb}%</span>
-            <span className="text-slate-400 font-bold">D {fixture.drawProb}%</span>
-            <span className="text-sky-400 font-bold">A {fixture.awayWinProb}%</span>
+            <span className="text-zinc-400 font-bold">D {fixture.drawProb}%</span>
+            <span className="text-zinc-300 font-bold">A {fixture.awayWinProb}%</span>
           </div>
           <div className="flex items-center text-text-primary">
             <span className="text-text-muted mr-1">FAV:</span>
@@ -127,8 +127,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               fixture.predictedOutcome === 'Home Win'
                 ? 'text-brand-accent'
                 : fixture.predictedOutcome === 'Away Win'
-                ? 'text-sky-400'
-                : 'text-slate-300'
+                ? 'text-zinc-300'
+                : 'text-zinc-400'
             }`}>
               {fixture.predictedOutcome.toUpperCase()}
             </span>

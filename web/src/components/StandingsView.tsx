@@ -166,7 +166,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
               // Sparkline points coordinate calculation (GW0 to GW38)
               const maxPts = 100;
               const yEnd = Math.max(2, 16 - (row.points / maxPts) * 14);
-              const strokeColor = isUCL ? '#00ff85' : isRel ? '#f43f5e' : '#94a3b8';
+              const strokeColor = isUCL ? '#ffffff' : isRel ? '#71717a' : '#a1a1aa';
 
               return (
                 <tr
@@ -174,11 +174,11 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                   onClick={() => onSelectTeam && onSelectTeam(row.team)}
                   className={`group transition-colors cursor-pointer ${
                     isUCL
-                      ? 'border-l-2 border-l-blue-400 bg-blue-950/10 hover:bg-surface-hover'
+                      ? 'border-l-2 border-l-white bg-surface-subtle hover:bg-surface-hover'
                       : isUEL
-                      ? 'border-l-2 border-l-amber-400 bg-amber-950/10 hover:bg-surface-hover'
+                      ? 'border-l-2 border-l-zinc-500 bg-surface-subtle/60 hover:bg-surface-hover'
                       : isRel
-                      ? 'border-l-2 border-l-rose-500 bg-rose-950/10 hover:bg-surface-hover'
+                      ? 'border-l-2 border-l-zinc-700 bg-surface-subtle/30 hover:bg-surface-hover'
                       : 'border-l-2 border-l-transparent hover:bg-surface-hover'
                   }`}
                 >
@@ -210,9 +210,9 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                   {/* Color-coded Goal Difference */}
                   <td className="py-2 px-2.5 text-center font-bold tabular-nums">
                     {row.gd > 0 ? (
-                      <span className="text-emerald-400">+{row.gd}</span>
+                      <span className="text-white font-bold">+{row.gd}</span>
                     ) : row.gd < 0 ? (
-                      <span className="text-rose-400">{row.gd}</span>
+                      <span className="text-zinc-400 font-bold">{row.gd}</span>
                     ) : (
                       <span className="text-text-muted">0</span>
                     )}
@@ -247,10 +247,10 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                           key={i}
                           className={`w-4 h-4 flex items-center justify-center font-bold rounded-none border ${
                             res === 'W'
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              ? 'bg-white text-black border-white'
                               : res === 'D'
-                              ? 'bg-slate-600/30 text-slate-300 border-slate-500/40'
-                              : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                              : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                           }`}
                         >
                           {res}

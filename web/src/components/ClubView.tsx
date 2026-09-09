@@ -176,8 +176,8 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
             return (
               <g key={p.gw}>
                 <title>{`GW${p.gw}: scored ${p.gf}, conceded ${p.ga}`}</title>
-                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#00ff85" opacity="0.9" />
-                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#475569" opacity="0.85" />
+                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#ffffff" opacity="0.9" />
+                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#52525b" opacity="0.85" />
                 {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
                   <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#818e9f" fontFamily="monospace">
                     {p.gw}
@@ -288,10 +288,10 @@ export const ClubView: React.FC<ClubViewProps> = ({
                     key={i}
                     className={`w-5 h-4 flex items-center justify-center font-bold border ${
                       r === 'W'
-                        ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                        ? 'bg-white text-black border-white'
                         : r === 'D'
-                        ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
-                        : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
+                        ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                        : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                     }`}
                   >
                     {r}
@@ -447,10 +447,10 @@ export const ClubView: React.FC<ClubViewProps> = ({
                         <span
                           className={`w-5 h-4 flex items-center justify-center font-mono text-[10px] font-bold border flex-shrink-0 ${
                             r === 'W'
-                              ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                              ? 'bg-white text-black border-white'
                               : r === 'D'
-                              ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
-                              : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
+                              ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                              : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                           }`}
                         >
                           {r}

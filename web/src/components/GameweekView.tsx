@@ -236,7 +236,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                     <div className="text-xs font-bold text-text-primary truncate">
                       {activeFixture.awayTeam}
                     </div>
-                    <div className="text-xl font-black text-sky-400 mt-0.5 tabular-nums">
+                    <div className="text-xl font-black text-zinc-300 mt-0.5 tabular-nums">
                       {activeFixture.predAwayGoals}
                     </div>
                     <div className="text-[9px] text-text-muted">
@@ -255,19 +255,19 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                     />
                     <div
                       style={{ width: `${activeFixture.drawProb}%` }}
-                      className="bg-slate-600"
+                      className="bg-zinc-700"
                       title={`Draw: ${activeFixture.drawProb}%`}
                     />
                     <div
                       style={{ width: `${activeFixture.awayWinProb}%` }}
-                      className="bg-sky-400"
+                      className="bg-zinc-400"
                       title={`Away Win: ${activeFixture.awayWinProb}%`}
                     />
                   </div>
                   <div className="flex items-center justify-between mt-1 text-[9px] font-mono">
                     <span className="text-brand-accent font-bold">HOME {activeFixture.homeWinProb}%</span>
-                    <span className="text-slate-400 font-bold">DRAW {activeFixture.drawProb}%</span>
-                    <span className="text-sky-400 font-bold">AWAY {activeFixture.awayWinProb}%</span>
+                    <span className="text-zinc-400 font-bold">DRAW {activeFixture.drawProb}%</span>
+                    <span className="text-zinc-300 font-bold">AWAY {activeFixture.awayWinProb}%</span>
                   </div>
                 </div>
               </div>
@@ -303,10 +303,10 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                             key={i}
                             className={`w-3.5 h-3.5 flex items-center justify-center font-bold text-[8px] rounded-none border ${
                               res === 'W'
-                                ? 'bg-brand-primary text-white border-brand-primary'
+                                ? 'bg-white text-black border-white'
                                 : res === 'D'
-                                ? 'bg-slate-700 text-slate-200 border-slate-600'
-                                : 'bg-rose-900/60 text-rose-200 border-rose-800'
+                                ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                             }`}
                           >
                             {res}
@@ -326,10 +326,10 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                             key={i}
                             className={`w-3.5 h-3.5 flex items-center justify-center font-bold text-[8px] rounded-none border ${
                               res === 'W'
-                                ? 'bg-brand-primary text-white border-brand-primary'
+                                ? 'bg-white text-black border-white'
                                 : res === 'D'
-                                ? 'bg-slate-700 text-slate-200 border-slate-600'
-                                : 'bg-rose-900/60 text-rose-200 border-rose-800'
+                                ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                             }`}
                           >
                             {res}
@@ -357,7 +357,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                         style={{
                           width: `${(activeAwayProfile.gfPerMatch / (activeHomeProfile.gfPerMatch + activeAwayProfile.gfPerMatch || 1)) * 100}%`,
                         }}
-                        className="bg-sky-400"
+                        className="bg-zinc-400"
                       />
                     </div>
                   </div>

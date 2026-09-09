@@ -446,10 +446,10 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                       key={i}
                       className={`w-5 h-4 flex items-center justify-center text-[10px] font-bold border ${
                         r === 'W'
-                          ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                          ? 'bg-white text-black border-white'
                           : r === 'D'
-                          ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
-                          : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
+                          ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                          : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                       }`}
                     >
                       {r}
@@ -463,10 +463,10 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                       key={i}
                       className={`w-5 h-4 flex items-center justify-center text-[10px] font-bold border ${
                         r === 'W'
-                          ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                          ? 'bg-white text-black border-white'
                           : r === 'D'
-                          ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
-                          : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
+                          ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                          : 'bg-zinc-950 text-zinc-500 border-zinc-800'
                       }`}
                     >
                       {r}
@@ -505,7 +505,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <div className="space-y-1">
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-text-secondary">Rest Interval:</span>
-                <span className={`font-bold ${homeRestDays < 4 ? 'text-amber-400' : 'text-brand-accent'}`}>
+                <span className={`font-bold ${homeRestDays < 4 ? 'text-zinc-400' : 'text-brand-accent'}`}>
                   {homeRestDays} Days {homeRestDays < 4 && '(Fatigue -12%)'}
                 </span>
               </div>
@@ -529,7 +529,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                 <span className="text-text-secondary">Tactical Momentum Shift:</span>
                 <span
                   className={`font-bold ${
-                    homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-rose-400' : 'text-text-muted'
+                    homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-zinc-400' : 'text-text-muted'
                   }`}
                 >
                   {homeFormBoost > 0 ? `+${homeFormBoost}%` : `${homeFormBoost}%`}
@@ -562,7 +562,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <div className="space-y-1">
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-text-secondary">Rest Interval:</span>
-                <span className={`font-bold ${awayRestDays < 4 ? 'text-amber-400' : 'text-text-secondary'}`}>
+                <span className={`font-bold ${awayRestDays < 4 ? 'text-zinc-400' : 'text-text-secondary'}`}>
                   {awayRestDays} Days {awayRestDays < 4 && '(Fatigue -12%)'}
                 </span>
               </div>
@@ -586,7 +586,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                 <span className="text-text-secondary">Tactical Momentum Shift:</span>
                 <span
                   className={`font-bold ${
-                    awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-rose-400' : 'text-text-muted'
+                    awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-zinc-400' : 'text-text-muted'
                   }`}
                 >
                   {awayFormBoost > 0 ? `+${awayFormBoost}%` : `${awayFormBoost}%`}

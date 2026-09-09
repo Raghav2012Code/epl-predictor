@@ -33,9 +33,9 @@ export const resolveAssetSrc = (src: string): string => {
 };
 
 const DONUT_SEGMENTS = [
-  { key: 'home', label: 'Home Win', color: '#00ff85' },
-  { key: 'draw', label: 'Draw', color: '#64748b' },
-  { key: 'away', label: 'Away Win', color: '#94a3b8' },
+  { key: 'home', label: 'Home Win', color: '#ffffff' },
+  { key: 'draw', label: 'Draw', color: '#71717a' },
+  { key: 'away', label: 'Away Win', color: '#a1a1aa' },
 ] as const;
 
 const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; total: number }> = ({
@@ -131,8 +131,8 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
             return (
               <g key={d.gw}>
                 <title>{`GW${d.gw}: ${d.goals} goals (H ${d.homeGoals} / A ${d.awayGoals}, avg ${d.avgPerMatch}/match)`}</title>
-                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#475569" opacity="0.85" />
-                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#00ff85" opacity="0.9" />
+                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#52525b" opacity="0.85" />
+                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#ffffff" opacity="0.9" />
                 {(d.gw === 1 || d.gw % 5 === 0 || d.gw === 38) && (
                   <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#818e9f" fontFamily="monospace">
                     {d.gw}
