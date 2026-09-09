@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="flex items-center text-text-secondary">
-              <Activity className="mr-1.5 h-3 w-3 text-pl-green" />
+              <Activity className="mr-1.5 h-3 w-3 text-brand-accent" />
               OFFICIAL FIXTURES & DATA ENGINE
             </span>
             <span className="hidden sm:inline text-border">|</span>
@@ -33,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="flex items-center space-x-2">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-border-subtle text-[11px] font-mono text-text-secondary border border-border">
-              <Cpu className="mr-1 h-2.5 w-2.5 text-pl-cyan" />
+              <Cpu className="mr-1 h-2.5 w-2.5 text-brand-accent" />
               RF + XGB DUAL-ENGINE ACTIVE
             </span>
           </div>
@@ -45,15 +45,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between gap-3">
           {/* Brand identity */}
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-pl-purple to-pl-purpleLight border border-pl-purpleLight shadow-inner">
-              <Trophy className="h-5 w-5 text-pl-green" />
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-brand-surface to-brand-primary border border-brand-primary/50 shadow-inner">
+              <Trophy className="h-5 w-5 text-brand-accent" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="font-sans font-black tracking-wider text-text-primary text-sm sm:text-base uppercase truncate">
                   Premier League
                 </span>
-                <span className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-pl-purple/80 border border-pl-purpleLight text-white font-semibold flex-shrink-0">
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-brand-surface border border-brand-accent/40 text-brand-accent font-semibold flex-shrink-0">
                   {season}
                 </span>
               </div>
@@ -71,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               placeholder="Search club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-2.5 py-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-pl-purpleLight focus:outline-none focus:ring-1 focus:ring-pl-purpleLight font-sans"
+              className="w-full rounded-md border border-border bg-surface px-2.5 py-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary font-sans"
             />
           </div>
         </div>
@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-current={activeTab === id ? 'page' : undefined}
               className={`flex flex-shrink-0 items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-md transition-colors min-h-[36px] ${
                 activeTab === id
-                  ? 'bg-pl-purple text-white shadow-sm font-semibold'
+                  ? 'bg-brand-primary text-white shadow-sm font-semibold hover:bg-brand-primaryHover'
                   : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
               }`}
             >
@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search club"
-            className="w-full rounded-md border border-border bg-surface px-2.5 py-2.5 pl-8 text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:border-pl-purpleLight focus:outline-none focus:ring-1 focus:ring-pl-purpleLight font-sans"
+            className="w-full rounded-md border border-border bg-surface px-2.5 py-2.5 pl-8 text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary font-sans"
           />
         </div>
       </div>

@@ -108,7 +108,7 @@ export const App: React.FC = () => {
               href="https://github.com/Raghav2012Code/epl-predictor"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center space-x-1 text-text-secondary hover:text-pl-cyan transition-colors"
+              className="flex items-center space-x-1 text-text-secondary hover:text-brand-accent transition-colors"
             >
               <Github className="h-3.5 w-3.5" />
               <span>GitHub Repository</span>
@@ -118,7 +118,7 @@ export const App: React.FC = () => {
             <span className="text-border">|</span>
 
             <span className="inline-flex items-center text-text-muted text-[11px]">
-              <Terminal className="mr-1 h-3 w-3 text-pl-green" />
+              <Terminal className="mr-1 h-3 w-3 text-brand-accent" />
               CLI: <code className="ml-1 text-text-secondary">python predict.py --gameweek 7</code>
             </span>
           </div>
