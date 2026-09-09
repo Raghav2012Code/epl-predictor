@@ -117,7 +117,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               setHomeTeam(awayTeam);
               setAwayTeam(temp);
             }}
-            className="text-[11px] text-pl-cyan hover:underline flex items-center space-x-1"
+            className="text-[11px] text-brand-accent hover:underline flex items-center space-x-1"
           >
             <span>Swap Sides</span>
           </button>
@@ -132,7 +132,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <select
               value={homeTeam}
               onChange={(e) => setHomeTeam(e.target.value)}
-              className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-pl-purpleLight focus:outline-none"
+              className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {teamNames.map((name) => (
                 <option key={name} value={name} disabled={name === awayTeam}>
@@ -150,7 +150,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <select
               value={awayTeam}
               onChange={(e) => setAwayTeam(e.target.value)}
-              className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-pl-purpleLight focus:outline-none"
+              className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {teamNames.map((name) => (
                 <option key={name} value={name} disabled={name === homeTeam}>
@@ -166,7 +166,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
       <div className="border border-border bg-surface p-6 rounded-sm">
         <div className="flex items-center justify-between border-b border-border pb-3 mb-6">
           <div className="flex items-center space-x-2">
-            <Swords className="h-4 w-4 text-pl-green" />
+            <Swords className="h-4 w-4 text-brand-accent" />
             <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">
               PREDICTED MATCH OUTCOME & EXPECTED GOALS (XG)
             </h2>
@@ -184,7 +184,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <div className="text-xs font-mono text-text-muted mt-0.5">
               Rank #{home.rank} • {home.points} Pts
             </div>
-            <div className="text-xs font-mono text-pl-green font-bold mt-2">
+            <div className="text-xs font-mono text-brand-accent font-bold mt-2">
               Expected xG: {simulation.expHg}
             </div>
           </div>
@@ -205,7 +205,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <div className="text-xs font-mono text-text-muted mt-0.5">
               Rank #{away.rank} • {away.points} Pts
             </div>
-            <div className="text-xs font-mono text-pl-magenta font-bold mt-2">
+            <div className="text-xs font-mono text-text-secondary font-bold mt-2">
               Expected xG: {simulation.expAg}
             </div>
           </div>
@@ -214,14 +214,14 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
         {/* Win Probability Bar */}
         <div className="mt-6 pt-4 border-t border-border space-y-2">
           <div className="flex justify-between text-xs font-mono font-bold">
-            <span className="text-pl-green">{home.short} WIN: {simulation.homeWinProb}%</span>
+            <span className="text-brand-accent">{home.short} WIN: {simulation.homeWinProb}%</span>
             <span className="text-slate-400">DRAW: {simulation.drawProb}%</span>
-            <span className="text-pl-magenta">{away.short} WIN: {simulation.awayWinProb}%</span>
+            <span className="text-text-secondary">{away.short} WIN: {simulation.awayWinProb}%</span>
           </div>
           <div className="h-2 w-full flex bg-background rounded-none overflow-hidden">
             <div
               style={{ width: `${simulation.homeWinProb}%` }}
-              className="bg-pl-green transition-all duration-300"
+              className="bg-brand-primary transition-all duration-300"
             />
             <div
               style={{ width: `${simulation.drawProb}%` }}
@@ -229,7 +229,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             />
             <div
               style={{ width: `${simulation.awayWinProb}%` }}
-              className="bg-pl-magenta transition-all duration-300"
+              className="bg-brand-accent transition-all duration-300"
             />
           </div>
         </div>
@@ -278,7 +278,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                 <span
                   key={i}
                   className={`w-4 h-4 flex items-center justify-center font-bold ${
-                    r === 'W' ? 'bg-pl-greenDark text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
+                    r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                   }`}
                 >
                   {r}
@@ -291,7 +291,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                 <span
                   key={i}
                   className={`w-4 h-4 flex items-center justify-center font-bold ${
-                    r === 'W' ? 'bg-pl-greenDark text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
+                    r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                   }`}
                 >
                   {r}
@@ -309,7 +309,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
           className="w-full flex items-center justify-between p-4 text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-text-primary transition-colors"
         >
           <div className="flex items-center space-x-2">
-            <Sliders className="h-4 w-4 text-pl-cyan" />
+            <Sliders className="h-4 w-4 text-brand-accent" />
             <span>WHAT-IF SCENARIO SANDBOX (REAL-TIME PARAMETER TUNING)</span>
           </div>
           <span className="text-text-muted font-normal text-[11px]">
@@ -328,7 +328,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{home.name} Rest Days:</span>
-                  <span className="font-bold text-pl-green">{homeRestDays} days</span>
+                  <span className="font-bold text-brand-accent">{homeRestDays} days</span>
                 </div>
                 <input
                   type="range"
@@ -336,7 +336,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   max="14"
                   value={homeRestDays}
                   onChange={(e) => setHomeRestDays(Number(e.target.value))}
-                  className="w-full accent-pl-green cursor-pointer bg-background"
+                  className="w-full accent-brand-primary cursor-pointer bg-background"
                 />
               </div>
 
@@ -344,7 +344,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{away.name} Rest Days:</span>
-                  <span className="font-bold text-pl-magenta">{awayRestDays} days</span>
+                  <span className="font-bold text-text-secondary">{awayRestDays} days</span>
                 </div>
                 <input
                   type="range"
@@ -352,7 +352,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   max="14"
                   value={awayRestDays}
                   onChange={(e) => setAwayRestDays(Number(e.target.value))}
-                  className="w-full accent-pl-magenta cursor-pointer bg-background"
+                  className="w-full accent-brand-accent cursor-pointer bg-background"
                 />
               </div>
 
@@ -360,7 +360,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{home.name} Form Momentum:</span>
-                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-pl-green' : homeFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
                     {homeFormBoost > 0 ? `+${homeFormBoost}%` : `${homeFormBoost}%`}
                   </span>
                 </div>
@@ -371,7 +371,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   step="5"
                   value={homeFormBoost}
                   onChange={(e) => setHomeFormBoost(Number(e.target.value))}
-                  className="w-full accent-pl-green cursor-pointer bg-background"
+                  className="w-full accent-brand-primary cursor-pointer bg-background"
                 />
               </div>
 
@@ -379,7 +379,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{away.name} Form Momentum:</span>
-                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-pl-magenta' : awayFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-red-400' : 'text-text-muted'}`}>
                     {awayFormBoost > 0 ? `+${awayFormBoost}%` : `${awayFormBoost}%`}
                   </span>
                 </div>
@@ -390,7 +390,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   step="5"
                   value={awayFormBoost}
                   onChange={(e) => setAwayFormBoost(Number(e.target.value))}
-                  className="w-full accent-pl-magenta cursor-pointer bg-background"
+                  className="w-full accent-brand-accent cursor-pointer bg-background"
                 />
               </div>
             </div>
@@ -402,7 +402,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                   type="checkbox"
                   checked={isNeutralVenue}
                   onChange={(e) => setIsNeutralVenue(e.target.checked)}
-                  className="rounded-none accent-pl-purple"
+                  className="rounded-none accent-brand-primary"
                 />
                 <span>Neutral Venue (Disables Home Advantage)</span>
               </label>

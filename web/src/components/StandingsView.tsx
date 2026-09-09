@@ -44,7 +44,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
         {/* Projected Champion */}
         <div className="border border-border bg-surface p-4 rounded-sm">
           <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-            <Trophy className="h-3.5 w-3.5 text-pl-green" />
+            <Trophy className="h-3.5 w-3.5 text-brand-accent" />
             <span>PROJECTED CHAMPIONS</span>
           </div>
           <div className="text-base font-black text-text-primary">{champion?.team}</div>
@@ -56,7 +56,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
         {/* Top Offensive Team */}
         <div className="border border-border bg-surface p-4 rounded-sm">
           <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-            <Award className="h-3.5 w-3.5 text-pl-cyan" />
+            <Award className="h-3.5 w-3.5 text-brand-accent" />
             <span>TOP OFFENSIVE SQUAD</span>
           </div>
           <div className="text-base font-black text-text-primary">{bestAttack?.team}</div>
@@ -82,7 +82,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
       <div className="border border-border bg-surface rounded-sm overflow-x-auto">
         <div className="p-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Trophy className="h-4 w-4 text-pl-green" />
+            <Trophy className="h-4 w-4 text-brand-accent" />
             <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
               2026/2027 PROJECTED PREMIER LEAGUE STANDINGS (380 MATCHES)
             </span>
@@ -189,7 +189,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                         className="w-1.5 h-3 flex-shrink-0"
                         style={{ backgroundColor: row.color }}
                       />
-                      <span className="group-hover:text-pl-cyan transition-colors truncate">
+                      <span className="group-hover:text-brand-accent transition-colors truncate">
                         {row.team}
                       </span>
                     </div>
@@ -216,7 +216,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                           key={i}
                           className={`w-3.5 h-3.5 flex items-center justify-center font-bold ${
                             res === 'W'
-                              ? 'bg-pl-greenDark text-white'
+                              ? 'bg-brand-primary text-white'
                               : res === 'D'
                               ? 'bg-slate-600 text-white'
                               : 'bg-red-800 text-white'
