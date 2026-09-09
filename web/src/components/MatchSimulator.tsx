@@ -215,7 +215,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
         <div className="mt-6 pt-4 border-t border-border space-y-2">
           <div className="flex justify-between text-xs font-mono font-bold">
             <span className="text-brand-accent">{home.short} WIN: {simulation.homeWinProb}%</span>
-            <span className="text-slate-400">DRAW: {simulation.drawProb}%</span>
+            <span className="text-slate-300">DRAW: {simulation.drawProb}%</span>
             <span className="text-text-secondary">{away.short} WIN: {simulation.awayWinProb}%</span>
           </div>
           <div className="h-2 w-full flex bg-background rounded-none overflow-hidden">

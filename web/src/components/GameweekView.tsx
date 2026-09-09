@@ -185,7 +185,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                 <span className="text-text-muted">Probability:</span>
                 <div className="flex space-x-2">
                   <span className="text-brand-accent font-bold">H: {selectedFixture.homeWinProb}%</span>
-                  <span className="text-slate-400 font-bold">D: {selectedFixture.drawProb}%</span>
+                  <span className="text-slate-300 font-bold">D: {selectedFixture.drawProb}%</span>
                   <span className="text-text-secondary font-bold">A: {selectedFixture.awayWinProb}%</span>
                 </div>
               </div>

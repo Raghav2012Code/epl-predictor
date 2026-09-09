@@ -134,15 +134,15 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
                 <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#8cbc93" opacity="0.85" />
                 <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#25845f" opacity="0.9" />
                 {(d.gw === 1 || d.gw % 5 === 0 || d.gw === 38) && (
-                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#93aba2" fontFamily="monospace">
+                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#adc7be" fontFamily="monospace">
                     {d.gw}
                   </text>
                 )}
               </g>
             );
           })}
-          <text x="4" y="36" fontSize="8" fill="#93aba2" fontFamily="monospace">{maxGoals}</text>
-          <text x="4" y="172" fontSize="8" fill="#93aba2" fontFamily="monospace">0</text>
+          <text x="4" y="36" fontSize="8" fill="#adc7be" fontFamily="monospace">{maxGoals}</text>
+          <text x="4" y="172" fontSize="8" fill="#adc7be" fontFamily="monospace">0</text>
         </svg>
         <div className="flex items-center justify-between text-[11px] font-mono text-text-muted px-1">
           <span className="flex items-center space-x-3">
@@ -362,7 +362,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 className={`px-2.5 py-1 rounded-sm transition-colors whitespace-nowrap ${
                   activeChartTab === d.id
                     ? 'bg-brand-primary text-white font-bold border border-brand-primary'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover'
+                    : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
                 }`}
               >
                 {d.title}

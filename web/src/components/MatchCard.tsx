@@ -118,7 +118,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono">
           <div className="flex items-center space-x-2 text-text-secondary">
             <span className="text-brand-accent font-bold">H {fixture.homeWinProb}%</span>
-            <span className="text-slate-400 font-bold">D {fixture.drawProb}%</span>
+            <span className="text-slate-300 font-bold">D {fixture.drawProb}%</span>
             <span className="text-text-secondary font-bold">A {fixture.awayWinProb}%</span>
           </div>
           <div className="flex items-center text-text-primary font-semibold">
