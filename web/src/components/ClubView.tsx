@@ -79,7 +79,7 @@ const hslToRgb = (h: number, s: number, l: number): [number, number, number] => 
   return [r, g, b];
 };
 
-/** Ensures club chart colors meet WCAG 2.1 Non-text Contrast (>= 3:1) against surface #12141a */
+/** Ensures club chart colors meet WCAG 2.1 Non-text Contrast (>= 3:1) against surface #0f1219 */
 const getAccessibleClubColor = (hex: string): string => {
   if (!hex || hex === '#FFFFFF') return '#818e9f';
   const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
@@ -93,7 +93,7 @@ const getAccessibleClubColor = (hex: string): string => {
   };
   const getLum = (cr: number, cg: number, cb: number) =>
     0.2126 * toLinear(cr) + 0.7152 * toLinear(cg) + 0.0722 * toLinear(cb);
-  const bgLum = getLum(0x12, 0x14, 0x1a);
+  const bgLum = getLum(0x0f, 0x12, 0x19);
   const contrastRatio = (l1: number, l2: number) =>
     (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 
@@ -130,12 +130,12 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[560px] bg-background border border-border-subtle rounded-sm p-2.5">
+      <div className="min-w-[560px] bg-background border border-border-subtle rounded-none p-2.5">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-52" role="img" aria-label={`${name} cumulative points race`}>
           <title>{`${name} cumulative points per gameweek`}</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
-              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#1e222b" strokeWidth="1" />
+              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#1a1f2c" strokeWidth="1" />
               <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#818e9f" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
@@ -145,7 +145,7 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <polyline points={line} fill="none" stroke={chartColor} strokeWidth="2.5" strokeLinejoin="round" />
           {series.filter((p) => p.gw % 2 === 1 || p.gw === 38).map((p) => (
             <g key={p.gw}>
-              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={chartColor} stroke="#090a0f" strokeWidth="1">
+              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={chartColor} stroke="#08090c" strokeWidth="1">
                 <title>{`GW${p.gw}: ${p.cumPoints} pts (${p.gf}-${p.ga} vs GW opponent)`}</title>
               </circle>
               {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
@@ -166,7 +166,7 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
   const W = series.length * 20 + 34;
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[560px] bg-background border border-border-subtle rounded-sm p-2.5">
+      <div className="min-w-[560px] bg-background border border-border-subtle rounded-none p-2.5">
         <svg viewBox={`0 0 ${W} 170`} className="w-full h-40" role="img" aria-label={`${name} goals for and against per gameweek`}>
           <title>{`${name} scored vs conceded per gameweek`}</title>
           {series.map((p, i) => {
@@ -187,9 +187,9 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
             );
           })}
         </svg>
-        <div className="flex items-center space-x-3 text-[11px] font-mono text-text-muted px-1">
-          <span className="flex items-center"><span className="h-2 w-2 bg-brand-primary mr-1" />Scored</span>
-          <span className="flex items-center"><span className="h-2 w-2 bg-brand-accent mr-1" />Conceded</span>
+        <div className="flex items-center space-x-4 text-[11px] font-mono text-text-muted px-1 mt-1">
+          <span className="flex items-center"><span className="h-2 w-2 bg-brand-accent mr-1.5" />Goals Scored</span>
+          <span className="flex items-center"><span className="h-2 w-2 bg-slate-500 mr-1.5" />Goals Conceded</span>
         </div>
       </div>
     </div>
@@ -238,7 +238,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
 
   if (!profile) {
     return (
-      <div className="border border-border bg-surface p-12 text-center rounded-sm">
+      <div className="border border-border bg-surface p-12 text-center rounded-none">
         <p className="text-xs text-text-muted font-mono">No club data available.</p>
       </div>
     );
@@ -249,15 +249,15 @@ export const ClubView: React.FC<ClubViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Club selector */}
-      <div className="border border-border bg-surface p-3 sm:p-4 rounded-sm flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="border border-border bg-surface p-3 sm:p-4 rounded-none flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase tracking-wider text-text-muted">
           <Shield className="h-4 w-4 text-brand-accent" />
-          <span>Club Performance</span>
+          <span>CLUB PERFORMANCE RADAR</span>
         </div>
         <select
           value={profile.name}
           onChange={(e) => setClub(e.target.value)}
-          className="w-full sm:max-w-xs rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+          className="w-full sm:max-w-xs rounded-none border border-border bg-background px-3 py-1.5 text-xs font-mono font-bold text-text-primary focus:border-brand-accent focus:outline-none"
           aria-label="Select club"
         >
           {clubNames.map((name) => (
@@ -269,34 +269,40 @@ export const ClubView: React.FC<ClubViewProps> = ({
       </div>
 
       {/* Hero */}
-      <div className="border border-border bg-surface rounded-sm overflow-hidden">
-        <div className="h-1.5 w-full border-b border-border-subtle" style={{ backgroundColor: profile.color }} />
+      <div className="border border-border bg-surface rounded-none overflow-hidden">
+        <div className="h-1 w-full border-b border-border-subtle" style={{ backgroundColor: profile.color }} />
         <div className="p-4 sm:p-5">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">
-                RANK #{profile.rank} • {profile.points} PTS
+                RANK #{profile.rank} • {profile.points} PTS • GD {profile.gd && profile.gd > 0 ? `+${profile.gd}` : profile.gd}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-text-primary mt-0.5">{profile.name}</h2>
-              <div className="flex items-center space-x-1.5 text-xs text-text-muted mt-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-text-primary mt-0.5 tracking-tight">{profile.name}</h2>
+              <div className="flex items-center space-x-1.5 text-xs text-text-muted mt-1 font-mono">
                 <MapPin className="h-3.5 w-3.5" />
                 <span>{profile.stadium}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-3 font-mono text-[10px]">
+              <div className="flex flex-wrap items-center gap-1 mt-3 font-mono text-[10px]">
                 {profile.last5Form.map((r, i) => (
                   <span
                     key={i}
-                    className={`w-5 h-5 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
-                      r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
+                    className={`w-5 h-4 flex items-center justify-center font-bold border ${
+                      r === 'W'
+                        ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                        : r === 'D'
+                        ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
+                        : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
                     }`}
                   >
                     {r}
                   </span>
                 ))}
-                <span className="text-text-muted ml-1">LAST 5</span>
+                <span className="text-text-muted ml-1.5">RECENT 5 FORM</span>
               </div>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 text-center text-xs w-full sm:w-auto">
+
+            {/* Micro KPI grid */}
+            <div className="grid grid-cols-3 gap-2 text-center text-xs w-full sm:w-auto font-mono">
               {[
                 { label: 'WIN RATE', value: `${profile.winRate}%` },
                 { label: 'GF / MATCH', value: String(profile.gfPerMatch) },
@@ -305,9 +311,9 @@ export const ClubView: React.FC<ClubViewProps> = ({
                 { label: 'SHOTS ON TGT', value: String(profile.shotsTargetAvg) },
                 { label: 'AVG REST', value: `${profile.restDaysAvg}d` },
               ].map((s) => (
-                <div key={s.label} className="border border-border-subtle bg-background px-2.5 py-2 rounded-sm">
-                  <div className="text-[9px] font-mono text-text-muted">{s.label}</div>
-                  <div className="font-mono font-black text-text-primary mt-0.5">{s.value}</div>
+                <div key={s.label} className="border border-border-subtle bg-background px-2.5 py-2 rounded-none">
+                  <div className="text-[9px] text-text-muted">{s.label}</div>
+                  <div className="font-bold text-text-primary mt-0.5">{s.value}</div>
                 </div>
               ))}
             </div>
@@ -315,8 +321,8 @@ export const ClubView: React.FC<ClubViewProps> = ({
           {typeof profile.gf === 'number' && (
             <div className="mt-3 pt-3 border-t border-border-subtle text-xs font-mono text-text-secondary flex flex-wrap gap-x-4 gap-y-1">
               <span>Record: <span className="text-text-primary font-bold">{profile.won}W-{profile.drawn}D-{profile.lost}L</span></span>
-              <span>Goals: <span className="text-text-primary font-bold">{profile.gf}F / {profile.ga}A (GD {profile.gd && profile.gd > 0 ? `+${profile.gd}` : profile.gd})</span></span>
-              {standing && <span>Table: <span className="text-text-primary font-bold">#{standing.rank} • {standing.points} pts</span></span>}
+              <span>Goals: <span className="text-text-primary font-bold">{profile.gf}F / {profile.ga}A</span></span>
+              {standing && <span>Table Position: <span className="text-text-primary font-bold">#{standing.rank} ({standing.points} pts)</span></span>}
             </div>
           )}
         </div>
@@ -324,21 +330,21 @@ export const ClubView: React.FC<ClubViewProps> = ({
 
       {/* Home / Away splits */}
       {(profile.homeSplit || profile.awaySplit) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono">
           {[
-            { title: 'HOME RECORD', icon: Home, split: profile.homeSplit },
-            { title: 'AWAY RECORD', icon: Plane, split: profile.awaySplit },
+            { title: 'HOME SPLIT RECORD', icon: Home, split: profile.homeSplit },
+            { title: 'AWAY SPLIT RECORD', icon: Plane, split: profile.awaySplit },
           ].map((card) =>
             card.split ? (
-              <div key={card.title} className="border border-border bg-surface p-4 rounded-sm">
-                <div className="flex items-center space-x-2 text-[11px] font-mono font-bold uppercase tracking-wider text-text-muted mb-2">
+              <div key={card.title} className="border border-border bg-surface p-4 rounded-none">
+                <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-wider text-text-muted mb-2">
                   <card.icon className="h-3.5 w-3.5 text-brand-accent" />
                   <span>{card.title}</span>
                 </div>
-                <div className="font-mono text-sm font-black text-text-primary">
+                <div className="text-sm font-bold text-text-primary">
                   {card.split.w}W - {card.split.d}D - {card.split.l}L
                 </div>
-                <div className="text-xs font-mono text-text-secondary mt-1">
+                <div className="text-xs text-text-secondary mt-1">
                   {card.split.gf} scored / {card.split.ga} conceded
                 </div>
               </div>
@@ -348,10 +354,10 @@ export const ClubView: React.FC<ClubViewProps> = ({
       )}
 
       {/* Points race */}
-      <div className="border border-border bg-surface p-4 rounded-sm">
+      <div className="border border-border bg-surface p-4 rounded-none">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
           <TrendingUp className="h-4 w-4 text-brand-accent" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">
             CUMULATIVE POINTS RACE (BY GAMEWEEK)
           </h3>
         </div>
@@ -363,10 +369,10 @@ export const ClubView: React.FC<ClubViewProps> = ({
       </div>
 
       {/* Goals */}
-      <div className="border border-border bg-surface p-4 rounded-sm">
+      <div className="border border-border bg-surface p-4 rounded-none">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
           <Swords className="h-4 w-4 text-brand-accent" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">
             SCORED VS CONCEDED PER GAMEWEEK
           </h3>
         </div>
@@ -379,15 +385,15 @@ export const ClubView: React.FC<ClubViewProps> = ({
 
       {/* Fixtures */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="border border-border bg-surface p-4 rounded-sm">
+        <div className="border border-border bg-surface p-4 rounded-none">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
             <CalendarDays className="h-4 w-4 text-brand-accent" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">NEXT 5 FIXTURES</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">NEXT 5 FIXTURES</h3>
           </div>
           {upcoming.length === 0 ? (
             <p className="text-xs font-mono text-text-muted">Season complete — no upcoming fixtures.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {upcoming.map((f) => {
                 const isHome = f.homeTeam === profile.name;
                 const opp = isHome ? f.awayTeam : f.homeTeam;
@@ -395,23 +401,23 @@ export const ClubView: React.FC<ClubViewProps> = ({
                   <button
                     key={f.id}
                     onClick={() => onOpenSimulator(f.homeTeam, f.awayTeam)}
-                    className="w-full text-left border border-border-subtle bg-background p-2.5 rounded-sm hover:border-border-active transition-colors"
+                    className="w-full text-left border border-border-subtle bg-background p-2 rounded-none hover:border-brand-accent/50 transition-colors"
                   >
                     <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="font-mono text-text-muted flex-shrink-0">GW{f.gameweek}</span>
+                      <span className="font-mono text-text-muted flex-shrink-0 text-[11px]">GW{f.gameweek}</span>
                       <span className="font-bold text-text-primary truncate">
                         {isHome ? 'vs' : 'at'} {opp}
                       </span>
-                      <span className="font-mono font-black text-text-primary flex-shrink-0">{f.predictedScore}</span>
+                      <span className="font-mono font-bold text-text-primary flex-shrink-0">{f.predictedScore}</span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] font-mono text-text-muted mt-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-text-muted mt-1">
                       <span>{f.date} • {isHome ? 'HOME' : 'AWAY'}</span>
                       <span>
                         <span className="text-brand-accent font-bold">H {f.homeWinProb}%</span>
                         {' / '}
-                        <span className="text-slate-300 font-bold">D {f.drawProb}%</span>
+                        <span className="text-slate-400 font-bold">D {f.drawProb}%</span>
                         {' / '}
-                        <span className="text-text-secondary font-bold">A {f.awayWinProb}%</span>
+                        <span className="text-slate-400 font-bold">A {f.awayWinProb}%</span>
                       </span>
                     </div>
                   </button>
@@ -421,31 +427,39 @@ export const ClubView: React.FC<ClubViewProps> = ({
           )}
         </div>
 
-        <div className="border border-border bg-surface p-4 rounded-sm">
+        <div className="border border-border bg-surface p-4 rounded-none">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
             <Shield className="h-4 w-4 text-brand-accent" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">RECENT RESULTS</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">RECENT RESULTS</h3>
           </div>
           {played.length === 0 ? (
             <p className="text-xs font-mono text-text-muted">No played matches yet this season.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {played.map((f) => {
                 const r = resultFor(f);
                 const isHome = f.homeTeam === profile.name;
                 const opp = isHome ? f.awayTeam : f.homeTeam;
                 return (
-                  <div key={f.id} className="border border-border-subtle bg-background p-2.5 rounded-sm">
+                  <div key={f.id} className="border border-border-subtle bg-background p-2 rounded-none">
                     <div className="flex items-center justify-between text-xs gap-2">
                       <span className="flex items-center space-x-2 min-w-0">
-                        <span className={`w-5 h-5 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm ring-1 ring-white/20 flex-shrink-0 ${r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'}`}>
+                        <span
+                          className={`w-5 h-4 flex items-center justify-center font-mono text-[10px] font-bold border flex-shrink-0 ${
+                            r === 'W'
+                              ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+                              : r === 'D'
+                              ? 'bg-slate-900/60 text-slate-400 border-slate-700/60'
+                              : 'bg-rose-950/60 text-rose-400 border-rose-800/60'
+                          }`}
+                        >
                           {r}
                         </span>
                         <span className="font-bold text-text-primary truncate">{isHome ? 'vs' : 'at'} {opp}</span>
                       </span>
-                      <span className="font-mono font-black text-text-primary flex-shrink-0">{f.actualScore}</span>
+                      <span className="font-mono font-bold text-text-primary flex-shrink-0">{f.actualScore}</span>
                     </div>
-                    <div className="text-[11px] font-mono text-text-muted mt-1">
+                    <div className="text-[10px] font-mono text-text-muted mt-1">
                       GW{f.gameweek} • {f.date} • predicted {f.predictedScore}
                     </div>
                   </div>
