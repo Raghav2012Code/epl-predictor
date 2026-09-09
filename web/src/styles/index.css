@@ -4,23 +4,23 @@
 
 @layer base {
   * {
-    border-color: #0a534e;
+    border-color: #590202;
   }
   html {
     scroll-behavior: smooth;
   }
   body {
-    background-color: #021e23;
-    color: #f3f5f8;
+    background-color: #290000;
+    color: #eeebd8;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
-    background-color: #25845f;
-    color: #ffffff;
+    background-color: #6d0202;
+    color: #eeebd8;
   }
   :focus-visible {
-    outline: 2px solid #a9d2ad;
+    outline: 2px solid #767e70;
     outline-offset: 2px;
   }
 }
@@ -42,12 +42,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #021e23;
+  background: #290000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #0a534e;
+  background: #590202;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #25845f;
+  background: #6d0202;
 }
