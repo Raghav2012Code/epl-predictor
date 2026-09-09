@@ -60,7 +60,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             <select
               value={currentGW}
               onChange={(e) => setCurrentGW(Number(e.target.value))}
-              className="rounded-sm border border-border bg-background px-2.5 py-1 text-xs font-mono font-bold text-text-primary focus:border-pl-purpleLight focus:outline-none"
+              className="rounded-sm border border-border bg-background px-2.5 py-1 text-xs font-mono font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
                 <option key={gw} value={gw}>
@@ -166,7 +166,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                   <div className="text-xs font-bold text-text-primary">
                     {selectedFixture.homeTeam}
                   </div>
-                  <div className="text-xl font-mono font-black text-pl-green mt-1">
+                  <div className="text-xl font-mono font-black text-brand-accent mt-1">
                     {selectedFixture.predHomeGoals}
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                   <div className="text-xs font-bold text-text-primary">
                     {selectedFixture.awayTeam}
                   </div>
-                  <div className="text-xl font-mono font-black text-pl-magenta mt-1">
+                  <div className="text-xl font-mono font-black text-text-primary mt-1">
                     {selectedFixture.predAwayGoals}
                   </div>
                 </div>
@@ -184,9 +184,9 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
               <div className="mt-3 pt-3 border-t border-border-subtle flex items-center justify-between text-xs font-mono">
                 <span className="text-text-muted">Probability:</span>
                 <div className="flex space-x-2">
-                  <span className="text-pl-green font-bold">H: {selectedFixture.homeWinProb}%</span>
+                  <span className="text-brand-accent font-bold">H: {selectedFixture.homeWinProb}%</span>
                   <span className="text-slate-400 font-bold">D: {selectedFixture.drawProb}%</span>
-                  <span className="text-pl-magenta font-bold">A: {selectedFixture.awayWinProb}%</span>
+                  <span className="text-text-secondary font-bold">A: {selectedFixture.awayWinProb}%</span>
                 </div>
               </div>
             </div>
@@ -203,7 +203,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
               </div>
               <div className="flex justify-between text-text-secondary">
                 <span className="text-text-muted">Fixture Status</span>
-                <span className="font-mono text-pl-cyan">{selectedFixture.status}</span>
+                <span className="font-mono text-brand-accent">{selectedFixture.status}</span>
               </div>
             </div>
 
@@ -226,7 +226,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                           key={i}
                           className={`w-4 h-4 flex items-center justify-center font-bold rounded-none ${
                             res === 'W'
-                              ? 'bg-pl-greenDark text-white'
+                              ? 'bg-brand-primary text-white'
                               : res === 'D'
                               ? 'bg-slate-600 text-white'
                               : 'bg-red-800 text-white'
@@ -249,7 +249,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                           key={i}
                           className={`w-4 h-4 flex items-center justify-center font-bold rounded-none ${
                             res === 'W'
-                              ? 'bg-pl-greenDark text-white'
+                              ? 'bg-brand-primary text-white'
                               : res === 'D'
                               ? 'bg-slate-600 text-white'
                               : 'bg-red-800 text-white'
@@ -275,13 +275,13 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                         style={{
                           width: `${(homeProfile.gfPerMatch / (homeProfile.gfPerMatch + awayProfile.gfPerMatch || 1)) * 100}%`,
                         }}
-                        className="bg-pl-green"
+                        className="bg-brand-primary"
                       />
                       <div
                         style={{
                           width: `${(awayProfile.gfPerMatch / (homeProfile.gfPerMatch + awayProfile.gfPerMatch || 1)) * 100}%`,
                         }}
-                        className="bg-pl-magenta"
+                        className="bg-brand-accent"
                       />
                     </div>
                   </div>
@@ -295,7 +295,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                 onOpenSimulator(selectedFixture.homeTeam, selectedFixture.awayTeam);
                 setSelectedFixture(null);
               }}
-              className="w-full flex items-center justify-center space-x-2 border border-pl-purpleLight bg-pl-purple py-2 text-xs font-bold text-white rounded-sm hover:bg-pl-purpleLight transition-colors"
+              className="w-full flex items-center justify-center space-x-2 border border-brand-primary bg-brand-primary py-2 text-xs font-bold text-white rounded-sm hover:bg-brand-primaryHover transition-colors"
             >
               <Swords className="h-3.5 w-3.5" />
               <span>Simulate in H2H Arena with Custom What-Ifs</span>

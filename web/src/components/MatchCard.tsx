@@ -20,7 +20,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       onClick={() => onSelect(fixture)}
       className={`group relative flex flex-col justify-between border bg-surface p-3.5 transition-all duration-150 cursor-pointer rounded-sm ${
         isSelected
-          ? 'border-pl-purpleLight bg-surface-hover shadow-md ring-1 ring-pl-purpleLight'
+          ? 'border-brand-primary bg-surface-hover shadow-md ring-1 ring-brand-primary'
           : 'border-border hover:border-border-active hover:bg-surface-hover'
       }`}
     >
@@ -41,7 +41,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               ACTUAL: {fixture.actualScore}
             </span>
           ) : (
-            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-pl-purple/40 text-pl-purpleLight border border-pl-purpleLight/40">
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-brand-surface text-brand-accent border border-brand-accent/40">
               SCHEDULED
             </span>
           )}
@@ -99,7 +99,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="h-1.5 w-full flex bg-background overflow-hidden rounded-none">
           <div
             style={{ width: `${fixture.homeWinProb}%` }}
-            className="bg-pl-green transition-all"
+            className="bg-brand-primary transition-all"
             title={`Home Win: ${fixture.homeWinProb}%`}
           />
           <div
@@ -109,7 +109,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           />
           <div
             style={{ width: `${fixture.awayWinProb}%` }}
-            className="bg-pl-magenta transition-all"
+            className="bg-brand-accent transition-all"
             title={`Away Win: ${fixture.awayWinProb}%`}
           />
         </div>
@@ -117,13 +117,13 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         {/* Stats and Favorite Badge */}
         <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono">
           <div className="flex items-center space-x-2 text-text-secondary">
-            <span className="text-pl-green">H {fixture.homeWinProb}%</span>
-            <span className="text-slate-400">D {fixture.drawProb}%</span>
-            <span className="text-pl-magenta">A {fixture.awayWinProb}%</span>
+            <span className="text-brand-accent font-bold">H {fixture.homeWinProb}%</span>
+            <span className="text-slate-400 font-bold">D {fixture.drawProb}%</span>
+            <span className="text-text-secondary font-bold">A {fixture.awayWinProb}%</span>
           </div>
           <div className="flex items-center text-text-primary font-semibold">
             <span className="uppercase text-[9px] text-text-muted mr-1">FAV:</span>
-            <span className={fixture.predictedOutcome === 'Home Win' ? 'text-pl-green' : (fixture.predictedOutcome === 'Away Win' ? 'text-pl-magenta' : 'text-slate-300')}>
+            <span className={fixture.predictedOutcome === 'Home Win' ? 'text-brand-accent' : (fixture.predictedOutcome === 'Away Win' ? 'text-text-secondary' : 'text-slate-300')}>
               {fixture.predictedOutcome}
             </span>
             <ChevronRight className="h-3 w-3 ml-0.5 text-text-muted group-hover:text-text-primary group-hover:translate-x-0.5 transition-all" />
