@@ -28,11 +28,96 @@ const parseScore = (score: string): [number, number] | null => {
   return [h, a];
 };
 
+const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return [h * 360, s, l];
+};
+
+const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
+  h /= 360;
+  if (s === 0) {
+    const val = Math.round(l * 255);
+    return [val, val, val];
+  }
+  const hue2rgb = (p: number, q: number, t: number) => {
+    let normalizedT = t;
+    if (normalizedT < 0) normalizedT += 1;
+    if (normalizedT > 1) normalizedT -= 1;
+    if (normalizedT < 1 / 6) return p + (q - p) * 6 * normalizedT;
+    if (normalizedT < 1 / 2) return q;
+    if (normalizedT < 2 / 3) return p + (q - p) * (2 / 3 - normalizedT) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+  const g = Math.round(hue2rgb(p, q, h) * 255);
+  const b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+  return [r, g, b];
+};
+
+/** Ensures club chart colors meet WCAG 2.1 Non-text Contrast (>= 3:1) against surface #0a534e */
+const getAccessibleClubColor = (hex: string): string => {
+  if (!hex || hex === '#FFFFFF') return '#b2cdc4';
+  const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
+  if (cleanHex.length !== 6) return hex;
+  const r = parseInt(cleanHex.slice(0, 2), 16);
+  const g = parseInt(cleanHex.slice(2, 4), 16);
+  const b = parseInt(cleanHex.slice(4, 6), 16);
+  const toLinear = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const getLum = (cr: number, cg: number, cb: number) =>
+    0.2126 * toLinear(cr) + 0.7152 * toLinear(cg) + 0.0722 * toLinear(cb);
+  const bgLum = getLum(0x0a, 0x53, 0x4e); // ~0.0674
+  const contrastRatio = (l1: number, l2: number) =>
+    (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+
+  if (contrastRatio(getLum(r, g, b), bgLum) >= 3.0) return hex;
+
+  let [h, s, l] = rgbToHsl(r, g, b);
+  if (s < 0.12) s = 0.15;
+  while (l < 0.92) {
+    l += 0.02;
+    const [nr, ng, nb] = hslToRgb(h, s, l);
+    if (contrastRatio(getLum(nr, ng, nb), bgLum) >= 3.0) {
+      const toHex = (n: number) => n.toString(16).padStart(2, '0');
+      return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
+    }
+  }
+  return hex;
+};
+
 const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; name: string }> = ({
   series,
   color,
   name,
 }) => {
+  const chartColor = useMemo(() => getAccessibleClubColor(color), [color]);
   const W = 760;
   const H = 220;
   const PAD_L = 34;
@@ -50,17 +135,17 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <title>{`${name} cumulative points per gameweek`}</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
-              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#0a534e" strokeWidth="1" />
+              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#063835" strokeWidth="1" />
               <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#b2cdc4" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
             </g>
           ))}
-          <polygon points={area} fill={color} opacity="0.14" />
-          <polyline points={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
+          <polygon points={area} fill={chartColor} opacity="0.16" />
+          <polyline points={line} fill="none" stroke={chartColor} strokeWidth="2.5" strokeLinejoin="round" />
           {series.filter((p) => p.gw % 2 === 1 || p.gw === 38).map((p) => (
             <g key={p.gw}>
-              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={color} stroke="#021e23" strokeWidth="1">
+              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={chartColor} stroke="#021e23" strokeWidth="1">
                 <title>{`GW${p.gw}: ${p.cumPoints} pts (${p.gf}-${p.ga} vs GW opponent)`}</title>
               </circle>
               {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
@@ -185,7 +270,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
 
       {/* Hero */}
       <div className="border border-border bg-surface rounded-sm overflow-hidden">
-        <div className="h-1.5 w-full" style={{ backgroundColor: profile.color }} />
+        <div className="h-1.5 w-full border-b border-border-subtle" style={{ backgroundColor: profile.color }} />
         <div className="p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
             <div>
@@ -271,7 +356,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
           </h3>
         </div>
         {series.length > 0 ? (
-          <PointsRaceChart series={series} color={profile.color === '#FFFFFF' ? '#b2cdc4' : profile.color} name={profile.name} />
+          <PointsRaceChart series={series} color={profile.color} name={profile.name} />
         ) : (
           <p className="text-xs font-mono text-text-muted">No gameweek series available.</p>
         )}

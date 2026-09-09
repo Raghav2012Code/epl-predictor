@@ -59,7 +59,7 @@ const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; tot
     <div className="flex flex-col sm:flex-row items-center gap-5">
       <svg viewBox="0 0 140 140" className="h-44 w-44 flex-shrink-0" role="img" aria-label="Forecast outcome distribution">
         <title>Home {dist.homePct}% / Draw {dist.drawPct}% / Away {dist.awayPct}%</title>
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#0a534e" strokeWidth="18" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#063835" strokeWidth="18" />
         {segs.map((s) => (
           <circle
             key={s.key}
@@ -118,7 +118,7 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
               x2={data.length * 18 + 30}
               y1={170 - f * 140}
               y2={170 - f * 140}
-              stroke="#0a534e"
+              stroke="#063835"
               strokeWidth="1"
             />
           ))}
@@ -165,7 +165,7 @@ const AttackDefenseChart: React.FC<{ standings: StandingsRow[] }> = ({ standings
         <div key={t.team} className="text-xs">
           <div className="flex items-center justify-between mb-1">
             <span className="flex items-center space-x-2 font-bold text-text-primary truncate">
-              <span className="h-3 w-1 flex-shrink-0" style={{ backgroundColor: t.color }} />
+              <span className="h-3 w-1 flex-shrink-0 ring-1 ring-white/15" style={{ backgroundColor: t.color }} />
               <span className="truncate">{t.team}</span>
             </span>
             <span className="font-mono text-text-muted flex-shrink-0 ml-2">
