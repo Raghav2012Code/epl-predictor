@@ -26,7 +26,7 @@ export default {
           primary: "#25845f",
           primaryHover: "#2ca073",
           primaryDark: "#1c684a",
-          accent: "#a2cca8",
+          accent: "#a9d2ad",
           accentBase: "#8cbc93",
           accentHover: "#b6ddbb",
           surface: "#0a534e",
@@ -34,8 +34,8 @@ export default {
         },
         text: {
           primary: "#f3f5f8",
-          secondary: "#a2cca8",
-          muted: "#adc7be",
+          secondary: "#a9d2ad",
+          muted: "#b2cdc4",
         },
       },
       borderRadius: {

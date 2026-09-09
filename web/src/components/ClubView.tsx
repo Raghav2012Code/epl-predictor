@@ -51,7 +51,7 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
               <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#0a534e" strokeWidth="1" />
-              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#adc7be" fontFamily="monospace">
+              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#b2cdc4" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
             </g>
@@ -64,7 +64,7 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
                 <title>{`GW${p.gw}: ${p.cumPoints} pts (${p.gf}-${p.ga} vs GW opponent)`}</title>
               </circle>
               {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#adc7be" fontFamily="monospace">
+                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#b2cdc4" fontFamily="monospace">
                   {p.gw}
                 </text>
               )}
@@ -94,7 +94,7 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
                 <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#25845f" opacity="0.9" />
                 <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#8cbc93" opacity="0.85" />
                 {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#adc7be" fontFamily="monospace">
+                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#b2cdc4" fontFamily="monospace">
                     {p.gw}
                   </text>
                 )}
@@ -271,7 +271,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
           </h3>
         </div>
         {series.length > 0 ? (
-          <PointsRaceChart series={series} color={profile.color === '#FFFFFF' ? '#adc7be' : profile.color} name={profile.name} />
+          <PointsRaceChart series={series} color={profile.color === '#FFFFFF' ? '#b2cdc4' : profile.color} name={profile.name} />
         ) : (
           <p className="text-xs font-mono text-text-muted">No gameweek series available.</p>
         )}
