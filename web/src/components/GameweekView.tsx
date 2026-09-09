@@ -16,9 +16,32 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
   searchQuery,
   onOpenSimulator,
 }) => {
-  const [currentGW, setCurrentGW] = useState<number>(7);
+  // Determine the current active gameweek dynamically (first gameweek with upcoming matches)
+  const currentActiveGW = React.useMemo(() => {
+    const firstUpcoming = fixtures.find((f) => f.status === 'Upcoming');
+    return firstUpcoming ? firstUpcoming.gameweek : 4;
+  }, [fixtures]);
+
+  const [currentGW, setCurrentGW] = useState<number>(currentActiveGW);
   const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'played'>('all');
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
+
+  // Map each gameweek to played, current, or upcoming for clean dropdown telemetry
+  const gwStatusMap = React.useMemo(() => {
+    const map = new Map<number, 'played' | 'current' | 'upcoming'>();
+    for (let gw = 1; gw <= 38; gw++) {
+      const matches = fixtures.filter((f) => f.gameweek === gw);
+      const allPlayed = matches.length > 0 && matches.every((f) => f.status === 'Played');
+      if (allPlayed) {
+        map.set(gw, 'played');
+      } else if (gw === currentActiveGW) {
+        map.set(gw, 'current');
+      } else {
+        map.set(gw, 'upcoming');
+      }
+    }
+    return map;
+  }, [fixtures, currentActiveGW]);
 
   // Filter fixtures by gameweek
   const gwFixtures = fixtures.filter((f) => f.gameweek === currentGW);
@@ -118,11 +141,15 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
               aria-label="Select gameweek"
               className="rounded-none border border-border bg-background px-2 py-0.5 text-xs font-mono font-bold text-text-primary focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
             >
-              {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
-                <option key={gw} value={gw}>
-                  GW {gw} {gw <= 2 ? '• Played' : gw === 7 ? '• Current' : ''}
-                </option>
-              ))}
+              {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => {
+                const status = gwStatusMap.get(gw);
+                const tag = status === 'played' ? '• Played' : status === 'current' ? '• Current' : '';
+                return (
+                  <option key={gw} value={gw}>
+                    GW {gw} {tag}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

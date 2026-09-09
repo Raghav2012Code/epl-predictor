@@ -195,11 +195,22 @@ def main():
         pipeline.forecast_2026_2027_season()
         print("\n[+] Predictions for all 380 fixtures exported successfully!")
     else:
-        # Default behavior: show Gameweek 1 or prompt
+        # Default behavior: show current upcoming gameweek (e.g. Gameweek 4)
+        csv_path = os.path.join(os.path.dirname(__file__), "data", "predictions_2026_2027.csv")
+        default_gw = 4
+        if os.path.exists(csv_path):
+            try:
+                df_all = pd.read_csv(csv_path)
+                upcoming = df_all[df_all["status"] == "Upcoming"]["gameweek"]
+                if not upcoming.empty:
+                    default_gw = int(upcoming.min())
+            except Exception:
+                pass
+
         print("\nWelcome to the Premier League Match Outcome & Scoreline Predictor!")
-        print("Showing upcoming Gameweek 1 predictions as default...\n")
-        run_gameweek_prediction(1)
-        print("Tip: Use --help to see all options (e.g. --match 'Arsenal' 'Chelsea', --gameweek 7, --benchmark).")
+        print(f"Showing current upcoming Gameweek {default_gw} predictions as default...\n")
+        run_gameweek_prediction(default_gw)
+        print(f"Tip: Use --help to see all options (e.g. --match 'Arsenal' 'Chelsea', --gameweek {default_gw}, --benchmark).")
 
 
 if __name__ == "__main__":
