@@ -11,6 +11,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { NavTab } from './Navbar';
+import { Logo } from './Logo';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -63,9 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3.5 border-b border-border bg-background/60">
           <div className="flex items-center space-x-2.5">
             {/* Terminal Monogram Badge */}
-            <div className="h-7 w-7 rounded-none bg-surface border border-border flex items-center justify-center text-white font-mono font-bold text-xs shadow-inner">
-              PL
-            </div>
+            <Logo size={30} className="border-border shadow-inner" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold tracking-wider text-text-primary uppercase">
