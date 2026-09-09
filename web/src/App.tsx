@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import eplDataRaw from './data/eplData.json';
 import { EPLDataset } from './types';
-import { Navbar, NavTab } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { TelemetryBar } from './components/TelemetryBar';
+import { NavTab } from './components/Navbar';
 import { GameweekView } from './components/GameweekView';
 import { MatchSimulator } from './components/MatchSimulator';
 import { StandingsView } from './components/StandingsView';
@@ -33,18 +35,24 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-background text-text-primary flex flex-col justify-between font-sans">
-        {/* Top Navbar */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        season={dataset.season}
-      />
+      <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row font-sans">
+        {/* Left Rail Studio Sidebar */}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          season={dataset.season}
+        />
 
-      {/* Main Content Area */}
-      <main className="flex-1 mx-auto max-w-7xl w-full px-3 sm:px-4 py-4 sm:py-6">
+        {/* Main Workstation Canvas */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <TelemetryBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            champion={dataset.standings[0]?.team}
+            season={dataset.season}
+          />
+
+          <main className="flex-1 w-full px-2.5 sm:px-4 py-3 sm:py-4 overflow-x-hidden">
         {activeTab === 'fixtures' && (
           <GameweekView
             fixtures={dataset.fixtures}
@@ -123,9 +131,10 @@ export const App: React.FC = () => {
             </span>
           </div>
         </div>
-      </footer>
-    </div>
-  </ErrorBoundary>
+        </footer>
+        </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 
