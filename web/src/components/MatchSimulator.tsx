@@ -362,7 +362,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{home.name} Form Momentum:</span>
-                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-red-300' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${homeFormBoost > 0 ? 'text-brand-accent' : homeFormBoost < 0 ? 'text-red-200' : 'text-text-muted'}`}>
                     {homeFormBoost > 0 ? `+${homeFormBoost}%` : `${homeFormBoost}%`}
                   </span>
                 </div>
@@ -382,7 +382,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
                   <span className="text-text-secondary">{away.name} Form Momentum:</span>
-                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-red-300' : 'text-text-muted'}`}>
+                  <span className={`font-bold ${awayFormBoost > 0 ? 'text-text-secondary' : awayFormBoost < 0 ? 'text-red-200' : 'text-text-muted'}`}>
                     {awayFormBoost > 0 ? `+${awayFormBoost}%` : `${awayFormBoost}%`}
                   </span>
                 </div>
