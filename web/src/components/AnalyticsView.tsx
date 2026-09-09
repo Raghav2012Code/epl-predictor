@@ -33,9 +33,9 @@ export const resolveAssetSrc = (src: string): string => {
 };
 
 const DONUT_SEGMENTS = [
-  { key: 'home', label: 'Home Win', color: '#6d0202' },
-  { key: 'draw', label: 'Draw', color: '#767e70' },
-  { key: 'away', label: 'Away Win', color: '#cbd1c4' },
+  { key: 'home', label: 'Home Win', color: '#00ff85' },
+  { key: 'draw', label: 'Draw', color: '#64748b' },
+  { key: 'away', label: 'Away Win', color: '#94a3b8' },
 ] as const;
 
 const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; total: number }> = ({
@@ -59,7 +59,7 @@ const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; tot
     <div className="flex flex-col sm:flex-row items-center gap-5">
       <svg viewBox="0 0 140 140" className="h-44 w-44 flex-shrink-0" role="img" aria-label="Forecast outcome distribution">
         <title>Home {dist.homePct}% / Draw {dist.drawPct}% / Away {dist.awayPct}%</title>
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#290000" strokeWidth="18" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#1e222b" strokeWidth="18" />
         {segs.map((s) => (
           <circle
             key={s.key}
@@ -118,7 +118,7 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
               x2={data.length * 18 + 30}
               y1={170 - f * 140}
               y2={170 - f * 140}
-              stroke="#480202"
+              stroke="#1e222b"
               strokeWidth="1"
             />
           ))}
@@ -131,18 +131,18 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
             return (
               <g key={d.gw}>
                 <title>{`GW${d.gw}: ${d.goals} goals (H ${d.homeGoals} / A ${d.awayGoals}, avg ${d.avgPerMatch}/match)`}</title>
-                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#767e70" opacity="0.85" />
-                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#6d0202" opacity="0.9" />
+                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#475569" opacity="0.85" />
+                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#00ff85" opacity="0.9" />
                 {(d.gw === 1 || d.gw % 5 === 0 || d.gw === 38) && (
-                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#a4aca0" fontFamily="monospace">
+                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#818e9f" fontFamily="monospace">
                     {d.gw}
                   </text>
                 )}
               </g>
             );
           })}
-          <text x="4" y="36" fontSize="8" fill="#a4aca0" fontFamily="monospace">{maxGoals}</text>
-          <text x="4" y="172" fontSize="8" fill="#a4aca0" fontFamily="monospace">0</text>
+          <text x="4" y="36" fontSize="8" fill="#818e9f" fontFamily="monospace">{maxGoals}</text>
+          <text x="4" y="172" fontSize="8" fill="#818e9f" fontFamily="monospace">0</text>
         </svg>
         <div className="flex items-center justify-between text-[11px] font-mono text-text-muted px-1">
           <span className="flex items-center space-x-3">

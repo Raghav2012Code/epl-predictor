@@ -79,9 +79,9 @@ const hslToRgb = (h: number, s: number, l: number): [number, number, number] => 
   return [r, g, b];
 };
 
-/** Ensures club chart colors meet WCAG 2.1 Non-text Contrast (>= 3:1) against surface #480202 */
+/** Ensures club chart colors meet WCAG 2.1 Non-text Contrast (>= 3:1) against surface #12141a */
 const getAccessibleClubColor = (hex: string): string => {
-  if (!hex || hex === '#FFFFFF') return '#a4aca0';
+  if (!hex || hex === '#FFFFFF') return '#818e9f';
   const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
   if (cleanHex.length !== 6) return hex;
   const r = parseInt(cleanHex.slice(0, 2), 16);
@@ -93,7 +93,7 @@ const getAccessibleClubColor = (hex: string): string => {
   };
   const getLum = (cr: number, cg: number, cb: number) =>
     0.2126 * toLinear(cr) + 0.7152 * toLinear(cg) + 0.0722 * toLinear(cb);
-  const bgLum = getLum(0x48, 0x02, 0x02);
+  const bgLum = getLum(0x12, 0x14, 0x1a);
   const contrastRatio = (l1: number, l2: number) =>
     (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 
@@ -135,8 +135,8 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <title>{`${name} cumulative points per gameweek`}</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
-              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#480202" strokeWidth="1" />
-              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#a4aca0" fontFamily="monospace">
+              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#1e222b" strokeWidth="1" />
+              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#818e9f" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
             </g>
@@ -145,11 +145,11 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <polyline points={line} fill="none" stroke={chartColor} strokeWidth="2.5" strokeLinejoin="round" />
           {series.filter((p) => p.gw % 2 === 1 || p.gw === 38).map((p) => (
             <g key={p.gw}>
-              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={chartColor} stroke="#290000" strokeWidth="1">
+              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={chartColor} stroke="#090a0f" strokeWidth="1">
                 <title>{`GW${p.gw}: ${p.cumPoints} pts (${p.gf}-${p.ga} vs GW opponent)`}</title>
               </circle>
               {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#a4aca0" fontFamily="monospace">
+                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#818e9f" fontFamily="monospace">
                   {p.gw}
                 </text>
               )}
@@ -176,10 +176,10 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
             return (
               <g key={p.gw}>
                 <title>{`GW${p.gw}: scored ${p.gf}, conceded ${p.ga}`}</title>
-                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#6d0202" opacity="0.9" />
-                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#767e70" opacity="0.85" />
+                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#00ff85" opacity="0.9" />
+                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#475569" opacity="0.85" />
                 {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#a4aca0" fontFamily="monospace">
+                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#818e9f" fontFamily="monospace">
                     {p.gw}
                   </text>
                 )}
