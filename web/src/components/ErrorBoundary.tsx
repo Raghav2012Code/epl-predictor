@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={this.handleReload}
-                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-md bg-pl-purple text-white hover:bg-pl-purpleLight transition-colors"
+                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-md bg-brand-primary text-white hover:bg-brand-primaryHover transition-colors"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 <span>Reload Application</span>

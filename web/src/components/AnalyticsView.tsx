@@ -33,9 +33,9 @@ export const resolveAssetSrc = (src: string): string => {
 };
 
 const DONUT_SEGMENTS = [
-  { key: 'home', label: 'Home Win', color: '#00ff85' },
+  { key: 'home', label: 'Home Win', color: '#25845f' },
   { key: 'draw', label: 'Draw', color: '#64748b' },
-  { key: 'away', label: 'Away Win', color: '#e90052' },
+  { key: 'away', label: 'Away Win', color: '#8cbc93' },
 ] as const;
 
 const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; total: number }> = ({
@@ -59,7 +59,7 @@ const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; tot
     <div className="flex flex-col sm:flex-row items-center gap-5">
       <svg viewBox="0 0 140 140" className="h-44 w-44 flex-shrink-0" role="img" aria-label="Forecast outcome distribution">
         <title>Home {dist.homePct}% / Draw {dist.drawPct}% / Away {dist.awayPct}%</title>
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#171a22" strokeWidth="18" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#0a534e" strokeWidth="18" />
         {segs.map((s) => (
           <circle
             key={s.key}
@@ -118,7 +118,7 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
               x2={data.length * 18 + 30}
               y1={170 - f * 140}
               y2={170 - f * 140}
-              stroke="#1f232e"
+              stroke="#0a534e"
               strokeWidth="1"
             />
           ))}
@@ -131,23 +131,23 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
             return (
               <g key={d.gw}>
                 <title>{`GW${d.gw}: ${d.goals} goals (H ${d.homeGoals} / A ${d.awayGoals}, avg ${d.avgPerMatch}/match)`}</title>
-                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#e90052" opacity="0.85" />
-                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#00ff85" opacity="0.9" />
+                <rect x={x} y={y + homeH} width="12" height={Math.max(0, awayH)} fill="#8cbc93" opacity="0.85" />
+                <rect x={x} y={y} width="12" height={Math.max(0, homeH)} fill="#25845f" opacity="0.9" />
                 {(d.gw === 1 || d.gw % 5 === 0 || d.gw === 38) && (
-                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#606776" fontFamily="monospace">
+                  <text x={x + 6} y="182" textAnchor="middle" fontSize="8" fill="#93aba2" fontFamily="monospace">
                     {d.gw}
                   </text>
                 )}
               </g>
             );
           })}
-          <text x="4" y="36" fontSize="8" fill="#606776" fontFamily="monospace">{maxGoals}</text>
-          <text x="4" y="172" fontSize="8" fill="#606776" fontFamily="monospace">0</text>
+          <text x="4" y="36" fontSize="8" fill="#93aba2" fontFamily="monospace">{maxGoals}</text>
+          <text x="4" y="172" fontSize="8" fill="#93aba2" fontFamily="monospace">0</text>
         </svg>
         <div className="flex items-center justify-between text-[11px] font-mono text-text-muted px-1">
           <span className="flex items-center space-x-3">
-            <span className="flex items-center"><span className="h-2 w-2 bg-pl-green mr-1" />Home goals</span>
-            <span className="flex items-center"><span className="h-2 w-2 bg-pl-magenta mr-1" />Away goals</span>
+            <span className="flex items-center"><span className="h-2 w-2 bg-brand-primary mr-1" />Home goals</span>
+            <span className="flex items-center"><span className="h-2 w-2 bg-brand-accent mr-1" />Away goals</span>
           </span>
           <span>Season avg: <span className="text-text-primary font-bold">{avg}/match</span></span>
         </div>
@@ -169,14 +169,14 @@ const AttackDefenseChart: React.FC<{ standings: StandingsRow[] }> = ({ standings
               <span className="truncate">{t.team}</span>
             </span>
             <span className="font-mono text-text-muted flex-shrink-0 ml-2">
-              <span className="text-pl-green font-bold">{t.gf} GF</span>
+              <span className="text-brand-accent font-bold">{t.gf} GF</span>
               {' / '}
               <span className="text-text-secondary font-bold">{t.ga} GA</span>
             </span>
           </div>
           <div className="space-y-1">
             <div className="h-1.5 w-full bg-background rounded-none overflow-hidden">
-              <div className="h-full bg-pl-green transition-all" style={{ width: `${(t.gf / max) * 100}%` }} title={`${t.team} goals for: ${t.gf}`} />
+              <div className="h-full bg-brand-primary transition-all" style={{ width: `${(t.gf / max) * 100}%` }} title={`${t.team} goals for: ${t.gf}`} />
             </div>
             <div className="h-1.5 w-full bg-background rounded-none overflow-hidden">
               <div className="h-full bg-slate-500 transition-all" style={{ width: `${(t.ga / max) * 100}%` }} title={`${t.team} goals against: ${t.ga}`} />
@@ -214,15 +214,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             </h2>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2 py-1 text-xs font-mono font-bold bg-pl-purple text-white border border-pl-purpleLight rounded-sm">
-              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-pl-green" />
+            <span className="inline-flex items-center px-2 py-1 text-xs font-mono font-bold bg-brand-primary text-white border border-brand-primary rounded-sm">
+              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-brand-accent" />
               PRODUCTION: {productionName.toUpperCase()} (SELECTED)
             </span>
           </div>
         </div>
 
         <p className="mt-3 text-xs text-text-secondary leading-relaxed">
-          The pipeline benchmarks Random Forest and XGBoost across 2,280 historical Premier League matches using strict time-series cross-validation (pre-2024 train, 2024–2026 validation). All features are calculated using historical chronological shift (<code className="font-mono text-pl-cyan">shift(1)</code>) to guarantee zero future data leakage.
+          The pipeline benchmarks Random Forest and XGBoost across 2,280 historical Premier League matches using strict time-series cross-validation (pre-2024 train, 2024–2026 validation). All features are calculated using historical chronological shift (<code className="font-mono text-brand-accent">shift(1)</code>) to guarantee zero future data leakage.
         </p>
       </div>
 
@@ -233,13 +233,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             key={m.name}
             className={`border p-4 rounded-sm bg-surface ${
               m.isProduction
-                ? 'border-pl-purpleLight ring-1 ring-pl-purpleLight/40'
+                ? 'border-brand-primary ring-1 ring-brand-primary/40'
                 : 'border-border'
             }`}
           >
             <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
               <div className="flex items-center space-x-2">
-                <Cpu className={`h-4 w-4 ${m.isProduction ? 'text-pl-cyan' : 'text-text-muted'}`} />
+                <Cpu className={`h-4 w-4 ${m.isProduction ? 'text-brand-accent' : 'text-text-muted'}`} />
                 <span className="text-xs font-bold text-text-primary uppercase tracking-wider">
                   {m.name}
                 </span>
@@ -247,7 +247,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               <span
                 className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm ${
                   m.isProduction
-                    ? 'bg-pl-purple text-white border border-pl-purpleLight'
+                    ? 'bg-brand-primary text-white border border-brand-primary'
                     : 'bg-surface-subtle text-text-muted border border-border'
                 }`}
               >
@@ -265,7 +265,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
               <div className="border border-border-subtle bg-background p-2 rounded-sm">
                 <div className="text-[10px] font-mono text-text-muted">GOAL MAE (AVG)</div>
-                <div className="text-base font-mono font-black text-pl-green mt-0.5">
+                <div className="text-base font-mono font-black text-brand-accent mt-0.5">
                   {m.avgGoalMae}
                 </div>
               </div>
@@ -293,7 +293,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
               <div className="border border-border-subtle bg-background p-2 rounded-sm">
                 <div className="text-[10px] font-mono text-text-muted">WITHIN 1 GOAL ACC</div>
-                <div className="text-base font-mono font-black text-pl-cyan mt-0.5">
+                <div className="text-base font-mono font-black text-brand-accent mt-0.5">
                   {m.within1Goal}%
                 </div>
               </div>
@@ -311,7 +311,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="border border-border bg-surface p-4 rounded-sm lg:col-span-2">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-            <PieIcon className="h-4 w-4 text-pl-green" />
+            <PieIcon className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
               FORECAST OUTCOME SPLIT (380 FIXTURES)
             </h3>
@@ -324,7 +324,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
         <div className="border border-border bg-surface p-4 rounded-sm lg:col-span-3">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-            <TrendingUp className="h-4 w-4 text-pl-cyan" />
+            <TrendingUp className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
               PREDICTED GOALS PER GAMEWEEK
             </h3>
@@ -335,7 +335,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
       <div className="border border-border bg-surface p-4 rounded-sm">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-          <Crosshair className="h-4 w-4 text-pl-magenta" />
+          <Crosshair className="h-4 w-4 text-brand-accent" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
             TOP 6 ATTACK VS DEFENCE (PROJECTED TOTALS)
           </h3>
@@ -347,7 +347,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       <div className="border border-border bg-surface p-4 rounded-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-3 mb-4 gap-2">
           <div className="flex items-center space-x-2">
-            <BarChart2 className="h-4 w-4 text-pl-green" />
+            <BarChart2 className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
               MATPLOTLIB DIAGNOSTIC VISUALIZATION GALLERY
             </h3>
@@ -361,7 +361,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 onClick={() => setActiveChartTab(d.id)}
                 className={`px-2.5 py-1 rounded-sm transition-colors whitespace-nowrap ${
                   activeChartTab === d.id
-                    ? 'bg-pl-purple text-white font-bold border border-pl-purpleLight'
+                    ? 'bg-brand-primary text-white font-bold border border-brand-primary'
                     : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover'
                 }`}
               >
@@ -400,7 +400,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       {/* Top Predictive Feature Signals */}
       <div className="border border-border bg-surface p-4 rounded-sm">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-          <ShieldCheck className="h-4 w-4 text-pl-cyan" />
+          <ShieldCheck className="h-4 w-4 text-brand-accent" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
             TOP PREDICTIVE FEATURE WEIGHTS ({productionName.toUpperCase()} FEATURE IMPORTANCE)
           </h3>
@@ -422,7 +422,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 <div className="text-[11px] text-text-muted mt-0.5">{f.desc}</div>
               </div>
               <div className="text-right flex-shrink-0">
-                <span className="inline-block font-mono text-xs font-bold text-pl-cyan">
+                <span className="inline-block font-mono text-xs font-bold text-brand-accent">
                   {(f.importance * 100).toFixed(1)}%
                 </span>
                 <div className="text-[9px] font-mono text-text-muted uppercase">{f.category}</div>

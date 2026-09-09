@@ -50,8 +50,8 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <title>{`${name} cumulative points per gameweek`}</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
-              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#1f232e" strokeWidth="1" />
-              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#606776" fontFamily="monospace">
+              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#0a534e" strokeWidth="1" />
+              <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#93aba2" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
             </g>
@@ -60,11 +60,11 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
           <polyline points={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
           {series.filter((p) => p.gw % 2 === 1 || p.gw === 38).map((p) => (
             <g key={p.gw}>
-              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={color} stroke="#090a0d" strokeWidth="1">
+              <circle cx={x(p.gw)} cy={y(p.cumPoints)} r="3" fill={color} stroke="#021e23" strokeWidth="1">
                 <title>{`GW${p.gw}: ${p.cumPoints} pts (${p.gf}-${p.ga} vs GW opponent)`}</title>
               </circle>
               {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#606776" fontFamily="monospace">
+                <text x={x(p.gw)} y={H - 8} textAnchor="middle" fontSize="9" fill="#93aba2" fontFamily="monospace">
                   {p.gw}
                 </text>
               )}
@@ -91,10 +91,10 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
             return (
               <g key={p.gw}>
                 <title>{`GW${p.gw}: scored ${p.gf}, conceded ${p.ga}`}</title>
-                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#00ff85" opacity="0.9" />
-                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#e90052" opacity="0.85" />
+                <rect x={x} y={150 - gfH} width="8" height={gfH} fill="#25845f" opacity="0.9" />
+                <rect x={x + 9} y={150 - gaH} width="8" height={gaH} fill="#8cbc93" opacity="0.85" />
                 {(p.gw === 1 || p.gw % 6 === 0 || p.gw === 38) && (
-                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#606776" fontFamily="monospace">
+                  <text x={x + 8} y="163" textAnchor="middle" fontSize="8" fill="#93aba2" fontFamily="monospace">
                     {p.gw}
                   </text>
                 )}
@@ -103,8 +103,8 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
           })}
         </svg>
         <div className="flex items-center space-x-3 text-[11px] font-mono text-text-muted px-1">
-          <span className="flex items-center"><span className="h-2 w-2 bg-pl-green mr-1" />Scored</span>
-          <span className="flex items-center"><span className="h-2 w-2 bg-pl-magenta mr-1" />Conceded</span>
+          <span className="flex items-center"><span className="h-2 w-2 bg-brand-primary mr-1" />Scored</span>
+          <span className="flex items-center"><span className="h-2 w-2 bg-brand-accent mr-1" />Conceded</span>
         </div>
       </div>
     </div>
@@ -166,13 +166,13 @@ export const ClubView: React.FC<ClubViewProps> = ({
       {/* Club selector */}
       <div className="border border-border bg-surface p-3 sm:p-4 rounded-sm flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase tracking-wider text-text-muted">
-          <Shield className="h-4 w-4 text-pl-green" />
+          <Shield className="h-4 w-4 text-brand-accent" />
           <span>Club Performance</span>
         </div>
         <select
           value={profile.name}
           onChange={(e) => setClub(e.target.value)}
-          className="w-full sm:max-w-xs rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-pl-purpleLight focus:outline-none"
+          className="w-full sm:max-w-xs rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
           aria-label="Select club"
         >
           {clubNames.map((name) => (
@@ -202,7 +202,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
                   <span
                     key={i}
                     className={`w-5 h-5 flex items-center justify-center font-bold rounded-sm ${
-                      r === 'W' ? 'bg-pl-greenDark text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
+                      r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                     }`}
                   >
                     {r}
@@ -247,7 +247,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
             card.split ? (
               <div key={card.title} className="border border-border bg-surface p-4 rounded-sm">
                 <div className="flex items-center space-x-2 text-[11px] font-mono font-bold uppercase tracking-wider text-text-muted mb-2">
-                  <card.icon className="h-3.5 w-3.5 text-pl-cyan" />
+                  <card.icon className="h-3.5 w-3.5 text-brand-accent" />
                   <span>{card.title}</span>
                 </div>
                 <div className="font-mono text-sm font-black text-text-primary">
@@ -265,7 +265,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
       {/* Points race */}
       <div className="border border-border bg-surface p-4 rounded-sm">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-          <TrendingUp className="h-4 w-4 text-pl-green" />
+          <TrendingUp className="h-4 w-4 text-brand-accent" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
             CUMULATIVE POINTS RACE (BY GAMEWEEK)
           </h3>
@@ -280,7 +280,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
       {/* Goals */}
       <div className="border border-border bg-surface p-4 rounded-sm">
         <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-          <Swords className="h-4 w-4 text-pl-magenta" />
+          <Swords className="h-4 w-4 text-brand-accent" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
             SCORED VS CONCEDED PER GAMEWEEK
           </h3>
@@ -296,7 +296,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="border border-border bg-surface p-4 rounded-sm">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-            <CalendarDays className="h-4 w-4 text-pl-cyan" />
+            <CalendarDays className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">NEXT 5 FIXTURES</h3>
           </div>
           {upcoming.length === 0 ? (
@@ -322,11 +322,11 @@ export const ClubView: React.FC<ClubViewProps> = ({
                     <div className="flex items-center justify-between text-[11px] font-mono text-text-muted mt-1">
                       <span>{f.date} • {isHome ? 'HOME' : 'AWAY'}</span>
                       <span>
-                        <span className="text-pl-green font-bold">H {f.homeWinProb}%</span>
+                        <span className="text-brand-accent font-bold">H {f.homeWinProb}%</span>
                         {' / '}
                         <span className="text-slate-400 font-bold">D {f.drawProb}%</span>
                         {' / '}
-                        <span className="text-pl-magenta font-bold">A {f.awayWinProb}%</span>
+                        <span className="text-text-secondary font-bold">A {f.awayWinProb}%</span>
                       </span>
                     </div>
                   </button>
@@ -338,7 +338,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
 
         <div className="border border-border bg-surface p-4 rounded-sm">
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
-            <Shield className="h-4 w-4 text-pl-green" />
+            <Shield className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">RECENT RESULTS</h3>
           </div>
           {played.length === 0 ? (
@@ -353,7 +353,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
                   <div key={f.id} className="border border-border-subtle bg-background p-2.5 rounded-sm">
                     <div className="flex items-center justify-between text-xs gap-2">
                       <span className="flex items-center space-x-2 min-w-0">
-                        <span className={`w-5 h-5 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm flex-shrink-0 ${r === 'W' ? 'bg-pl-greenDark text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'}`}>
+                        <span className={`w-5 h-5 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm flex-shrink-0 ${r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'}`}>
                           {r}
                         </span>
                         <span className="font-bold text-text-primary truncate">{isHome ? 'vs' : 'at'} {opp}</span>
