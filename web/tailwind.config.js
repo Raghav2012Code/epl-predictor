@@ -8,31 +8,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#090a0d",
+        background: "#021e23",
+        canvas: "#021e23",
         surface: {
-          DEFAULT: "#101217",
-          subtle: "#15181f",
-          card: "#12141a",
-          hover: "#181b23",
-          active: "#1f232e",
+          DEFAULT: "#0a534e",
+          subtle: "#063835",
+          card: "#0a534e",
+          hover: "#0e645e",
+          active: "#12756e",
         },
         border: {
-          DEFAULT: "#1f232e",
-          subtle: "#171a22",
-          active: "#2e3445",
+          DEFAULT: "#0a534e",
+          subtle: "#063835",
+          active: "#25845f",
+        },
+        brand: {
+          primary: "#25845f",
+          primaryHover: "#2ca073",
+          primaryDark: "#1c684a",
+          accent: "#8cbc93",
+          accentHover: "#9ec7a4",
+          surface: "#0a534e",
+          canvas: "#021e23",
         },
         text: {
           primary: "#f3f5f8",
-          secondary: "#9ba3b2",
-          muted: "#606776",
-        },
-        pl: {
-          purple: "#38003c",
-          purpleLight: "#6c0c77",
-          green: "#00ff85",
-          greenDark: "#028b49",
-          magenta: "#e90052",
-          blue: "#04faff",
+          secondary: "#8cbc93",
+          muted: "#93aba2",
         },
       },
       borderRadius: {

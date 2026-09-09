@@ -4,23 +4,23 @@
 
 @layer base {
   * {
-    border-color: #1f232e;
+    border-color: #0a534e;
   }
   html {
     scroll-behavior: smooth;
   }
   body {
-    background-color: #090a0d;
+    background-color: #021e23;
     color: #f3f5f8;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
-    background-color: #38003c;
+    background-color: #25845f;
     color: #f3f5f8;
   }
   :focus-visible {
-    outline: 2px solid #6c0c77;
+    outline: 2px solid #25845f;
     outline-offset: 2px;
   }
 }
@@ -42,12 +42,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0d;
+  background: #021e23;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f232e;
+  background: #0a534e;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e3445;
+  background: #25845f;
 }
