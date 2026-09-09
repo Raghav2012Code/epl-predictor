@@ -37,7 +37,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         </div>
         <div>
           {isPlayed ? (
-            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-border text-text-secondary">
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-surface-subtle border border-border-subtle text-text-secondary">
               ACTUAL: {fixture.actualScore}
             </span>
           ) : (

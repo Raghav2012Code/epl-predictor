@@ -194,7 +194,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest px-5 py-2 bg-background border border-border text-text-primary rounded-sm shadow-inner">
               {simulation.predHg} - {simulation.predAg}
             </div>
-            <div className="mt-2 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-sm bg-border font-bold text-text-secondary">
+            <div className="mt-2 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-sm bg-surface-subtle border border-border-subtle font-bold text-text-secondary">
               FAVORED: {simulation.favored}
             </div>
           </div>

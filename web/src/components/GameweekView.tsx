@@ -87,7 +87,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             onClick={() => setFilterStatus('all')}
             className={`px-2.5 py-1 rounded-sm transition-colors ${
               filterStatus === 'all'
-                ? 'bg-border text-text-primary font-bold'
+                ? 'bg-brand-primary text-white font-bold shadow-sm'
                 : 'text-text-muted hover:text-text-secondary'
             }`}
           >
@@ -97,7 +97,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             onClick={() => setFilterStatus('upcoming')}
             className={`px-2.5 py-1 rounded-sm transition-colors ${
               filterStatus === 'upcoming'
-                ? 'bg-border text-text-primary font-bold'
+                ? 'bg-brand-primary text-white font-bold shadow-sm'
                 : 'text-text-muted hover:text-text-secondary'
             }`}
           >
@@ -107,7 +107,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             onClick={() => setFilterStatus('played')}
             className={`px-2.5 py-1 rounded-sm transition-colors ${
               filterStatus === 'played'
-                ? 'bg-border text-text-primary font-bold'
+                ? 'bg-brand-primary text-white font-bold shadow-sm'
                 : 'text-text-muted hover:text-text-secondary'
             }`}
           >
