@@ -4,13 +4,14 @@
 
 @layer base {
   * {
-    border-color: #1a1f2c;
+    border-color: #1f1f23;
   }
   html {
     scroll-behavior: smooth;
+    background-color: #000000;
   }
   body {
-    background-color: #08090c;
+    background-color: #000000;
     color: #ffffff;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     -webkit-tap-highlight-color: transparent;
@@ -26,7 +27,6 @@
 }
 
 @layer utilities {
-  /* Hide scrollbars for horizontally scrollable tab bars while keeping scroll */
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -35,7 +35,7 @@
     display: none;
   }
   .hairline-border {
-    border-color: #1a1f2c;
+    border-color: #1f1f23;
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;
@@ -48,12 +48,12 @@
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #08090c;
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a1f2c;
+  background: #1f1f23;
   border-radius: 0px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
+  background: #52525b;
 }

@@ -8,18 +8,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#08090c",
-        canvas: "#08090c",
+        background: "#000000",
+        canvas: "#000000",
         surface: {
-          DEFAULT: "#0f1219",
-          subtle: "#0a0c12",
-          card: "#0f1219",
-          hover: "#151922",
-          active: "#1c2230",
+          DEFAULT: "#0a0a0c",
+          subtle: "#000000",
+          card: "#0a0a0c",
+          hover: "#141417",
+          active: "#1c1c20",
         },
         border: {
-          DEFAULT: "#1a1f2c",
-          subtle: "#121620",
+          DEFAULT: "#1f1f23",
+          subtle: "#121214",
           active: "#ffffff",
         },
         brand: {
@@ -29,8 +29,8 @@ export default {
           accent: "#ffffff",
           accentBase: "#ffffff",
           accentHover: "#e4e4e7",
-          surface: "#0f1219",
-          canvas: "#08090c",
+          surface: "#0a0a0c",
+          canvas: "#000000",
         },
         text: {
           primary: "#ffffff",

@@ -68,7 +68,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
         {/* Top Defensive Team */}
         <div className="border border-border bg-surface p-4 rounded-sm">
           <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-            <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
+            <ShieldAlert className="h-3.5 w-3.5 text-text-secondary" />
             <span>TOP DEFENSIVE RECORD</span>
           </div>
           <div className="text-base font-black text-text-primary">{bestDefense?.team}</div>
@@ -89,13 +89,13 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
           </div>
           <div className="flex items-center space-x-3 text-[11px] font-mono text-text-muted">
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-blue-400 mr-1.5" /> Champions League
+              <span className="w-2 h-2 bg-white mr-1.5" /> Champions League
             </span>
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-amber-400 mr-1.5" /> Europa League
+              <span className="w-2 h-2 bg-zinc-500 mr-1.5" /> Europa League
             </span>
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-red-400 mr-1.5" /> Relegation
+              <span className="w-2 h-2 bg-zinc-700 mr-1.5" /> Relegation
             </span>
           </div>
         </div>
