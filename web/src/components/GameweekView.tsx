@@ -61,6 +61,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             <select
               value={currentGW}
               onChange={(e) => setCurrentGW(Number(e.target.value))}
+              aria-label="Select gameweek"
               className="rounded-sm border border-border bg-background px-2.5 py-1 text-xs font-mono font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
@@ -227,7 +228,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                       {homeProfile.last5Form.map((res, i) => (
                         <span
                           key={i}
-                          className={`w-4 h-4 flex items-center justify-center font-bold rounded-none ${
+                          className={`w-4 h-4 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                             res === 'W'
                               ? 'bg-brand-primary text-white'
                               : res === 'D'
@@ -250,7 +251,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
                       {awayProfile.last5Form.map((res, i) => (
                         <span
                           key={i}
-                          className={`w-4 h-4 flex items-center justify-center font-bold rounded-none ${
+                          className={`w-4 h-4 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                             res === 'W'
                               ? 'bg-brand-primary text-white'
                               : res === 'D'

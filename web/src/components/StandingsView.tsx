@@ -214,7 +214,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                       {row.last5.map((res, i) => (
                         <span
                           key={i}
-                          className={`w-3.5 h-3.5 flex items-center justify-center font-bold ${
+                          className={`w-3.5 h-3.5 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                             res === 'W'
                               ? 'bg-brand-primary text-white'
                               : res === 'D'

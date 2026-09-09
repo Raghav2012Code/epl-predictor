@@ -132,6 +132,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <select
               value={homeTeam}
               onChange={(e) => setHomeTeam(e.target.value)}
+              aria-label="Select home team"
               className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {teamNames.map((name) => (
@@ -150,6 +151,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
             <select
               value={awayTeam}
               onChange={(e) => setAwayTeam(e.target.value)}
+              aria-label="Select away team"
               className="w-full rounded-sm border border-border bg-background px-3 py-2 text-xs font-bold text-text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {teamNames.map((name) => (
@@ -277,7 +279,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               {home.last5Form.map((r, i) => (
                 <span
                   key={i}
-                  className={`w-4 h-4 flex items-center justify-center font-bold ${
+                  className={`w-4 h-4 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                     r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                   }`}
                 >
@@ -290,7 +292,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               {away.last5Form.map((r, i) => (
                 <span
                   key={i}
-                  className={`w-4 h-4 flex items-center justify-center font-bold ${
+                  className={`w-4 h-4 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                     r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                   }`}
                 >

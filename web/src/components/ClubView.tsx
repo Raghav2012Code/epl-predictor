@@ -286,7 +286,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
                 {profile.last5Form.map((r, i) => (
                   <span
                     key={i}
-                    className={`w-5 h-5 flex items-center justify-center font-bold rounded-sm ${
+                    className={`w-5 h-5 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
                       r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'
                     }`}
                   >
@@ -438,7 +438,7 @@ export const ClubView: React.FC<ClubViewProps> = ({
                   <div key={f.id} className="border border-border-subtle bg-background p-2.5 rounded-sm">
                     <div className="flex items-center justify-between text-xs gap-2">
                       <span className="flex items-center space-x-2 min-w-0">
-                        <span className={`w-5 h-5 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm flex-shrink-0 ${r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'}`}>
+                        <span className={`w-5 h-5 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm ring-1 ring-white/20 flex-shrink-0 ${r === 'W' ? 'bg-brand-primary text-white' : r === 'D' ? 'bg-slate-600 text-white' : 'bg-red-800 text-white'}`}>
                           {r}
                         </span>
                         <span className="font-bold text-text-primary truncate">{isHome ? 'vs' : 'at'} {opp}</span>
