@@ -59,7 +59,7 @@ const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; tot
     <div className="flex flex-col sm:flex-row items-center gap-5">
       <svg viewBox="0 0 140 140" className="h-44 w-44 flex-shrink-0" role="img" aria-label="Forecast outcome distribution">
         <title>Home {dist.homePct}% / Draw {dist.drawPct}% / Away {dist.awayPct}%</title>
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#063835" strokeWidth="18" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#021e23" strokeWidth="18" />
         {segs.map((s) => (
           <circle
             key={s.key}
@@ -88,7 +88,7 @@ const OutcomeDonut: React.FC<{ dist: LeagueAnalytics['outcomeDistribution']; tot
         {segs.map((s) => (
           <div key={s.key} className="flex items-center justify-between border border-border-subtle bg-background px-2.5 py-2 rounded-sm">
             <span className="flex items-center space-x-2 text-text-secondary">
-              <span className="h-2.5 w-2.5" style={{ backgroundColor: s.color }} />
+              <span className="h-2.5 w-2.5 flex-shrink-0 ring-1 ring-white/15" style={{ backgroundColor: s.color }} />
               <span className="font-mono font-bold">{s.label}</span>
             </span>
             <span className="font-mono text-text-primary font-bold">
@@ -108,7 +108,7 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
   const maxGoals = Math.max(...data.map((d) => d.goals), 1);
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[620px]">
+      <div className="min-w-[620px] bg-background border border-border-subtle rounded-sm p-2.5">
         <svg viewBox={`0 0 ${data.length * 18 + 40} 190`} className="w-full h-48" role="img" aria-label="Predicted goals per gameweek">
           <title>Predicted goals per gameweek (stacked home / away)</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
@@ -118,7 +118,7 @@ const GoalsTrendChart: React.FC<{ data: LeagueAnalytics['goalsPerGameweek']; avg
               x2={data.length * 18 + 30}
               y1={170 - f * 140}
               y2={170 - f * 140}
-              stroke="#063835"
+              stroke="#0a534e"
               strokeWidth="1"
             />
           ))}

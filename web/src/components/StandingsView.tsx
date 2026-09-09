@@ -89,13 +89,13 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
           </div>
           <div className="flex items-center space-x-3 text-[11px] font-mono text-text-muted">
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-blue-500 mr-1.5" /> Champions League
+              <span className="w-2 h-2 bg-blue-400 mr-1.5" /> Champions League
             </span>
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-amber-500 mr-1.5" /> Europa League
+              <span className="w-2 h-2 bg-amber-400 mr-1.5" /> Europa League
             </span>
             <span className="flex items-center">
-              <span className="w-2 h-2 bg-red-500 mr-1.5" /> Relegation
+              <span className="w-2 h-2 bg-red-400 mr-1.5" /> Relegation
             </span>
           </div>
         </div>
@@ -171,13 +171,13 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                   {/* Position with qualification border bar */}
                   <td className="py-2.5 px-3 text-center font-bold text-text-secondary relative">
                     {isUCL && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500" />
+                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400" />
                     )}
                     {isUEL && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-500" />
+                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400" />
                     )}
                     {isRel && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-500" />
+                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-400" />
                     )}
                     {row.rank}
                   </td>

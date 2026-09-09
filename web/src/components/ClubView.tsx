@@ -130,12 +130,12 @@ const PointsRaceChart: React.FC<{ series: ClubGameweekPoint[]; color: string; na
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[560px]">
+      <div className="min-w-[560px] bg-background border border-border-subtle rounded-sm p-2.5">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-52" role="img" aria-label={`${name} cumulative points race`}>
           <title>{`${name} cumulative points per gameweek`}</title>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
-              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#063835" strokeWidth="1" />
+              <line x1={PAD_L} x2={W - 10} y1={y(maxPts * f)} y2={y(maxPts * f)} stroke="#0a534e" strokeWidth="1" />
               <text x="2" y={y(maxPts * f) + 3} fontSize="9" fill="#b2cdc4" fontFamily="monospace">
                 {Math.round(maxPts * f)}
               </text>
@@ -166,7 +166,7 @@ const GoalsBarsChart: React.FC<{ series: ClubGameweekPoint[]; name: string }> = 
   const W = series.length * 20 + 34;
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[560px]">
+      <div className="min-w-[560px] bg-background border border-border-subtle rounded-sm p-2.5">
         <svg viewBox={`0 0 ${W} 170`} className="w-full h-40" role="img" aria-label={`${name} goals for and against per gameweek`}>
           <title>{`${name} scored vs conceded per gameweek`}</title>
           {series.map((p, i) => {
