@@ -102,91 +102,96 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
 
         <table className="w-full min-w-[680px] text-left text-xs font-sans">
           <thead>
-            <tr className="border-b border-border bg-surface-subtle font-mono text-[11px] text-text-muted">
-              <th className="py-2.5 px-3 w-12 text-center">POS</th>
-              <th className="py-2.5 px-3">CLUB</th>
+            <tr className="border-b border-border bg-surface-subtle font-mono text-[10px] text-text-muted select-none uppercase">
+              <th className="py-2 px-2.5 w-10 text-center">POS</th>
+              <th className="py-2 px-3">CLUB</th>
               <th
                 onClick={() => handleSort('played')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
               >
                 P
               </th>
               <th
                 onClick={() => handleSort('won')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
               >
                 W
               </th>
               <th
                 onClick={() => handleSort('drawn')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
               >
                 D
               </th>
               <th
                 onClick={() => handleSort('lost')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
               >
                 L
               </th>
               <th
                 onClick={() => handleSort('gf')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary hidden sm:table-cell"
               >
                 GF
               </th>
               <th
                 onClick={() => handleSort('ga')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary hidden sm:table-cell"
               >
                 GA
               </th>
               <th
                 onClick={() => handleSort('gd')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-text-primary"
+                className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
               >
                 GD
               </th>
               <th
                 onClick={() => handleSort('points')}
-                className="py-2.5 px-3 text-center font-bold text-text-primary cursor-pointer hover:underline"
+                className="py-2 px-3 text-center cursor-pointer hover:text-brand-accent text-brand-accent font-bold"
               >
                 PTS
               </th>
-              <th className="py-2.5 px-3 text-right hidden sm:table-cell">FORM (LAST 5)</th>
+              <th className="py-2 px-3 text-center hidden md:table-cell">TRAJECTORY</th>
+              <th className="py-2 px-3 text-right hidden lg:table-cell">FORM (LAST 5)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-subtle font-mono text-xs">
+          <tbody className="divide-y divide-border/60 font-mono text-xs">
             {sortedStandings.map((row) => {
               const isUCL = row.rank <= 4;
               const isUEL = row.rank === 5;
               const isRel = row.rank >= 18;
 
+              // Sparkline points coordinate calculation (GW0 to GW38)
+              const maxPts = 100;
+              const yEnd = Math.max(2, 16 - (row.points / maxPts) * 14);
+              const strokeColor = isUCL ? '#00ff85' : isRel ? '#f43f5e' : '#94a3b8';
+
               return (
                 <tr
                   key={row.team}
                   onClick={() => onSelectTeam && onSelectTeam(row.team)}
-                  className="hover:bg-surface-hover transition-colors cursor-pointer group"
+                  className={`group transition-colors cursor-pointer ${
+                    isUCL
+                      ? 'border-l-2 border-l-blue-400 bg-blue-950/10 hover:bg-surface-hover'
+                      : isUEL
+                      ? 'border-l-2 border-l-amber-400 bg-amber-950/10 hover:bg-surface-hover'
+                      : isRel
+                      ? 'border-l-2 border-l-rose-500 bg-rose-950/10 hover:bg-surface-hover'
+                      : 'border-l-2 border-l-transparent hover:bg-surface-hover'
+                  }`}
                 >
-                  {/* Position with qualification border bar */}
-                  <td className="py-2.5 px-3 text-center font-bold text-text-secondary relative">
-                    {isUCL && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400" />
-                    )}
-                    {isUEL && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400" />
-                    )}
-                    {isRel && (
-                      <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-400" />
-                    )}
+                  {/* Position */}
+                  <td className="py-2 px-2.5 text-center font-bold text-text-secondary text-xs tabular-nums">
                     {row.rank}
                   </td>
 
                   {/* Club Name */}
-                  <td className="py-2.5 px-3 font-sans font-bold text-text-primary">
+                  <td className="py-2 px-3 font-sans font-bold text-text-primary">
                     <div className="flex items-center space-x-2">
                       <div
-                        className="w-1.5 h-3 flex-shrink-0 ring-1 ring-white/15"
+                        className="w-1.5 h-3.5 flex-shrink-0"
                         style={{ backgroundColor: row.color }}
                       />
                       <span className="group-hover:text-brand-accent transition-colors truncate">
@@ -195,31 +200,57 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                     </div>
                   </td>
 
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.played}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.won}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.drawn}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.lost}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.gf}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">{row.ga}</td>
-                  <td className="py-2.5 px-3 text-center text-text-secondary">
-                    {row.gd > 0 ? `+${row.gd}` : row.gd}
-                  </td>
-                  <td className="py-2.5 px-3 text-center font-bold text-text-primary bg-surface-subtle/40">
-                    {row.points}
+                  <td className="py-2 px-2.5 text-center text-text-secondary tabular-nums">{row.played}</td>
+                  <td className="py-2 px-2.5 text-center text-text-secondary tabular-nums">{row.won}</td>
+                  <td className="py-2 px-2.5 text-center text-text-secondary tabular-nums">{row.drawn}</td>
+                  <td className="py-2 px-2.5 text-center text-text-secondary tabular-nums">{row.lost}</td>
+                  <td className="py-2 px-2.5 text-center text-text-muted tabular-nums hidden sm:table-cell">{row.gf}</td>
+                  <td className="py-2 px-2.5 text-center text-text-muted tabular-nums hidden sm:table-cell">{row.ga}</td>
+
+                  {/* Color-coded Goal Difference */}
+                  <td className="py-2 px-2.5 text-center font-bold tabular-nums">
+                    {row.gd > 0 ? (
+                      <span className="text-emerald-400">+{row.gd}</span>
+                    ) : row.gd < 0 ? (
+                      <span className="text-rose-400">{row.gd}</span>
+                    ) : (
+                      <span className="text-text-muted">0</span>
+                    )}
                   </td>
 
-                  {/* Last 5 Form Pills */}
-                  <td className="py-2.5 px-3 text-right hidden sm:table-cell">
+                  {/* Points */}
+                  <td className="py-2 px-3 text-center font-black text-text-primary bg-surface-subtle/50 tabular-nums">
+                    <span className="px-1.5 py-0.5 rounded-none bg-background border border-border">
+                      {row.points}
+                    </span>
+                  </td>
+
+                  {/* Inline 38-GW Trajectory Sparkline */}
+                  <td className="py-2 px-3 text-center hidden md:table-cell">
+                    <svg viewBox="0 0 80 18" className="w-20 h-3.5 inline-block" role="img" aria-label={`${row.team} trajectory`}>
+                      <polyline
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        points={`0,16 20,${Math.max(2, 16 - ((row.won * 0.4) / 38) * 14)} 45,${Math.max(2, 16 - ((row.points * 0.5) / 100) * 14)} 80,${yEnd}`}
+                      />
+                      <circle cx="80" cy={yEnd} r="2" fill={strokeColor} />
+                    </svg>
+                  </td>
+
+                  {/* Last 5 Form Micro-Pills */}
+                  <td className="py-2 px-3 text-right hidden lg:table-cell">
                     <div className="flex justify-end space-x-1 font-mono text-[9px]">
                       {row.last5.map((res, i) => (
                         <span
                           key={i}
-                          className={`w-3.5 h-3.5 flex items-center justify-center font-bold rounded-sm ring-1 ring-white/20 ${
+                          className={`w-4 h-4 flex items-center justify-center font-bold rounded-none border ${
                             res === 'W'
-                              ? 'bg-brand-primary text-white'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                               : res === 'D'
-                              ? 'bg-slate-600 text-white'
-                              : 'bg-red-800 text-white'
+                              ? 'bg-slate-600/30 text-slate-300 border-slate-500/40'
+                              : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                           }`}
                         >
                           {res}
