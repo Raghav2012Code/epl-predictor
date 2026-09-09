@@ -7,6 +7,7 @@ import { MatchSimulator } from './components/MatchSimulator';
 import { StandingsView } from './components/StandingsView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { ClubView } from './components/ClubView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ExternalLink, Github, Terminal } from 'lucide-react';
 
 const dataset = eplDataRaw as unknown as EPLDataset;
@@ -31,8 +32,9 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-text-primary flex flex-col justify-between font-sans">
-      {/* Top Navbar */}
+    <ErrorBoundary>
+      <div className="min-h-screen bg-background text-text-primary flex flex-col justify-between font-sans">
+        {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -123,6 +125,7 @@ export const App: React.FC = () => {
         </div>
       </footer>
     </div>
+  </ErrorBoundary>
   );
 };
 

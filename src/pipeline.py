@@ -26,6 +26,7 @@ from src.evaluate import (
 )
 from src.feature_engineering import (
     build_engineered_dataset,
+    build_feature_context,
     build_fixture_features,
     get_feature_column_names,
 )
@@ -37,6 +38,8 @@ from src.models import (
 )
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
+DEFAULT_MODEL_PATH = os.path.join(MODELS_DIR, "production_model.joblib")
 
 
 class PremierLeaguePredictionPipeline:
@@ -52,11 +55,18 @@ class PremierLeaguePredictionPipeline:
         self.best_model_name: str = "XGBoost"
         self.best_model: Optional[MatchPredictorModel] = None
 
+    def load_data(self, force_download: bool = False) -> PremierLeaguePredictionPipeline:
+        """Loads historical match data and upcoming fixtures without running full dataset engineering."""
+        if self.raw_historical is None:
+            self.raw_historical = load_historical_stats(force_download=force_download)
+        if self.fixtures_2026_2027 is None:
+            self.fixtures_2026_2027 = load_2026_2027_fixtures()
+        return self
+
     def prepare_data(self, force_download: bool = False) -> PremierLeaguePredictionPipeline:
         """Loads historical stats and 2026/27 fixtures and performs feature engineering."""
         print("[1/5] Loading historical match data and 2026/2027 fixtures...")
-        self.raw_historical = load_historical_stats(force_download=force_download)
-        self.fixtures_2026_2027 = load_2026_2027_fixtures()
+        self.load_data(force_download=force_download)
 
         print(f"      - Loaded {len(self.raw_historical)} historical matches across 6 seasons.")
         print(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
@@ -125,8 +135,26 @@ class PremierLeaguePredictionPipeline:
             self.engineered_df["target_home_goals"],
             self.engineered_df["target_away_goals"],
         )
+        self.save_model(DEFAULT_MODEL_PATH)
 
         return self.metrics
+
+    def save_model(self, filepath: Optional[str] = None) -> str:
+        """Saves the current fitted production model checkpoint to disk."""
+        if self.best_model is None:
+            raise ValueError("No fitted production model available to save.")
+        path = filepath or DEFAULT_MODEL_PATH
+        self.best_model.save(path)
+        print(f"      - Model checkpoint saved to: {path}")
+        return path
+
+    def load_model(self, filepath: Optional[str] = None) -> MatchPredictorModel:
+        """Loads a production model checkpoint from disk."""
+        path = filepath or DEFAULT_MODEL_PATH
+        self.best_model = MatchPredictorModel.load(path)
+        self.best_model_name = "Random Forest" if self.best_model.model_type == "rf" else "XGBoost"
+        self.feature_cols = self.best_model.feature_names
+        return self.best_model
 
     def forecast_2026_2027_season(self) -> pd.DataFrame:
         """Forecasts all 380 fixtures for the 2026/2027 season and exports results."""
@@ -135,7 +163,8 @@ class PremierLeaguePredictionPipeline:
 
         print("[5/5] Generating match outcome probabilities and scoreline forecasts for 2026/2027...")
         fixtures = self.fixtures_2026_2027.copy()
-        rolling_history = self.raw_historical.copy()
+        rolling_history = self.raw_historical.copy().sort_values(by="date").reset_index(drop=True)
+        feature_context = build_feature_context(rolling_history)
 
         predictions: List[Dict[str, Any]] = []
 
@@ -146,8 +175,8 @@ class PremierLeaguePredictionPipeline:
             gw = fix["gameweek"]
             m_time = fix["time"]
 
-            # Feature vector using history prior to this match
-            X_match = build_fixture_features(ht, at, m_date, rolling_history)
+            # Feature vector using precomputed context for sub-millisecond extraction
+            X_match = build_fixture_features(ht, at, m_date, rolling_history, precomputed_context=feature_context)
 
             probas = self.best_model.predict_outcome_proba(X_match)[0]  # [p_away, p_draw, p_home]
             p_away = float(probas[0])
@@ -188,7 +217,7 @@ class PremierLeaguePredictionPipeline:
                 pred_item["actual_score"] = f"{act_hg} - {act_ag}"
                 pred_item["status"] = "Played"
 
-                # Append to rolling history so subsequent gameweeks reflect real results
+                # Append to rolling history and refresh context so subsequent gameweeks reflect real results
                 new_row = {
                     "season": "2026-27",
                     "date": m_date,
@@ -207,7 +236,9 @@ class PremierLeaguePredictionPipeline:
                     "away_possession": 50.0,
                 }
                 rolling_history = pd.concat([rolling_history, pd.DataFrame([new_row])], ignore_index=True)
+                feature_context = build_feature_context(rolling_history)
             else:
+
                 pred_item["actual_score"] = "-"
                 pred_item["status"] = "Upcoming"
 

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+data/raw/
+models/*.joblib
+web/node_modules
+web/dist
+visuals/*.png
+.github
+tests
+README.md
+AGENTS.md

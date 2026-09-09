@@ -15,6 +15,7 @@ from src.data_loader import (
 )
 from src.feature_engineering import (
     build_engineered_dataset,
+    build_feature_context,
     build_fixture_features,
     get_feature_column_names,
 )
@@ -165,3 +166,69 @@ def test_model_training_and_inference():
     scores_xgb = xgb_model.predict_scoreline(X)
     assert proba_xgb.shape == (n_samples, 3)
     assert len(scores_xgb) == n_samples
+
+
+def test_model_save_and_load(tmp_path):
+    n_samples = 30
+    feature_cols = get_feature_column_names()
+    np.random.seed(42)
+
+    X = pd.DataFrame(np.random.randn(n_samples, len(feature_cols)), columns=feature_cols)
+    y_outcome = pd.Series(np.random.choice([0, 1, 2], size=n_samples))
+    y_hg = pd.Series(np.random.poisson(1.5, size=n_samples))
+    y_ag = pd.Series(np.random.poisson(1.1, size=n_samples))
+
+    model = MatchPredictorModel("rf")
+    model.fit(X, y_outcome, y_hg, y_ag)
+    orig_probas = model.predict_outcome_proba(X)
+    orig_scores = model.predict_scoreline(X)
+
+    save_file = str(tmp_path / "test_model.joblib")
+    model.save(save_file)
+    assert os.path.exists(save_file)
+
+    loaded_model = MatchPredictorModel.load(save_file)
+    assert loaded_model.is_fitted
+    assert loaded_model.model_type == "rf"
+    assert loaded_model.feature_names == feature_cols
+
+    loaded_probas = loaded_model.predict_outcome_proba(X)
+    loaded_scores = loaded_model.predict_scoreline(X)
+    np.testing.assert_allclose(orig_probas, loaded_probas, rtol=1e-5)
+    assert orig_scores == loaded_scores
+
+
+def test_precomputed_context_consistency():
+    dates = pd.date_range("2024-01-01", periods=10, freq="7D")
+    records = []
+    for i, d in enumerate(dates):
+        records.append(
+            {
+                "season": "2023-24",
+                "date": d,
+                "home_team": "Arsenal" if i % 2 == 0 else "Chelsea",
+                "away_team": "Chelsea" if i % 2 == 0 else "Arsenal",
+                "home_goals": 2,
+                "away_goals": 1,
+                "result": "H",
+                "home_shots": 14.0,
+                "away_shots": 9.0,
+                "home_shots_target": 5.0,
+                "away_shots_target": 3.0,
+                "home_corners": 6.0,
+                "away_corners": 4.0,
+                "home_possession": 55.0,
+                "away_possession": 45.0,
+            }
+        )
+    raw_df = pd.DataFrame(records)
+    future_date = datetime(2024, 4, 1)
+
+    # Standard extraction
+    feat_std = build_fixture_features("Arsenal", "Chelsea", future_date, raw_df)
+
+    # Precomputed context extraction
+    ctx = build_feature_context(raw_df, as_of_date=future_date)
+    feat_ctx = build_fixture_features("Arsenal", "Chelsea", future_date, raw_df, precomputed_context=ctx)
+
+    pd.testing.assert_frame_equal(feat_std, feat_ctx)

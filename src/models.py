@@ -7,8 +7,10 @@ and goal regressors (Home Goals / Away Goals) with side-by-side benchmarking.
 from __future__ import annotations
 
 import math
+import os
 from typing import Any, Dict, List, Tuple
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -194,6 +196,36 @@ class MatchPredictorModel:
         else:
             fi = np.zeros(len(self.feature_names))
         return pd.Series(fi, index=self.feature_names).sort_values(ascending=False)
+
+    def save(self, filepath: str) -> str:
+        """Serializes fitted model artifacts, regressors, and metadata to disk using joblib."""
+        if not self.is_fitted:
+            raise ValueError("Cannot save an unfitted MatchPredictorModel.")
+        os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+        payload = {
+            "model_type": self.model_type,
+            "classifier": self.classifier,
+            "home_regressor": self.home_regressor,
+            "away_regressor": self.away_regressor,
+            "feature_names": self.feature_names,
+            "is_fitted": self.is_fitted,
+        }
+        joblib.dump(payload, filepath, compress=3)
+        return filepath
+
+    @classmethod
+    def load(cls, filepath: str) -> MatchPredictorModel:
+        """Loads a serialized MatchPredictorModel checkpoint from disk."""
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Model checkpoint not found at: {filepath}")
+        payload = joblib.load(filepath)
+        instance = cls(payload["model_type"])
+        instance.classifier = payload["classifier"]
+        instance.home_regressor = payload["home_regressor"]
+        instance.away_regressor = payload["away_regressor"]
+        instance.feature_names = payload["feature_names"]
+        instance.is_fitted = payload["is_fitted"]
+        return instance
 
 
 def train_and_benchmark_models(

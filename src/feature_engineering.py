@@ -531,41 +531,75 @@ def get_feature_column_names() -> List[str]:
     return cols
 
 
+def build_feature_context(
+    history_matches_df: pd.DataFrame,
+    as_of_date: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Precomputes dynamic Elo state, rating histories, and perspective table for fast batch inference."""
+    if as_of_date is not None:
+        history = history_matches_df[history_matches_df["date"] < as_of_date].copy()
+    else:
+        history = history_matches_df.copy()
+    history = history.sort_values(by="date").reset_index(drop=True)
+    _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
+    team_df = transform_matches_to_team_perspective(history)
+    return {
+        "history": history,
+        "current_ratings": current_ratings,
+        "rating_histories": rating_histories,
+        "team_df": team_df,
+        "as_of_date": as_of_date,
+    }
+
+
 def build_fixture_features(
     home_team: str,
     away_team: str,
     match_date: datetime,
     history_matches_df: pd.DataFrame,
+    precomputed_context: Optional[Dict[str, Any]] = None,
 ) -> pd.DataFrame:
     """Builds a single-row feature DataFrame for an upcoming match using past history.
 
     Used for real-time inference and upcoming 2026/2027 fixtures.
+    Supports optional precomputed_context for sub-millisecond batch forecasting.
     """
-    history = history_matches_df[history_matches_df["date"] < match_date].copy()
     feature_cols = get_feature_column_names()
 
-    if history.empty:
-        # Fallback to zero-diff defaults if no history
-        row = {c: 0.0 for c in feature_cols}
-        row["home_rest_days"] = 7.0
-        row["away_rest_days"] = 7.0
-        row["home_roll_possession_5"] = 50.0
-        row["away_roll_possession_5"] = 50.0
-        h_base = BASE_ELO.get(home_team, 1420.0)
-        a_base = BASE_ELO.get(away_team, 1420.0)
-        row["home_elo"] = h_base
-        row["away_elo"] = a_base
-        row["elo_diff"] = (h_base + 65.0) - a_base
-        row["home_elo_momentum_3"] = 0.0
-        row["away_elo_momentum_3"] = 0.0
-        row["diff_elo_momentum_3"] = 0.0
-        row["home_elo_momentum_5"] = 0.0
-        row["away_elo_momentum_5"] = 0.0
-        row["diff_elo_momentum_5"] = 0.0
-        return pd.DataFrame([row])[feature_cols]
+    if precomputed_context is not None and (
+        precomputed_context.get("as_of_date") is None or precomputed_context["as_of_date"] <= match_date
+    ):
+        history = precomputed_context["history"]
+        current_ratings = precomputed_context["current_ratings"]
+        rating_histories = precomputed_context["rating_histories"]
+        team_df = precomputed_context["team_df"]
+    else:
+        history = history_matches_df[history_matches_df["date"] < match_date].copy()
+        if history.empty:
+            # Fallback to zero-diff defaults if no history
+            row = {c: 0.0 for c in feature_cols}
+            row["home_rest_days"] = 7.0
+            row["away_rest_days"] = 7.0
+            row["home_roll_possession_5"] = 50.0
+            row["away_roll_possession_5"] = 50.0
+            h_base = BASE_ELO.get(home_team, 1420.0)
+            a_base = BASE_ELO.get(away_team, 1420.0)
+            row["home_elo"] = h_base
+            row["away_elo"] = a_base
+            row["elo_diff"] = (h_base + 65.0) - a_base
+            row["home_elo_momentum_3"] = 0.0
+            row["away_elo_momentum_3"] = 0.0
+            row["diff_elo_momentum_3"] = 0.0
+            row["home_elo_momentum_5"] = 0.0
+            row["away_elo_momentum_5"] = 0.0
+            row["diff_elo_momentum_5"] = 0.0
+            return pd.DataFrame([row])[feature_cols]
 
-    # Compute current dynamic Elo and rating history up to match date
-    _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
+        # Compute current dynamic Elo and rating history up to match date
+        history = history.sort_values(by="date").reset_index(drop=True)
+        _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
+        team_df = transform_matches_to_team_perspective(history)
+
     h_elo = current_ratings.get(home_team, BASE_ELO.get(home_team, 1420.0))
     a_elo = current_ratings.get(away_team, BASE_ELO.get(away_team, 1420.0))
 
@@ -576,11 +610,10 @@ def build_fixture_features(
     h_m5 = (h_elo - h_hist[-5]) if len(h_hist) >= 5 else (h_elo - BASE_ELO.get(home_team, 1420.0))
     a_m5 = (a_elo - a_hist[-5]) if len(a_hist) >= 5 else (a_elo - BASE_ELO.get(away_team, 1420.0))
 
-    # Convert to team perspective
-    team_df = transform_matches_to_team_perspective(history)
-
     def extract_latest_team_stats(team_name: str, is_home: int) -> Dict[str, float]:
         sub = team_df[team_df["team"] == team_name]
+        if not sub.empty and "date" in sub.columns:
+            sub = sub[sub["date"] < match_date]
         stats: Dict[str, float] = {}
 
         p_info = CLUB_POWER_INDEX.get(team_name, {
@@ -689,8 +722,11 @@ def build_fixture_features(
 
     # H2H
     h2h_sub = history[
-        ((history["home_team"] == home_team) & (history["away_team"] == away_team))
-        | ((history["home_team"] == away_team) & (history["away_team"] == home_team))
+        (history["date"] < match_date)
+        & (
+            ((history["home_team"] == home_team) & (history["away_team"] == away_team))
+            | ((history["home_team"] == away_team) & (history["away_team"] == home_team))
+        )
     ].tail(5)
 
     if not h2h_sub.empty:

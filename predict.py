@@ -33,13 +33,18 @@ from src.pipeline import PremierLeaguePredictionPipeline
 PIPELINE_INSTANCE = None
 
 
-def get_pipeline() -> PremierLeaguePredictionPipeline:
+def get_pipeline(force_retrain: bool = False, fast_mode: bool = False) -> PremierLeaguePredictionPipeline:
     """Singleton helper to load or initialize pipeline."""
     global PIPELINE_INSTANCE
-    if PIPELINE_INSTANCE is None:
+    if PIPELINE_INSTANCE is None or force_retrain:
         PIPELINE_INSTANCE = PremierLeaguePredictionPipeline()
-        PIPELINE_INSTANCE.prepare_data()
-        PIPELINE_INSTANCE.train_and_evaluate()
+        model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
+        if not force_retrain and fast_mode and os.path.exists(model_path):
+            PIPELINE_INSTANCE.load_data()
+            PIPELINE_INSTANCE.load_model(model_path)
+        else:
+            PIPELINE_INSTANCE.prepare_data()
+            PIPELINE_INSTANCE.train_and_evaluate()
     return PIPELINE_INSTANCE
 
 
@@ -88,9 +93,11 @@ def run_gameweek_prediction(gameweek_num: int):
     print("\n")
 
 
-def run_custom_matchup(home_team: str, away_team: str):
+def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = False):
     """Predicts outcome and score for any custom head-to-head match."""
-    pipeline = get_pipeline()
+    model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
+    fast = not force_retrain and os.path.exists(model_path)
+    pipeline = get_pipeline(force_retrain=force_retrain, fast_mode=fast)
     pred = pipeline.predict_custom_match(home_team, away_team)
 
     print("\n" + "=" * 65)
@@ -160,6 +167,11 @@ def main():
         help="Custom match prediction: e.g. --match 'Arsenal' 'Chelsea'",
     )
     parser.add_argument(
+        "--retrain", "-r",
+        action="store_true",
+        help="Force re-training of models even if a cached model checkpoint exists.",
+    )
+    parser.add_argument(
         "--benchmark", "-b",
         action="store_true",
         help="Display benchmark metrics comparing Random Forest vs XGBoost.",
@@ -175,7 +187,7 @@ def main():
     if args.benchmark:
         run_benchmark()
     elif args.match:
-        run_custom_matchup(args.match[0], args.match[1])
+        run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain)
     elif args.gameweek is not None:
         run_gameweek_prediction(args.gameweek)
     elif args.export:
