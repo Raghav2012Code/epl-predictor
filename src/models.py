@@ -85,6 +85,13 @@ class MatchPredictorModel:
 
         self.feature_names: List[str] = []
         self.is_fitted: bool = False
+        # Temperature scaling for calibrated probabilities (fit on validation).
+        # T > 1 softens overconfident peaks; T == 1.0 means uncalibrated.
+        self.calibration_temperature: float = 1.0
+        # Multiplicative bias correction for expected goals (fit on training
+        # means): counters systematic under/over-prediction of Poisson means.
+        self.home_goal_correction: float = 1.0
+        self.away_goal_correction: float = 1.0
 
     def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series) -> MatchPredictorModel:
         """Fits the outcome classifier and both goal regressors."""
@@ -92,10 +99,52 @@ class MatchPredictorModel:
         self.classifier.fit(X, y_outcome)
         self.home_regressor.fit(X, y_hg)
         self.away_regressor.fit(X, y_ag)
+        # Fit goal bias correction on training means (guarded, bounded).
+        try:
+            pred_h = np.maximum(0.05, np.asarray(self.home_regressor.predict(X), dtype=float))
+            pred_a = np.maximum(0.05, np.asarray(self.away_regressor.predict(X), dtype=float))
+            true_h = np.asarray(y_hg, dtype=float)
+            true_a = np.asarray(y_ag, dtype=float)
+            ch = float(np.mean(true_h) / max(1e-6, float(np.mean(pred_h))))
+            ca = float(np.mean(true_a) / max(1e-6, float(np.mean(pred_a))))
+            self.home_goal_correction = float(np.clip(ch, 0.8, 1.25))
+            self.away_goal_correction = float(np.clip(ca, 0.8, 1.25))
+        except Exception:
+            self.home_goal_correction = 1.0
+            self.away_goal_correction = 1.0
         self.is_fitted = True
         return self
 
-    def compute_poisson_grid(self, h_exp: float, a_exp: float, max_goals: int = 6) -> Tuple[np.ndarray, np.ndarray]:
+    def calibrate_temperature(self, X_val: pd.DataFrame, y_val: pd.Series) -> float:
+        """Fits temperature scaling on validation blended probabilities.
+
+        Grid-searches T in [0.5, 3.0] to minimize multi-class log-loss.
+        Returns the fitted temperature and stores it for inference.
+        """
+        probas = self.predict_outcome_proba(X_val, apply_temperature=False)
+        y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
+        eps = 1e-15
+        best_t, best_ll = 1.0, float("inf")
+        for t in [round(x, 2) for x in np.arange(0.5, 3.01, 0.05)]:
+            scaled = self._apply_temperature(probas, t)
+            clipped = np.clip(scaled, eps, 1 - eps)
+            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
+            if ll < best_ll:
+                best_ll, best_t = ll, t
+        self.calibration_temperature = float(best_t)
+        return self.calibration_temperature
+
+    @staticmethod
+    def _apply_temperature(probas: np.ndarray, t: float) -> np.ndarray:
+        """Applies temperature scaling: softmax(log(p)/T) row-wise."""
+        t = max(0.05, float(t))
+        logp = np.log(np.clip(probas, 1e-15, 1.0))
+        scaled = logp / t
+        scaled -= scaled.max(axis=1, keepdims=True)
+        exp = np.exp(scaled)
+        return exp / exp.sum(axis=1, keepdims=True)
+
+    def compute_poisson_grid(self, h_exp: float, a_exp: float, max_goals: int = 10) -> Tuple[np.ndarray, np.ndarray]:
         """Calculates normalized bivariate Poisson probability grid and outcome probabilities.
 
         Applies Dixon-Coles adjustment for low scores (0-0, 1-0, 0-1, 1-1).
@@ -132,10 +181,11 @@ class MatchPredictorModel:
         p_away = float(np.sum(np.triu(grid, 1)))
         return grid, np.array([p_away, p_draw, p_home])
 
-    def predict_outcome_proba(self, X: pd.DataFrame) -> np.ndarray:
+    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
         """Returns calibrated probability matrix of shape (N, 3): [p_away, p_draw, p_home].
 
-        Blends multi-class tree probabilities with count Poisson probabilities for optimal calibration.
+        Blends multi-class tree probabilities with count Poisson probabilities,
+        then applies fitted temperature scaling (if calibrated).
         """
         clf_probas = self.classifier.predict_proba(X)
         exp_hg, exp_ag = self.predict_expected_goals(X)
@@ -147,12 +197,14 @@ class MatchPredictorModel:
             p_comb /= p_comb.sum()
             blended[i] = p_comb
 
+        if apply_temperature and self.calibration_temperature != 1.0:
+            blended = self._apply_temperature(blended, self.calibration_temperature)
         return blended
 
     def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
-        """Returns expected float goals (expected_hg, expected_ag)."""
-        exp_hg = np.maximum(0.0, self.home_regressor.predict(X))
-        exp_ag = np.maximum(0.0, self.away_regressor.predict(X))
+        """Returns bias-corrected expected float goals (expected_hg, expected_ag)."""
+        exp_hg = np.maximum(0.0, self.home_regressor.predict(X)) * self.home_goal_correction
+        exp_ag = np.maximum(0.0, self.away_regressor.predict(X)) * self.away_goal_correction
         return exp_hg, exp_ag
 
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
@@ -167,7 +219,9 @@ class MatchPredictorModel:
         probas = self.predict_outcome_proba(X)
 
         scorelines: List[Tuple[int, int]] = []
-        max_goals = 6
+        # 0-10 covers >99.9% of Poisson mass for EPL means (<3.0); 0-6
+        # truncated high-scoring tails and biased outcome probs after renorm.
+        max_goals = 10
 
         for i in range(len(X)):
             grid, _ = self.compute_poisson_grid(exp_hg[i], exp_ag[i], max_goals=max_goals)
@@ -211,6 +265,9 @@ class MatchPredictorModel:
             "away_regressor": self.away_regressor,
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
+            "calibration_temperature": self.calibration_temperature,
+            "home_goal_correction": self.home_goal_correction,
+            "away_goal_correction": self.away_goal_correction,
         }
         joblib.dump(payload, filepath, compress=3)
         return filepath
@@ -227,6 +284,10 @@ class MatchPredictorModel:
         instance.away_regressor = payload["away_regressor"]
         instance.feature_names = payload["feature_names"]
         instance.is_fitted = payload["is_fitted"]
+        # Backward-compatible: checkpoints saved before calibration default to 1.0.
+        instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
+        instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
         return instance
 
 
@@ -255,8 +316,13 @@ def train_and_benchmark_models(
 
     for name, model in models.items():
         model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
+        # Calibrate blended probabilities on validation (temperature scaling).
+        try:
+            model.calibrate_temperature(X_val, y_val_outcome)
+        except Exception:
+            model.calibration_temperature = 1.0
 
-        # Predictions on validation
+        # Predictions on validation (calibrated)
         val_proba = model.predict_outcome_proba(X_val)
         val_preds = np.argmax(val_proba, axis=1)
         exp_hg, exp_ag = model.predict_expected_goals(X_val)
@@ -313,6 +379,9 @@ def train_and_benchmark_models(
             "val_proba": val_proba,
             "pred_scores": pred_scores,
             "feature_importances": model.get_feature_importances(),
+            "calibration_temperature": model.calibration_temperature,
+            "home_goal_correction": model.home_goal_correction,
+            "away_goal_correction": model.away_goal_correction,
         }
 
     return models, metrics
