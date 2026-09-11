@@ -702,9 +702,14 @@ def build_fixture_features(
         rest = (match_date - last_date).total_seconds() / (24 * 3600)
         stats["rest_days"] = float(np.clip(rest, 1.0, 30.0))
 
-        # Bayesian shrinkage for small sample sizes (N < 8 matches)
+        # Bayesian shrinkage for small samples. Promoted/thin-history sides
+        # (e.g. Coventry/Hull, k < 15) keep at least 50% prior weight so a few
+        # early EPL games cannot swing their ratings wildly.
         k = len(sub)
         prior_w = max(0.0, (8.0 - k) / 8.0)
+        if k < 15:
+            prior_w = max(prior_w, 0.5 * (15.0 - k) / 15.0 + 0.25)
+            prior_w = min(1.0, prior_w)
         obs_w = 1.0 - prior_w
 
         # Rolling overall
