@@ -36,7 +36,13 @@ PIPELINE_INSTANCE = None
 def get_pipeline(force_retrain: bool = False, fast_mode: bool = False) -> PremierLeaguePredictionPipeline:
     """Singleton helper to load or initialize pipeline."""
     global PIPELINE_INSTANCE
-    if PIPELINE_INSTANCE is None or force_retrain:
+    # Refresh when forced, when switching between fast/slow modes, or first use.
+    needs_build = (
+        PIPELINE_INSTANCE is None
+        or force_retrain
+        or (fast_mode and PIPELINE_INSTANCE.best_model is None)
+    )
+    if needs_build:
         PIPELINE_INSTANCE = PremierLeaguePredictionPipeline()
         model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
         if not force_retrain and fast_mode and os.path.exists(model_path):
@@ -48,18 +54,33 @@ def get_pipeline(force_retrain: bool = False, fast_mode: bool = False) -> Premie
     return PIPELINE_INSTANCE
 
 
-def run_gameweek_prediction(gameweek_num: int):
+def _resolve_engine_label() -> str:
+    """Reads the production engine from checkpoint, falling back to XGBoost."""
+    model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
+    if os.path.exists(model_path):
+        try:
+            import joblib as _joblib
+
+            payload = _joblib.load(model_path)
+            mt = payload.get("model_type", "xgboost") if isinstance(payload, dict) else "xgboost"
+            return "Random Forest" if str(mt).lower() == "rf" else "XGBoost"
+        except Exception:
+            pass
+    return "XGBoost"
+
+
+def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
     """Displays predicted outcomes and scores for a specific gameweek."""
     csv_path = os.path.join(os.path.dirname(__file__), "data", "predictions_2026_2027.csv")
 
-    if not os.path.exists(csv_path):
+    if not os.path.exists(csv_path) or force_retrain:
         print("Generating 2026/2027 predictions dataset...")
-        pipeline = get_pipeline()
+        pipeline = get_pipeline(force_retrain=force_retrain)
         df = pipeline.forecast_2026_2027_season()
         best_model = pipeline.best_model_name
     else:
         df = pd.read_csv(csv_path)
-        best_model = "XGBoost"
+        best_model = _resolve_engine_label()
 
     gw_matches = df[df["gameweek"] == gameweek_num]
     if gw_matches.empty:
@@ -77,10 +98,13 @@ def run_gameweek_prediction(gameweek_num: int):
         score_str = f"[{r['predicted_score']}]"
         prob_str = f"H: {r['home_win_prob']}% | D: {r['draw_prob']}% | A: {r['away_win_prob']}%"
         status_note = f"Actual: {r['actual_score']}" if r.get("status") == "Played" else "Upcoming"
+        time_val = r.get("time", "15:00")
+        if not isinstance(time_val, str) or not time_val.strip():
+            time_val = "15:00"
 
         table_data.append([
             r["date"],
-            r.get("time", "15:00"),
+            time_val,
             match_str,
             score_str,
             prob_str,
@@ -119,9 +143,9 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
     print("=" * 65 + "\n")
 
 
-def run_benchmark():
+def run_benchmark(force_retrain: bool = False):
     """Prints side-by-side benchmark table comparing Random Forest and XGBoost."""
-    pipeline = get_pipeline()
+    pipeline = get_pipeline(force_retrain=force_retrain)
     metrics = pipeline.metrics
 
     print("\n" + "=" * 80)
@@ -185,13 +209,13 @@ def main():
     args = parser.parse_args()
 
     if args.benchmark:
-        run_benchmark()
+        run_benchmark(force_retrain=args.retrain)
     elif args.match:
         run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain)
     elif args.gameweek is not None:
-        run_gameweek_prediction(args.gameweek)
+        run_gameweek_prediction(args.gameweek, force_retrain=args.retrain)
     elif args.export:
-        pipeline = get_pipeline()
+        pipeline = get_pipeline(force_retrain=args.retrain)
         pipeline.forecast_2026_2027_season()
         print("\n[+] Predictions for all 380 fixtures exported successfully!")
     else:
