@@ -1,0 +1,35 @@
+{
+  "production_model": "Random Forest",
+  "calibration_temperature": 1.1,
+  "home_goal_correction": 1.0003142814194084,
+  "away_goal_correction": 1.0043497970424564,
+  "feature_count": 78,
+  "models": {
+    "Random Forest": {
+      "accuracy": 0.4619,
+      "log_loss": 1.0521,
+      "macro_f1": 0.3531,
+      "mae_home_goals": 1.0172,
+      "mae_away_goals": 0.9118,
+      "avg_goal_mae": 0.9645,
+      "exact_score_acc": 0.0805,
+      "within_1_goal_acc": 0.4979,
+      "calibration_temperature": 1.1,
+      "home_goal_correction": 1.0001,
+      "away_goal_correction": 1.0048
+    },
+    "XGBoost": {
+      "accuracy": 0.4661,
+      "log_loss": 1.0524,
+      "macro_f1": 0.3381,
+      "mae_home_goals": 1.0179,
+      "mae_away_goals": 0.9107,
+      "avg_goal_mae": 0.9643,
+      "exact_score_acc": 0.0805,
+      "within_1_goal_acc": 0.5042,
+      "calibration_temperature": 1.6,
+      "home_goal_correction": 1.0079,
+      "away_goal_correction": 1.0055
+    }
+  }
+}
