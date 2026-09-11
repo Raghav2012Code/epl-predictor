@@ -205,8 +205,25 @@ def main():
         action="store_true",
         help="Re-train and export 2026/27 predictions to CSV and Markdown.",
     )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable debug logging (sets LOG_LEVEL=DEBUG).",
+    )
+    parser.add_argument(
+        "--quiet", "-q",
+        action="store_true",
+        help="Suppress info logs (sets LOG_LEVEL=WARNING).",
+    )
 
     args = parser.parse_args()
+
+    from src.logging_config import configure_logging
+
+    if args.verbose:
+        configure_logging("DEBUG")
+    elif args.quiet:
+        configure_logging("WARNING")
 
     if args.benchmark:
         run_benchmark(force_retrain=args.retrain)

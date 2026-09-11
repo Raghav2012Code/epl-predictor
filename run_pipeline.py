@@ -10,16 +10,27 @@ Steps:
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from src.logging_config import configure_logging
 from src.pipeline import PremierLeaguePredictionPipeline
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Run the full Premier League prediction pipeline.")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging.")
+    parser.add_argument("--quiet", "-q", action="store_true", help="Suppress info logs.")
+    args = parser.parse_args()
+    if args.verbose:
+        configure_logging("DEBUG")
+    elif args.quiet:
+        configure_logging("WARNING")
+
     start_time = time.time()
     print("=" * 80)
     print("  PREMIER LEAGUE MATCH OUTCOME & SCORE PREDICTOR PIPELINE (2026/27)")

@@ -15,6 +15,10 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 RAW_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "raw")
 
 # Standardized club name canonical mapping
@@ -412,11 +416,11 @@ def load_historical_stats(
 
     if not all_dfs:
         if skipped:
-            print(f"[warn] No historical seasons loaded. Skipped: {', '.join(skipped)}")
+            logger.warning("No historical seasons loaded. Skipped: %s", ", ".join(skipped))
         return pd.DataFrame()
 
     if skipped:
-        print(f"[warn] Partial historical load. Skipped seasons: {', '.join(skipped)}")
+        logger.warning("Partial historical load. Skipped seasons: %s", ", ".join(skipped))
 
     full_df = pd.concat(all_dfs, ignore_index=True)
     full_df = full_df.sort_values(by="date").reset_index(drop=True)

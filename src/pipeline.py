@@ -36,6 +36,9 @@ from src.models import (
     MatchPredictorModel,
     train_and_benchmark_models,
 )
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
@@ -65,15 +68,15 @@ class PremierLeaguePredictionPipeline:
 
     def prepare_data(self, force_download: bool = False) -> PremierLeaguePredictionPipeline:
         """Loads historical stats and 2026/27 fixtures and performs feature engineering."""
-        print("[1/5] Loading historical match data and 2026/2027 fixtures...")
+        logger.info("[1/5] Loading historical match data and 2026/2027 fixtures...")
         self.load_data(force_download=force_download)
 
-        print(f"      - Loaded {len(self.raw_historical)} historical matches across 6 seasons.")
-        print(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
+        logger.info(f"      - Loaded {len(self.raw_historical)} historical matches across 6 seasons.")
+        logger.info(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
 
-        print("[2/5] Engineering rolling form, venue splits, and head-to-head metrics...")
+        logger.info("[2/5] Engineering rolling form, venue splits, and head-to-head metrics...")
         self.engineered_df = build_engineered_dataset(self.raw_historical)
-        print(f"      - Engineered dataset shape: {self.engineered_df.shape} ({len(self.feature_cols)} features).")
+        logger.info(f"      - Engineered dataset shape: {self.engineered_df.shape} ({len(self.feature_cols)} features).")
         return self
 
     def train_and_evaluate(self, split_date_str: str = "2024-01-01") -> Dict[str, Any]:
@@ -81,7 +84,7 @@ class PremierLeaguePredictionPipeline:
         if self.engineered_df is None:
             self.prepare_data()
 
-        print(f"[3/5] Benchmarking Random Forest vs XGBoost with time-series split (cutoff: {split_date_str})...")
+        logger.info(f"[3/5] Benchmarking Random Forest vs XGBoost with time-series split (cutoff: {split_date_str})...")
         split_date = pd.to_datetime(split_date_str)
         train_mask = self.engineered_df["date"] < split_date
         val_mask = self.engineered_df["date"] >= split_date
@@ -89,7 +92,7 @@ class PremierLeaguePredictionPipeline:
         train_df = self.engineered_df[train_mask].copy()
         val_df = self.engineered_df[val_mask].copy()
 
-        print(f"      - Training matches: {len(train_df)} | Validation matches: {len(val_df)}")
+        logger.info(f"      - Training matches: {len(train_df)} | Validation matches: {len(val_df)}")
 
         self.models, self.metrics = train_and_benchmark_models(train_df, val_df, self.feature_cols)
 
@@ -104,12 +107,12 @@ class PremierLeaguePredictionPipeline:
         self.best_model_name = "XGBoost" if xgb_rank <= rf_rank else "Random Forest"
         self.best_model = self.models[self.best_model_name]
 
-        print(f"      - Random Forest Accuracy: {self.metrics['Random Forest']['accuracy']:.3f} | LogLoss: {self.metrics['Random Forest']['log_loss']:.3f} | Goal MAE: {self.metrics['Random Forest']['avg_goal_mae']:.3f}")
-        print(f"      - XGBoost Accuracy:       {self.metrics['XGBoost']['accuracy']:.3f} | LogLoss: {self.metrics['XGBoost']['log_loss']:.3f} | Goal MAE: {self.metrics['XGBoost']['avg_goal_mae']:.3f}")
-        print(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest log-loss)")
+        logger.info(f"      - Random Forest Accuracy: {self.metrics['Random Forest']['accuracy']:.3f} | LogLoss: {self.metrics['Random Forest']['log_loss']:.3f} | Goal MAE: {self.metrics['Random Forest']['avg_goal_mae']:.3f}")
+        logger.info(f"      - XGBoost Accuracy:       {self.metrics['XGBoost']['accuracy']:.3f} | LogLoss: {self.metrics['XGBoost']['log_loss']:.3f} | Goal MAE: {self.metrics['XGBoost']['avg_goal_mae']:.3f}")
+        logger.info(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest log-loss)")
 
         # Generate Matplotlib visualizations
-        print("[4/5] Generating Matplotlib diagnostic visualization suite...")
+        logger.info("[4/5] Generating Matplotlib diagnostic visualization suite...")
         y_val_outcome = val_df["target_outcome"].values
         y_val_hg = val_df["target_home_goals"].values
         y_val_ag = val_df["target_away_goals"].values
@@ -129,10 +132,10 @@ class PremierLeaguePredictionPipeline:
             y_val_ag,
             self.metrics[self.best_model_name]["pred_scores"],
         )
-        print("      - Diagnostic charts saved to 'visuals/' directory.")
+        logger.info("      - Diagnostic charts saved to 'visuals/' directory.")
 
         # Re-train best model on 100% of historical data for maximum forecasting accuracy
-        print("      - Refitting best model on full historical dataset for upcoming forecasts...")
+        logger.info("      - Refitting best model on full historical dataset for upcoming forecasts...")
         self.best_model.fit(
             self.engineered_df[self.feature_cols],
             self.engineered_df["target_outcome"],
@@ -151,7 +154,7 @@ class PremierLeaguePredictionPipeline:
 
         path = filepath or DEFAULT_MODEL_PATH
         self.best_model.save(path)
-        print(f"      - Model checkpoint saved to: {path}")
+        logger.info(f"      - Model checkpoint saved to: {path}")
         # Versioned metrics sidecar (committed): proves which benchmark the
         # checkpoint corresponds to without committing the large .joblib.
         try:
@@ -177,9 +180,9 @@ class PremierLeaguePredictionPipeline:
             os.makedirs(os.path.dirname(os.path.abspath(sidecar)), exist_ok=True)
             with open(sidecar, "w", encoding="utf-8") as f:
                 _json.dump(payload, f, indent=2)
-            print(f"      - Metrics sidecar saved to: {sidecar}")
+            logger.info(f"      - Metrics sidecar saved to: {sidecar}")
         except Exception as exc:
-            print(f"[warn] Could not write metrics sidecar: {exc}")
+            logger.warning(f"Could not write metrics sidecar: {exc}")
         return path
 
     def load_model(self, filepath: Optional[str] = None) -> MatchPredictorModel:
@@ -190,7 +193,7 @@ class PremierLeaguePredictionPipeline:
         expected = set(get_feature_column_names())
         loaded = set(self.best_model.feature_names)
         if loaded != expected:
-            print(f"[warn] Checkpoint feature set differs from code ({len(loaded)} vs {len(expected)}). "
+            logger.warning(f"Checkpoint feature set differs from code ({len(loaded)} vs {len(expected)}). "
                   f"Missing: {sorted(expected - loaded)[:5]}, Extra: {sorted(loaded - expected)[:5]}. "
                   "Consider retraining with --retrain.")
         self.feature_cols = self.best_model.feature_names
@@ -201,7 +204,7 @@ class PremierLeaguePredictionPipeline:
         if self.best_model is None:
             self.train_and_evaluate()
 
-        print("[5/5] Generating match outcome probabilities and scoreline forecasts for 2026/2027...")
+        logger.info("[5/5] Generating match outcome probabilities and scoreline forecasts for 2026/2027...")
         if self.raw_historical is None or self.raw_historical.empty:
             raise ValueError("Historical data is empty; call prepare_data() before forecasting.")
         if self.fixtures_2026_2027 is None or self.fixtures_2026_2027.empty:
@@ -304,12 +307,12 @@ class PremierLeaguePredictionPipeline:
         os.makedirs(DATA_DIR, exist_ok=True)
         csv_path = os.path.join(DATA_DIR, "predictions_2026_2027.csv")
         pred_df.to_csv(csv_path, index=False)
-        print(f"      - Exported CSV to: {csv_path}")
+        logger.info(f"      - Exported CSV to: {csv_path}")
 
         # Export Markdown
         md_path = os.path.join(DATA_DIR, "predictions_2026_2027.md")
         self._export_markdown_report(pred_df, md_path)
-        print(f"      - Exported Markdown summary to: {md_path}")
+        logger.info(f"      - Exported Markdown summary to: {md_path}")
 
         return pred_df
 
