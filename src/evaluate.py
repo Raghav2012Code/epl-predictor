@@ -144,20 +144,25 @@ def plot_metrics_comparison(
     metrics: Dict[str, Dict[str, Any]],
     output_path: Optional[str] = None,
 ) -> str:
-    """Plots side-by-side grouped bar chart in pure black & white."""
+    """Plots side-by-side grouped bars with split axes.
+
+    Accuracy/F1/Within-1-Goal (higher-is-better, 0-1) share the left axis;
+    Goal MAE (lower-is-better) uses the right axis so magnitudes are not
+    visually conflated on a single scale.
+    """
     os.makedirs(VISUALS_DIR, exist_ok=True)
     if output_path is None:
         output_path = os.path.join(VISUALS_DIR, "model_metrics_comparison.png")
 
-    metric_keys = [
-        ("Accuracy", "accuracy", True),
-        ("Macro F1", "macro_f1", True),
-        ("Goal MAE (Lower is better)", "avg_goal_mae", False),
-        ("Within 1 Goal Acc", "within_1_goal_acc", True),
+    higher_keys = [
+        ("Accuracy", "accuracy"),
+        ("Macro F1", "macro_f1"),
+        ("Within 1 Goal Acc", "within_1_goal_acc"),
     ]
+    mae_key = ("Goal MAE (lower is better)", "avg_goal_mae")
 
     models = list(metrics.keys())
-    x = np.arange(len(metric_keys))
+    x = np.arange(len(higher_keys))
     width = 0.35
 
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -167,7 +172,7 @@ def plot_metrics_comparison(
     colors = ["#FFFFFF", "#71717A"]
 
     for i, model_name in enumerate(models):
-        vals = [metrics[model_name][k[1]] for k in metric_keys]
+        vals = [metrics[model_name][k[1]] for k in higher_keys]
         offset = (i - 0.5) * width
         rects = ax.bar(x + offset, vals, width, label=model_name, color=colors[i % len(colors)], alpha=0.9, edgecolor="#1F1F23", linewidth=0.5)
 
@@ -186,13 +191,26 @@ def plot_metrics_comparison(
             )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([k[0] for k in metric_keys], color="#A1A1AA", fontsize=11)
+    ax.set_xticklabels([k[0] for k in higher_keys], color="#A1A1AA", fontsize=11)
     ax.tick_params(colors="#A1A1AA")
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("Accuracy / F1 (higher is better)", color="#A1A1AA", fontsize=11)
     ax.set_title("Random Forest vs XGBoost Performance Benchmark", color="#FFFFFF", fontsize=15, fontweight="bold", pad=15)
-    ax.legend(facecolor="#000000", edgecolor="#1F1F23", labelcolor="#FFFFFF", fontsize=11)
+    ax.legend(facecolor="#000000", edgecolor="#1F1F23", labelcolor="#FFFFFF", fontsize=11, loc="upper left")
     ax.grid(axis="y", linestyle="--", alpha=0.2, color="#27272A")
     for spine in ax.spines.values():
         spine.set_color("#1F1F23")
+
+    # Secondary axis for Goal MAE so lower-is-better is not mixed into 0-1 bars.
+    ax2 = ax.twinx()
+    mae_vals = [metrics[m][mae_key[1]] for m in models]
+    ax2.plot(models, mae_vals, color="#E4E4E7", marker="o", linewidth=1.5, markersize=6, label=mae_key[0])
+    for m_name, v in zip(models, mae_vals):
+        ax2.annotate(f"{v:.3f}", xy=(m_name, v), xytext=(0, 8),
+                     textcoords="offset points", ha="center", va="bottom",
+                     color="#FFFFFF", fontweight="bold", fontsize=10)
+    ax2.set_ylabel(mae_key[0], color="#A1A1AA", fontsize=11)
+    ax2.tick_params(colors="#A1A1AA")
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
