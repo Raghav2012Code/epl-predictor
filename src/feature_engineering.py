@@ -8,7 +8,7 @@ zero-leakage guarantees.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -73,13 +73,18 @@ CLUB_POWER_INDEX: Dict[str, Dict[str, float]] = {
     "Everton": {"elo": 1590.0, "gf_baseline": 1.10, "ga_baseline": 1.44, "points_baseline": 1.05, "shots_baseline": 11.5, "target_baseline": 3.7, "poss_baseline": 42.0},
     "Nottingham Forest": {"elo": 1575.0, "gf_baseline": 1.18, "ga_baseline": 1.74, "points_baseline": 1.00, "shots_baseline": 11.0, "target_baseline": 3.5, "poss_baseline": 41.0},
     "Leeds": {"elo": 1560.0, "gf_baseline": 1.36, "ga_baseline": 1.81, "points_baseline": 0.98, "shots_baseline": 12.0, "target_baseline": 3.8, "poss_baseline": 47.0},
-    "Leicester": {"elo": 1560.0, "gf_baseline": 1.25, "ga_baseline": 1.75, "points_baseline": 0.95, "shots_baseline": 11.5, "target_baseline": 3.6, "poss_baseline": 46.0},
-    "Southampton": {"elo": 1530.0, "gf_baseline": 1.10, "ga_baseline": 1.85, "points_baseline": 0.90, "shots_baseline": 11.0, "target_baseline": 3.5, "poss_baseline": 44.0},
+    "Leicester": {"elo": 1600.0, "gf_baseline": 1.25, "ga_baseline": 1.75, "points_baseline": 0.95, "shots_baseline": 11.5, "target_baseline": 3.6, "poss_baseline": 46.0},
+    "Southampton": {"elo": 1540.0, "gf_baseline": 1.10, "ga_baseline": 1.85, "points_baseline": 0.90, "shots_baseline": 11.0, "target_baseline": 3.5, "poss_baseline": 44.0},
     "Burnley": {"elo": 1520.0, "gf_baseline": 1.05, "ga_baseline": 1.85, "points_baseline": 0.88, "shots_baseline": 10.5, "target_baseline": 3.2, "poss_baseline": 43.0},
     "Ipswich": {"elo": 1475.0, "gf_baseline": 1.13, "ga_baseline": 1.94, "points_baseline": 0.85, "shots_baseline": 10.0, "target_baseline": 3.1, "poss_baseline": 42.0},
     "Sunderland": {"elo": 1460.0, "gf_baseline": 1.05, "ga_baseline": 1.82, "points_baseline": 0.82, "shots_baseline": 9.8, "target_baseline": 3.0, "poss_baseline": 42.0},
     "Coventry": {"elo": 1430.0, "gf_baseline": 0.97, "ga_baseline": 1.86, "points_baseline": 0.78, "shots_baseline": 9.5, "target_baseline": 2.9, "poss_baseline": 41.0},
     "Hull": {"elo": 1420.0, "gf_baseline": 0.94, "ga_baseline": 1.89, "points_baseline": 0.75, "shots_baseline": 9.2, "target_baseline": 2.8, "poss_baseline": 40.0},
+    "Watford": {"elo": 1500.0, "gf_baseline": 1.08, "ga_baseline": 1.80, "points_baseline": 0.88, "shots_baseline": 10.8, "target_baseline": 3.4, "poss_baseline": 43.0},
+    "Norwich": {"elo": 1490.0, "gf_baseline": 1.05, "ga_baseline": 1.82, "points_baseline": 0.86, "shots_baseline": 10.5, "target_baseline": 3.3, "poss_baseline": 43.0},
+    "West Brom": {"elo": 1490.0, "gf_baseline": 1.04, "ga_baseline": 1.83, "points_baseline": 0.85, "shots_baseline": 10.4, "target_baseline": 3.2, "poss_baseline": 42.0},
+    "Sheffield United": {"elo": 1480.0, "gf_baseline": 1.02, "ga_baseline": 1.85, "points_baseline": 0.84, "shots_baseline": 10.2, "target_baseline": 3.1, "poss_baseline": 42.0},
+    "Luton": {"elo": 1480.0, "gf_baseline": 1.10, "ga_baseline": 1.88, "points_baseline": 0.84, "shots_baseline": 10.3, "target_baseline": 3.2, "poss_baseline": 42.0},
 }
 
 
