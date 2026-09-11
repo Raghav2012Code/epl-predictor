@@ -206,7 +206,12 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
 
 
 def build_historical_club_averages(raw_historical: pd.DataFrame) -> Dict[str, Dict[str, float]]:
-    """Computes real per-club historical possession / shots-on-target averages."""
+    """Computes per-club historical shots-on-target and possession-proxy averages.
+
+    Note: possession in this repo is a synthetic shots/corners proxy
+    (see data_loader), not measured tracking data. The key is still named
+    ``possession`` for the dashboard, but callers should label it as derived.
+    """
     poss_sum: Dict[str, float] = {}
     poss_n: Dict[str, int] = {}
     st_sum: Dict[str, float] = {}
@@ -260,15 +265,21 @@ def build_web_dataset() -> str:
     df_preds["date"] = pd.to_datetime(df_preds["date"])
 
     # 1. Fixtures (chronological, stable ids)
+    if df_preds.empty:
+        raise ValueError("Predictions CSV is empty; run forecast_2026_2027_season() first.")
+    if len(df_preds) != 380:
+        print(f"[warn] Expected 380 fixtures, found {len(df_preds)}. Exporting anyway.")
     fixtures: List[Dict[str, Any]] = []
     for idx, r in df_preds.sort_values(["gameweek", "date"]).reset_index(drop=True).iterrows():
         ht, at = str(r["home_team"]), str(r["away_team"])
+        raw_time = r.get("time", "15:00")
+        time_str = str(raw_time).strip() if isinstance(raw_time, str) and str(raw_time).strip() else "15:00"
         fixtures.append(
             {
                 "id": int(idx) + 1,
                 "gameweek": int(r["gameweek"]),
                 "date": str(pd.to_datetime(r["date"]).strftime("%Y-%m-%d")),
-                "time": str(r.get("time", "15:00")),
+                "time": time_str,
                 "homeTeam": ht,
                 "awayTeam": at,
                 "homeShort": CLUB_METADATA.get(ht, {}).get("short", ht[:3].upper()),
@@ -318,8 +329,9 @@ def build_web_dataset() -> str:
                 pass
         return int(f["predHomeGoals"]), int(f["predAwayGoals"])
 
-    # Rest-day tracking from real fixture dates
-    last_date: Dict[str, pd.Timestamp] = {}
+    # Rest-day tracking from real fixture dates (float days + kickoff time when
+    # available, matching feature_engineering's total_seconds/86400 logic).
+    last_dt: Dict[str, pd.Timestamp] = {}
     rest_gaps: Dict[str, List[float]] = {c: [] for c in CLUB_METADATA.keys()}
 
     for f in fixtures:
@@ -335,13 +347,19 @@ def build_web_dataset() -> str:
                     "series": [],
                 }
                 rest_gaps[club] = []
-        f_date = pd.to_datetime(f["date"])
+        try:
+            f_time = str(f.get("time", "15:00") or "15:00")
+            f_dt = pd.to_datetime(f"{f['date']} {f_time}", errors="coerce")
+            if pd.isna(f_dt):
+                f_dt = pd.to_datetime(f["date"])
+        except Exception:
+            f_dt = pd.to_datetime(f["date"])
         for club in (ht, at):
-            if club in last_date:
-                gap = (f_date - last_date[club]).days
+            if club in last_dt:
+                gap = (f_dt - last_dt[club]).total_seconds() / 86400.0
                 if 0 < gap < 60:
                     rest_gaps.setdefault(club, []).append(float(gap))
-            last_date[club] = f_date
+            last_dt[club] = f_dt
 
         hg, ag = effective_goals(f)
         res = _resolve_result(hg, ag)
