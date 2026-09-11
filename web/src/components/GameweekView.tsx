@@ -112,7 +112,11 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
   return (
     <div className="space-y-3">
       {/* Gameweek Intelligence KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono select-none">
+      <div
+        className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono select-none"
+        aria-live="polite"
+        aria-label={`Gameweek ${currentGW} summary`}
+      >
         <div className="border border-border bg-surface p-2.5 rounded-none flex flex-col justify-between">
           <span className="text-[9px] text-text-muted uppercase tracking-wider">ROUND SCHEDULE</span>
           <div className="text-sm font-black text-text-primary mt-0.5">
@@ -159,7 +163,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             onClick={() => goToGW(Math.max(1, currentGW - 1))}
             disabled={currentGW === 1}
             aria-label="Previous gameweek"
-            className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-white"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
@@ -190,7 +194,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             onClick={() => goToGW(Math.min(38, currentGW + 1))}
             disabled={currentGW === 38}
             aria-label="Next gameweek"
-            className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-white"
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -318,7 +322,11 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
 
                 {/* Segmented probability bar */}
                 <div className="pt-2 border-t border-border-subtle">
-                  <div className="h-1.5 w-full flex bg-surface overflow-hidden rounded-none">
+                  <div
+                    className="h-1.5 w-full flex bg-surface overflow-hidden rounded-none"
+                    role="img"
+                    aria-label={`Home ${activeFixture.homeWinProb} percent, draw ${activeFixture.drawProb} percent, away ${activeFixture.awayWinProb} percent`}
+                  >
                     <div
                       style={{ width: `${activeFixture.homeWinProb}%` }}
                       className="bg-brand-accent"

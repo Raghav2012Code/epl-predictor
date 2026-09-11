@@ -105,8 +105,8 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
         <table className="w-full min-w-[680px] text-left text-xs font-sans">
           <thead>
             <tr className="border-b border-border bg-surface-subtle font-mono text-[10px] text-text-muted select-none uppercase">
-              <th className="py-2 px-2.5 w-10 text-center">POS</th>
-              <th className="py-2 px-3">CLUB</th>
+              <th className="py-2 px-2.5 w-10 text-center sticky left-0 z-10 bg-surface-subtle">POS</th>
+              <th className="py-2 px-3 sticky left-10 z-10 bg-surface-subtle">CLUB</th>
               <th
                 onClick={() => handleSort('played')}
                 className="py-2 px-2.5 text-center cursor-pointer hover:text-text-primary"
@@ -197,12 +197,12 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                   }`}
                 >
                   {/* Position */}
-                  <td className="py-2 px-2.5 text-center font-bold text-text-secondary text-xs tabular-nums">
+                  <td className="py-2 px-2.5 text-center font-bold text-text-secondary text-xs tabular-nums sticky left-0 z-10 bg-surface">
                     {row.rank}
                   </td>
 
                   {/* Club Name */}
-                  <td className="py-2 px-3 font-sans font-bold text-text-primary">
+                  <td className="py-2 px-3 font-sans font-bold text-text-primary sticky left-10 z-10 bg-surface">
                     <div className="flex items-center space-x-2">
                       <div
                         className="w-1.5 h-3.5 flex-shrink-0"

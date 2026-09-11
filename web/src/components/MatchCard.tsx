@@ -106,7 +106,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       {/* Outcome Probability Distribution */}
       <div className="pt-1.5 border-t border-border-subtle">
         {/* Precision Segmented Bar */}
-        <div className="h-1 w-full flex bg-background overflow-hidden rounded-none">
+        <div
+          className="h-1 w-full flex bg-background overflow-hidden rounded-none"
+          role="img"
+          aria-label={`Home ${fixture.homeWinProb} percent, draw ${fixture.drawProb} percent, away ${fixture.awayWinProb} percent`}
+        >
           <div
             style={{ width: `${fixture.homeWinProb}%` }}
             className="bg-brand-accent transition-all"

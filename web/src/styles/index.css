@@ -62,6 +62,14 @@
     .skeleton-shimmer::after {
       animation: none;
     }
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
