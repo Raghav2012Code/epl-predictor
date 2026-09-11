@@ -147,9 +147,39 @@ class PremierLeaguePredictionPipeline:
         """Saves the current fitted production model checkpoint to disk."""
         if self.best_model is None:
             raise ValueError("No fitted production model available to save.")
+        import json as _json
+
         path = filepath or DEFAULT_MODEL_PATH
         self.best_model.save(path)
         print(f"      - Model checkpoint saved to: {path}")
+        # Versioned metrics sidecar (committed): proves which benchmark the
+        # checkpoint corresponds to without committing the large .joblib.
+        try:
+            sidecar = os.path.join(os.path.dirname(path), "metrics.json")
+            payload = {
+                "production_model": self.best_model_name,
+                "calibration_temperature": getattr(self.best_model, "calibration_temperature", 1.0),
+                "home_goal_correction": getattr(self.best_model, "home_goal_correction", 1.0),
+                "away_goal_correction": getattr(self.best_model, "away_goal_correction", 1.0),
+                "feature_count": len(self.feature_cols),
+                "models": {
+                    name: {
+                        k: (round(float(v), 4) if isinstance(v, (int, float)) else v)
+                        for k, v in vals.items()
+                        if k in ("accuracy", "log_loss", "macro_f1", "mae_home_goals",
+                                 "mae_away_goals", "avg_goal_mae", "exact_score_acc",
+                                 "within_1_goal_acc", "calibration_temperature",
+                                 "home_goal_correction", "away_goal_correction")
+                    }
+                    for name, vals in (self.metrics or {}).items()
+                },
+            }
+            os.makedirs(os.path.dirname(os.path.abspath(sidecar)), exist_ok=True)
+            with open(sidecar, "w", encoding="utf-8") as f:
+                _json.dump(payload, f, indent=2)
+            print(f"      - Metrics sidecar saved to: {sidecar}")
+        except Exception as exc:
+            print(f"[warn] Could not write metrics sidecar: {exc}")
         return path
 
     def load_model(self, filepath: Optional[str] = None) -> MatchPredictorModel:
