@@ -157,6 +157,12 @@ class PremierLeaguePredictionPipeline:
         path = filepath or DEFAULT_MODEL_PATH
         self.best_model = MatchPredictorModel.load(path)
         self.best_model_name = "Random Forest" if self.best_model.model_type == "rf" else "XGBoost"
+        expected = set(get_feature_column_names())
+        loaded = set(self.best_model.feature_names)
+        if loaded != expected:
+            print(f"[warn] Checkpoint feature set differs from code ({len(loaded)} vs {len(expected)}). "
+                  f"Missing: {sorted(expected - loaded)[:5]}, Extra: {sorted(loaded - expected)[:5]}. "
+                  "Consider retraining with --retrain.")
         self.feature_cols = self.best_model.feature_names
         return self.best_model
 
@@ -166,8 +172,20 @@ class PremierLeaguePredictionPipeline:
             self.train_and_evaluate()
 
         print("[5/5] Generating match outcome probabilities and scoreline forecasts for 2026/2027...")
-        fixtures = self.fixtures_2026_2027.copy()
+        if self.raw_historical is None or self.raw_historical.empty:
+            raise ValueError("Historical data is empty; call prepare_data() before forecasting.")
+        if self.fixtures_2026_2027 is None or self.fixtures_2026_2027.empty:
+            raise ValueError("2026/2027 fixtures are empty; call prepare_data() before forecasting.")
+        fixtures = self.fixtures_2026_2027.copy().sort_values(by=["date", "gameweek"]).reset_index(drop=True)
         rolling_history = self.raw_historical.copy().sort_values(by="date").reset_index(drop=True)
+        # Historical means for unobserved in-play stats of played 2026/27
+        # matches (shots/corners/possession are not in openfootball feeds).
+        hist_means = {
+            c: float(rolling_history[c].mean())
+            for c in ["home_shots", "away_shots", "home_shots_target", "away_shots_target",
+                      "home_corners", "away_corners", "home_possession", "away_possession"]
+            if c in rolling_history.columns
+        }
         feature_context = build_feature_context(rolling_history)
 
         predictions: List[Dict[str, Any]] = []
@@ -177,7 +195,8 @@ class PremierLeaguePredictionPipeline:
             ht = fix["home_team"]
             at = fix["away_team"]
             gw = fix["gameweek"]
-            m_time = fix["time"]
+            raw_time = fix.get("time", "")
+            m_time = raw_time if isinstance(raw_time, str) and raw_time.strip() else "15:00"
 
             # Feature vector using precomputed context for sub-millisecond extraction
             X_match = build_fixture_features(ht, at, m_date, rolling_history, precomputed_context=feature_context)
@@ -219,7 +238,10 @@ class PremierLeaguePredictionPipeline:
                 pred_item["actual_score"] = f"{act_hg} - {act_ag}"
                 pred_item["status"] = "Played"
 
-                # Append to rolling history and refresh context so subsequent gameweeks reflect real results
+                # Append to rolling history and refresh context so subsequent gameweeks reflect real results.
+                # Shots/corners/possession are unobserved in openfootball feeds,
+                # so use historical means (not hardcoded constants) to avoid
+                # diluting form signals with league-average placeholders.
                 new_row = {
                     "season": "2026-27",
                     "date": m_date,
@@ -228,14 +250,14 @@ class PremierLeaguePredictionPipeline:
                     "home_goals": act_hg,
                     "away_goals": act_ag,
                     "result": act_res,
-                    "home_shots": 12.0,
-                    "away_shots": 10.0,
-                    "home_shots_target": 4.0,
-                    "away_shots_target": 3.0,
-                    "home_corners": 5.0,
-                    "away_corners": 4.0,
-                    "home_possession": 50.0,
-                    "away_possession": 50.0,
+                    "home_shots": hist_means.get("home_shots", 12.0),
+                    "away_shots": hist_means.get("away_shots", 10.0),
+                    "home_shots_target": hist_means.get("home_shots_target", 4.0),
+                    "away_shots_target": hist_means.get("away_shots_target", 3.0),
+                    "home_corners": hist_means.get("home_corners", 5.0),
+                    "away_corners": hist_means.get("away_corners", 4.0),
+                    "home_possession": hist_means.get("home_possession", 50.0),
+                    "away_possession": hist_means.get("away_possession", 50.0),
                 }
                 rolling_history = pd.concat([rolling_history, pd.DataFrame([new_row])], ignore_index=True)
                 feature_context = build_feature_context(rolling_history)
@@ -307,6 +329,9 @@ class PremierLeaguePredictionPipeline:
         """Instant prediction for an arbitrary matchup between two clubs."""
         if self.best_model is None:
             self.train_and_evaluate()
+        if self.raw_historical is None or self.raw_historical.empty:
+            # Fast-load path (load_model only) may skip history; load it now.
+            self.load_data()
 
         ht_std = standardize_team_name(home_team)
         at_std = standardize_team_name(away_team)
