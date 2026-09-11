@@ -33,7 +33,7 @@ from src.pipeline import PremierLeaguePredictionPipeline
 PIPELINE_INSTANCE = None
 
 
-def get_pipeline(force_retrain: bool = False, fast_mode: bool = False) -> PremierLeaguePredictionPipeline:
+def get_pipeline(force_retrain: bool = False, fast_mode: bool = False, offline: bool | None = None) -> PremierLeaguePredictionPipeline:
     """Singleton helper to load or initialize pipeline."""
     global PIPELINE_INSTANCE
     # Refresh when forced, when switching between fast/slow modes, or first use.
@@ -46,10 +46,10 @@ def get_pipeline(force_retrain: bool = False, fast_mode: bool = False) -> Premie
         PIPELINE_INSTANCE = PremierLeaguePredictionPipeline()
         model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
         if not force_retrain and fast_mode and os.path.exists(model_path):
-            PIPELINE_INSTANCE.load_data()
+            PIPELINE_INSTANCE.load_data(offline=offline)
             PIPELINE_INSTANCE.load_model(model_path)
         else:
-            PIPELINE_INSTANCE.prepare_data()
+            PIPELINE_INSTANCE.prepare_data(offline=offline)
             PIPELINE_INSTANCE.train_and_evaluate()
     return PIPELINE_INSTANCE
 
@@ -69,7 +69,7 @@ def _resolve_engine_label() -> str:
     return "XGBoost"
 
 
-def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
+def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offline: bool | None = None):
     """Displays predicted outcomes and scores for a specific gameweek."""
     from src.validation import validate_gameweek
 
@@ -82,7 +82,7 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
 
     if not os.path.exists(csv_path) or force_retrain:
         print("Generating 2026/2027 predictions dataset...")
-        pipeline = get_pipeline(force_retrain=force_retrain)
+        pipeline = get_pipeline(force_retrain=force_retrain, offline=offline)
         df = pipeline.forecast_2026_2027_season()
         best_model = pipeline.best_model_name
     else:
@@ -124,7 +124,7 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
     print("\n")
 
 
-def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = False):
+def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = False, offline: bool | None = None):
     """Predicts outcome and score for any custom head-to-head match."""
     from src.validation import assert_model_compatible, canonical_team
 
@@ -139,7 +139,7 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
         return
     model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
     fast = not force_retrain and os.path.exists(model_path)
-    pipeline = get_pipeline(force_retrain=force_retrain, fast_mode=fast)
+    pipeline = get_pipeline(force_retrain=force_retrain, fast_mode=fast, offline=offline)
     try:
         assert_model_compatible(pipeline.best_model, strict=False)
     except RuntimeError as exc:
@@ -166,9 +166,9 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
     print("=" * 65 + "\n")
 
 
-def run_benchmark(force_retrain: bool = False):
+def run_benchmark(force_retrain: bool = False, offline: bool | None = None):
     """Prints side-by-side benchmark table comparing Random Forest and XGBoost."""
-    pipeline = get_pipeline(force_retrain=force_retrain)
+    pipeline = get_pipeline(force_retrain=force_retrain, offline=offline)
     metrics = pipeline.metrics
 
     print("\n" + "=" * 80)
@@ -238,6 +238,11 @@ def main():
         action="store_true",
         help="Suppress info logs (sets LOG_LEVEL=WARNING).",
     )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Use only cached data in data/raw (no downloads).",
+    )
 
     args = parser.parse_args()
 
@@ -249,13 +254,13 @@ def main():
         configure_logging("WARNING")
 
     if args.benchmark:
-        run_benchmark(force_retrain=args.retrain)
+        run_benchmark(force_retrain=args.retrain, offline=args.offline)
     elif args.match:
-        run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain)
+        run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain, offline=args.offline)
     elif args.gameweek is not None:
-        run_gameweek_prediction(args.gameweek, force_retrain=args.retrain)
+        run_gameweek_prediction(args.gameweek, force_retrain=args.retrain, offline=args.offline)
     elif args.export:
-        pipeline = get_pipeline(force_retrain=args.retrain)
+        pipeline = get_pipeline(force_retrain=args.retrain, offline=args.offline)
         pipeline.forecast_2026_2027_season()
         print("\n[+] Predictions for all 380 fixtures exported successfully!")
     else:

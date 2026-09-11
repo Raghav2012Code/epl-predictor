@@ -142,27 +142,94 @@ def standardize_team_name(name: str) -> str:
     return TEAM_ALIASES.get(clean, name.strip())
 
 
-def download_file(url: str, local_path: str, force_download: bool = False) -> str:
-    """Downloads a file if not already cached locally."""
+def _manifest_path() -> str:
+    return os.path.join(RAW_DATA_DIR, ".manifest.json")
+
+
+def _record_download(url: str, local_path: str) -> None:
+    """Records a checksum manifest entry for a cached download (best-effort)."""
+    import hashlib
+    import json as _json
+    import time as _time
+
+    try:
+        h = hashlib.sha256()
+        with open(local_path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                h.update(chunk)
+        manifest: dict = {}
+        mp = _manifest_path()
+        if os.path.exists(mp):
+            try:
+                with open(mp, "r", encoding="utf-8") as f:
+                    manifest = _json.load(f) or {}
+            except Exception:
+                manifest = {}
+        manifest[os.path.basename(local_path)] = {
+            "url": url,
+            "sha256": h.hexdigest(),
+            "bytes": os.path.getsize(local_path),
+            "downloaded_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+        }
+        os.makedirs(os.path.dirname(mp), exist_ok=True)
+        with open(mp, "w", encoding="utf-8") as f:
+            _json.dump(manifest, f, indent=2)
+    except Exception as exc:
+        logger.warning("Could not write download manifest: %s", exc)
+
+
+def download_file(
+    url: str,
+    local_path: str,
+    force_download: bool = False,
+    retries: int = 3,
+    timeout: int = 30,
+) -> str:
+    """Downloads a file if not already cached locally.
+
+    Retries transient failures with exponential backoff, writes atomically
+    (temp file + rename) so interrupted downloads never leave corrupt cache,
+    and records a sha256 manifest entry.
+    """
+    import time as _time
+
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     if os.path.exists(local_path) and not force_download:
         return local_path
 
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as response, open(
-        local_path, "wb"
-    ) as out_file:
-        out_file.write(response.read())
-    return local_path
+    last_exc: Exception | None = None
+    for attempt in range(max(1, retries)):
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+            )
+            tmp_path = local_path + ".part"
+            with urllib.request.urlopen(req, timeout=timeout) as response, open(
+                tmp_path, "wb"
+            ) as out_file:
+                out_file.write(response.read())
+            os.replace(tmp_path, local_path)
+            _record_download(url, local_path)
+            return local_path
+        except Exception as exc:
+            last_exc = exc
+            try:
+                tmp_path = local_path + ".part"
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
+            if attempt < retries - 1:
+                _time.sleep(2 ** attempt)
+    raise RuntimeError(f"Download failed after {retries} attempt(s): {url} ({last_exc})")
 
 
 def parse_openfootball_fixtures(
     file_path_or_url: str,
     season: str = "2026-27",
     is_url: bool = False,
+    offline: bool = False,
 ) -> pd.DataFrame:
     """Parses openfootball fixture schedule file (e.g. 2026-27/1-premierleague.txt).
 
@@ -171,7 +238,14 @@ def parse_openfootball_fixtures(
     """
     if is_url:
         local_cache = os.path.join(RAW_DATA_DIR, f"openfootball_{season}.txt")
-        download_file(file_path_or_url, local_cache)
+        if offline:
+            if not os.path.exists(local_cache):
+                raise FileNotFoundError(
+                    f"Offline mode: fixture cache missing at {local_cache}. "
+                    "Run once online to populate data/raw/."
+                )
+        else:
+            download_file(file_path_or_url, local_cache)
         content_path = local_cache
     else:
         content_path = file_path_or_url
@@ -307,10 +381,12 @@ def parse_openfootball_fixtures(
 def load_historical_stats(
     seasons: Optional[List[str]] = None,
     force_download: bool = False,
+    offline: bool = False,
 ) -> pd.DataFrame:
     """Downloads and merges historical Premier League match statistics.
 
     Includes full results, goals, shots, shots on target, corners, and possession.
+    With ``offline=True`` only the local ``data/raw`` cache is used.
     """
     from src.config import get_config
 
@@ -334,7 +410,11 @@ def load_historical_stats(
         url = base_url.format(s_code)
         local_path = os.path.join(RAW_DATA_DIR, f"season_{s_code}.csv")
         try:
-            download_file(url, local_path, force_download=force_download)
+            if offline:
+                if not os.path.exists(local_path):
+                    raise FileNotFoundError(f"Offline mode: cache missing at {local_path}")
+            else:
+                download_file(url, local_path, force_download=force_download)
             df = pd.read_csv(local_path)
         except Exception as exc:
             # Never fail silently: record which seasons were skipped so the
@@ -427,11 +507,11 @@ def load_historical_stats(
     return full_df
 
 
-def load_2026_2027_fixtures() -> pd.DataFrame:
+def load_2026_2027_fixtures(offline: bool = False) -> pd.DataFrame:
     """Loads and parses the 2026/2027 Premier League schedule from openfootball/england."""
     from src.config import get_config
 
     cfg = get_config()["data"]
     url = str(cfg["fixture_url"])
     season = str(cfg["fixture_season"])
-    return parse_openfootball_fixtures(url, season=season, is_url=True)
+    return parse_openfootball_fixtures(url, season=season, is_url=True, offline=offline)

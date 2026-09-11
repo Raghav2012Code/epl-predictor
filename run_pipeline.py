@@ -25,6 +25,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run the full Premier League prediction pipeline.")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging.")
     parser.add_argument("--quiet", "-q", action="store_true", help="Suppress info logs.")
+    parser.add_argument("--offline", action="store_true", help="Use only cached data in data/raw.")
+    parser.add_argument("--force-download", action="store_true", help="Re-download all datasets.")
     args = parser.parse_args()
     if args.verbose:
         configure_logging("DEBUG")
@@ -37,7 +39,7 @@ def main():
     print("=" * 80)
 
     pipeline = PremierLeaguePredictionPipeline()
-    pipeline.prepare_data()
+    pipeline.prepare_data(force_download=args.force_download, offline=args.offline)
     pipeline.train_and_evaluate()
     pred_df = pipeline.forecast_2026_2027_season()
 

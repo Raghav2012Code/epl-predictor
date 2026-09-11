@@ -57,18 +57,24 @@ class PremierLeaguePredictionPipeline:
         self.best_model_name: str = "XGBoost"
         self.best_model: Optional[MatchPredictorModel] = None
 
-    def load_data(self, force_download: bool = False) -> PremierLeaguePredictionPipeline:
+    def load_data(
+        self, force_download: bool = False, offline: bool | None = None
+    ) -> PremierLeaguePredictionPipeline:
         """Loads historical match data and upcoming fixtures without running full dataset engineering."""
+        if offline is None:
+            offline = os.environ.get("EPL_OFFLINE", "").lower() in ("1", "true", "yes")
         if self.raw_historical is None:
-            self.raw_historical = load_historical_stats(force_download=force_download)
+            self.raw_historical = load_historical_stats(force_download=force_download, offline=offline)
         if self.fixtures_2026_2027 is None:
-            self.fixtures_2026_2027 = load_2026_2027_fixtures()
+            self.fixtures_2026_2027 = load_2026_2027_fixtures(offline=offline)
         return self
 
-    def prepare_data(self, force_download: bool = False) -> PremierLeaguePredictionPipeline:
+    def prepare_data(
+        self, force_download: bool = False, offline: bool | None = None
+    ) -> PremierLeaguePredictionPipeline:
         """Loads historical stats and 2026/27 fixtures and performs feature engineering."""
         logger.info("[1/5] Loading historical match data and 2026/2027 fixtures...")
-        self.load_data(force_download=force_download)
+        self.load_data(force_download=force_download, offline=offline)
 
         logger.info(f"      - Loaded {len(self.raw_historical)} historical matches across 6 seasons.")
         logger.info(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
@@ -223,6 +229,7 @@ class PremierLeaguePredictionPipeline:
             if c in rolling_history.columns
         }
         feature_context = build_feature_context(rolling_history)
+        context_history_len = len(rolling_history)
 
         predictions: List[Dict[str, Any]] = []
 
@@ -296,7 +303,11 @@ class PremierLeaguePredictionPipeline:
                     "away_possession": hist_means.get("away_possession", 50.0),
                 }
                 rolling_history = pd.concat([rolling_history, pd.DataFrame([new_row])], ignore_index=True)
-                feature_context = build_feature_context(rolling_history)
+                # Rebuild only when history actually grew; upcoming fixtures
+                # reuse the cached Elo/team state via build_fixture_features.
+                if len(rolling_history) != context_history_len:
+                    feature_context = build_feature_context(rolling_history)
+                    context_history_len = len(rolling_history)
             else:
 
                 pred_item["actual_score"] = "-"
