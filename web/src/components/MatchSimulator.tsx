@@ -1,17 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { TeamProfile } from '../types';
-import { Sliders, RotateCcw, Swords, Shield, Zap, TrendingUp, Sparkles, ArrowRightLeft, Activity, Flame, Clock } from 'lucide-react';
+import { Fixture, TeamProfile } from '../types';
+import { Sliders, RotateCcw, Swords, Shield, Zap, TrendingUp, Sparkles, ArrowRightLeft, Activity, Flame, Clock, GitCompare } from 'lucide-react';
 
 interface MatchSimulatorProps {
   teams: Record<string, TeamProfile>;
   initialHomeTeam?: string;
   initialAwayTeam?: string;
+  /** Bundled production fixtures for side-by-side comparison (same pairing). */
+  fixtures?: Fixture[];
+  productionModel?: string;
 }
 
 export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
   teams,
   initialHomeTeam = 'Arsenal',
   initialAwayTeam = 'Chelsea',
+  fixtures = [],
+  productionModel = 'Random Forest',
 }) => {
   const teamNames = useMemo(() => Object.keys(teams).sort(), [teams]);
 
@@ -103,6 +108,18 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
       awayDefense: Math.round(awayDefense * 100) / 100,
     };
   }, [home, away, homeRestDays, awayRestDays, homeFormBoost, awayFormBoost, isNeutralVenue]);
+
+  // Bundled production forecast for the same pairing (if scheduled this season).
+  const production = useMemo(
+    () =>
+      fixtures.find(
+        (f) =>
+          (f.homeTeam === homeTeam && f.awayTeam === awayTeam) ||
+          (f.homeTeam === awayTeam && f.awayTeam === homeTeam),
+      ) ?? null,
+    [fixtures, homeTeam, awayTeam],
+  );
+  const productionFlipped = production !== null && production.homeTeam !== homeTeam;
 
   // Tactical Scenario Presets
   const applyPreset = (presetKey: string) => {
@@ -357,6 +374,66 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
               <span>Host Advantage: {isNeutralVenue ? 'DISABLED' : '+25% xG Bias'}</span>
               <span>Model Confidence: {Math.max(simulation.homeWinProb, simulation.awayWinProb, simulation.drawProb)}%</span>
             </div>
+          </div>
+
+          {/* Production comparison (bundled model forecast for this pairing) */}
+          <div className="pt-3 mt-1 border-t border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                <GitCompare className="h-3 w-3 text-brand-accent" />
+                <span>VS PRODUCTION ({productionModel.toUpperCase()})</span>
+              </span>
+              {productionFlipped && (
+                <span className="text-[9px] font-mono text-text-muted">legs swapped</span>
+              )}
+            </div>
+            {production ? (
+              <div className="grid grid-cols-3 gap-1.5 font-mono text-[11px]">
+                {(
+                  [
+                    {
+                      label: 'HOME %',
+                      prod: productionFlipped ? production.awayWinProb : production.homeWinProb,
+                      sim: simulation.homeWinProb,
+                    },
+                    { label: 'DRAW %', prod: production.drawProb, sim: simulation.drawProb },
+                    {
+                      label: 'AWAY %',
+                      prod: productionFlipped ? production.homeWinProb : production.awayWinProb,
+                      sim: simulation.awayWinProb,
+                    },
+                  ] as const
+                ).map((d) => {
+                  const delta = Math.round((d.sim - d.prod) * 10) / 10;
+                  const tone =
+                    delta > 0.5 ? 'text-brand-accent' : delta < -0.5 ? 'text-zinc-400' : 'text-text-muted';
+                  return (
+                    <div key={d.label} className="border border-border-subtle bg-background px-2 py-1.5">
+                      <div className="text-[9px] text-text-muted">{d.label}</div>
+                      <div className="font-bold text-text-primary">
+                        {d.sim}% <span className="font-normal text-text-muted">vs {d.prod}%</span>
+                      </div>
+                      <div className={`font-bold ${tone}`}>
+                        {delta > 0 ? `+${delta}` : `${delta}`}pp
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[10px] font-mono text-text-muted">
+                No scheduled {homeTeam} vs {awayTeam} fixture this season — sandbox only.
+              </p>
+            )}
+            {production && (
+              <div className="text-[10px] font-mono text-text-muted">
+                Production: <span className="text-text-primary font-bold">{production.predictedScore}</span>
+                {' '}({production.predictedOutcome}, GW{production.gameweek}) vs sandbox{' '}
+                <span className="text-text-primary font-bold">
+                  {simulation.predHg} - {simulation.predAg}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

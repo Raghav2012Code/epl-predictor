@@ -77,6 +77,8 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
             teams={dataset.teams}
             initialHomeTeam={simulatorSelection.home}
             initialAwayTeam={simulatorSelection.away}
+            fixtures={dataset.fixtures}
+            productionModel={dataset.benchmark.productionModel}
           />
         )}
 
