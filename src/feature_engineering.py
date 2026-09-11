@@ -117,6 +117,9 @@ def compute_dynamic_elo(
         current_ratings: Final Elo state after all matches played.
         rating_histories: Chronological history of pre-match Elo ratings per club.
     """
+    # Always operate chronologically; callers may pass unsorted frames.
+    if "date" in matches_df.columns:
+        matches_df = matches_df.sort_values(by="date").reset_index(drop=True)
     ratings: Dict[str, float] = dict(initial_ratings) if initial_ratings else dict(BASE_ELO)
     rating_histories: Dict[str, List[float]] = {t: [] for t in BASE_ELO.keys()}
     streaks: Dict[str, int] = {t: 0 for t in BASE_ELO.keys()}
@@ -571,9 +574,19 @@ def build_fixture_features(
     """
     feature_cols = get_feature_column_names()
 
-    if precomputed_context is not None and (
-        precomputed_context.get("as_of_date") is None or precomputed_context["as_of_date"] <= match_date
-    ):
+    use_cache = False
+    if precomputed_context is not None:
+        ctx_history = precomputed_context.get("history")
+        ctx_as_of = precomputed_context.get("as_of_date")
+        if ctx_history is not None:
+            # Cache is valid only when it contains no matches at/after match_date
+            # and its as_of bound (if any) does not exceed match_date.
+            no_future = bool((ctx_history["date"] < match_date).all()) if len(ctx_history) else True
+            if no_future and (ctx_as_of is None or ctx_as_of <= match_date):
+                use_cache = True
+
+    if use_cache:
+        assert precomputed_context is not None
         history = precomputed_context["history"]
         current_ratings = precomputed_context["current_ratings"]
         rating_histories = precomputed_context["rating_histories"]
