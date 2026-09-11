@@ -93,16 +93,20 @@ class PremierLeaguePredictionPipeline:
 
         self.models, self.metrics = train_and_benchmark_models(train_df, val_df, self.feature_cols)
 
-        # Determine best model based on accuracy and goal MAE
-        rf_score = self.metrics["Random Forest"]["accuracy"] - self.metrics["Random Forest"]["avg_goal_mae"] * 0.1
-        xgb_score = self.metrics["XGBoost"]["accuracy"] - self.metrics["XGBoost"]["avg_goal_mae"] * 0.1
+        # Best model: primary key is calibrated multi-class log-loss (lower),
+        # tie-broken by accuracy (higher) then goal MAE (lower). This matches
+        # the classifier objective instead of an arbitrary acc-MAE blend.
+        def _rank(m: Dict[str, Any]) -> tuple:
+            return (m["log_loss"], -m["accuracy"], m["avg_goal_mae"])
 
-        self.best_model_name = "XGBoost" if xgb_score >= rf_score else "Random Forest"
+        rf_rank = _rank(self.metrics["Random Forest"])
+        xgb_rank = _rank(self.metrics["XGBoost"])
+        self.best_model_name = "XGBoost" if xgb_rank <= rf_rank else "Random Forest"
         self.best_model = self.models[self.best_model_name]
 
-        print(f"      - Random Forest Accuracy: {self.metrics['Random Forest']['accuracy']:.3f} | Goal MAE: {self.metrics['Random Forest']['avg_goal_mae']:.3f}")
-        print(f"      - XGBoost Accuracy:       {self.metrics['XGBoost']['accuracy']:.3f} | Goal MAE: {self.metrics['XGBoost']['avg_goal_mae']:.3f}")
-        print(f"      -> Best Performing Model Selected: {self.best_model_name}")
+        print(f"      - Random Forest Accuracy: {self.metrics['Random Forest']['accuracy']:.3f} | LogLoss: {self.metrics['Random Forest']['log_loss']:.3f} | Goal MAE: {self.metrics['Random Forest']['avg_goal_mae']:.3f}")
+        print(f"      - XGBoost Accuracy:       {self.metrics['XGBoost']['accuracy']:.3f} | LogLoss: {self.metrics['XGBoost']['log_loss']:.3f} | Goal MAE: {self.metrics['XGBoost']['avg_goal_mae']:.3f}")
+        print(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest log-loss)")
 
         # Generate Matplotlib visualizations
         print("[4/5] Generating Matplotlib diagnostic visualization suite...")
