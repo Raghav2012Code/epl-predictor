@@ -158,8 +158,10 @@ class MatchPredictorModel:
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
         """Forecasts integer scoreline for each match in X using Poisson mode argmax.
 
-        Selects the highest-probability joint scoreline (h, a) consistent with predicted outcome,
-        eliminating forced 2-1 mode collapse and yielding diverse Premier League score distributions.
+        Selects the highest-probability joint scoreline (h, a) consistent with
+        the blended outcome argmax, so the scoreline always agrees with
+        ``predict_outcome_proba``. This eliminates forced 2-1 mode collapse
+        while keeping probabilities and predicted outcomes consistent.
         """
         exp_hg, exp_ag = self.predict_expected_goals(X)
         probas = self.predict_outcome_proba(X)
@@ -169,13 +171,10 @@ class MatchPredictorModel:
 
         for i in range(len(X)):
             grid, _ = self.compute_poisson_grid(exp_hg[i], exp_ag[i], max_goals=max_goals)
-            p_a, p_d, p_h = probas[i][0], probas[i][1], probas[i][2]
-
-            # Competitive draw check: when home and away are evenly balanced and draw prob is robust
-            if abs(p_h - p_a) <= 0.16 and p_d >= 0.24:
-                fav_outcome = 1
-            else:
-                fav_outcome = int(np.argmax(probas[i]))  # 0: Away, 1: Draw, 2: Home
+            # Favored outcome is always the blended probability argmax:
+            # 0: Away, 1: Draw, 2: Home. No separate draw-boost rule here so
+            # pipeline `predicted_outcome` (derived from probas) stays in sync.
+            fav_outcome = int(np.argmax(probas[i]))
 
             # Select best scoreline matching favored outcome
             best_s = (1, 1)

@@ -186,13 +186,11 @@ class PremierLeaguePredictionPipeline:
             pred_scores = self.best_model.predict_scoreline(X_match)[0]
             pred_hg, pred_ag = pred_scores
 
-            # Determine favorite outcome consistent with predicted scoreline
-            if pred_hg > pred_ag:
-                fav_outcome = "Home Win"
-            elif pred_hg < pred_ag:
-                fav_outcome = "Away Win"
-            else:
-                fav_outcome = "Draw"
+            # Favorite outcome is the blended probability argmax so it always
+            # agrees with home/draw/away probs (scoreline is already
+            # constrained to that outcome in predict_scoreline).
+            fav_idx = int(np.argmax(probas))
+            fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
             pred_item = {
                 "gameweek": gw,
@@ -316,12 +314,8 @@ class PremierLeaguePredictionPipeline:
         exp_hg, exp_ag = self.best_model.predict_expected_goals(X_match)
 
         p_away, p_draw, p_home = probas[0], probas[1], probas[2]
-        if pred_scores[0] > pred_scores[1]:
-            fav_outcome = "Home Win"
-        elif pred_scores[0] < pred_scores[1]:
-            fav_outcome = "Away Win"
-        else:
-            fav_outcome = "Draw"
+        fav_idx = int(np.argmax(probas))
+        fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
         return {
             "home_team": ht_std,
