@@ -16,7 +16,6 @@ from tabulate import tabulate
 from src.data_loader import (
     load_2026_2027_fixtures,
     load_historical_stats,
-    standardize_team_name,
 )
 from src.evaluate import (
     plot_confusion_matrices,
@@ -370,8 +369,13 @@ class PremierLeaguePredictionPipeline:
             # Fast-load path (load_model only) may skip history; load it now.
             self.load_data()
 
-        ht_std = standardize_team_name(home_team)
-        at_std = standardize_team_name(away_team)
+        from src.validation import assert_model_compatible, canonical_team
+
+        assert_model_compatible(self.best_model, strict=False)
+        ht_std = canonical_team(home_team)
+        at_std = canonical_team(away_team)
+        if ht_std == at_std:
+            raise ValueError("Home and away clubs must differ.")
         m_date = match_date or datetime.now()
 
         X_match = build_fixture_features(ht_std, at_std, m_date, self.raw_historical)

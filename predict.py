@@ -71,6 +71,13 @@ def _resolve_engine_label() -> str:
 
 def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
     """Displays predicted outcomes and scores for a specific gameweek."""
+    from src.validation import validate_gameweek
+
+    try:
+        gameweek_num = validate_gameweek(gameweek_num)
+    except ValueError as exc:
+        print(f"\n[!] {exc}\n")
+        return
     csv_path = os.path.join(os.path.dirname(__file__), "data", "predictions_2026_2027.csv")
 
     if not os.path.exists(csv_path) or force_retrain:
@@ -119,9 +126,25 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False):
 
 def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = False):
     """Predicts outcome and score for any custom head-to-head match."""
+    from src.validation import assert_model_compatible, canonical_team
+
+    try:
+        home_team = canonical_team(home_team)
+        away_team = canonical_team(away_team)
+    except ValueError as exc:
+        print(f"\n[!] {exc}\n")
+        return
+    if home_team == away_team:
+        print("\n[!] Home and away clubs must differ.\n")
+        return
     model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
     fast = not force_retrain and os.path.exists(model_path)
     pipeline = get_pipeline(force_retrain=force_retrain, fast_mode=fast)
+    try:
+        assert_model_compatible(pipeline.best_model, strict=False)
+    except RuntimeError as exc:
+        print(f"\n[!] {exc}\n")
+        return
     pred = pipeline.predict_custom_match(home_team, away_team)
 
     print("\n" + "=" * 65)
