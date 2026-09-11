@@ -102,7 +102,10 @@ class MatchPredictorModel:
         """
         lh = max(0.2, float(h_exp))
         la = max(0.2, float(a_exp))
-        rho = -0.11
+        # Dixon-Coles low-score dependence. rho must stay small and positive
+        # (literature ~0.1); a negative value inverts the correction and
+        # inflates draws while suppressing 1-0/0-1.
+        rho = 0.11
         grid = np.zeros((max_goals + 1, max_goals + 1))
 
         for h in range(max_goals + 1):
