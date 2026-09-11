@@ -15,6 +15,25 @@ import pandas as pd
 
 WINDOWS: List[int] = [3, 5, 10]
 
+# Zero-leakage fallbacks for cold-start rolling features. These are fixed
+# league-average priors, NOT dataset medians (which would leak future info).
+LEAGUE_DEFAULTS: Dict[str, float] = {
+    "rest_days": 7.0,
+    "roll_goals_for": 1.35,
+    "roll_goals_against": 1.35,
+    "roll_goal_diff": 0.0,
+    "roll_shots_for": 12.0,
+    "roll_shots_target_for": 4.0,
+    "roll_possession": 50.0,
+    "roll_points": 1.35,
+    "venue_roll_goals_for": 1.45,
+    "venue_roll_goals_against": 1.35,
+    "venue_roll_points": 1.45,
+    "h2h_home_win_rate": 0.33,
+    "h2h_goal_diff": 0.0,
+    "h2h_matches_count": 0.0,
+}
+
 # Historical baseline Elo ratings & power parameters across 2020-2026
 BASE_ELO: Dict[str, float] = {
     # Elite Title Contenders
@@ -423,10 +442,17 @@ def compute_head_to_head_features(matches_df: pd.DataFrame) -> pd.DataFrame:
             h2h_goal_diff.append(0.0)
             h2h_total_matches.append(0)
 
-        # Record this encounter after calculating features
+        # Record this encounter after calculating features. Skip unplayed
+        # fixtures (NaN goals) so inference frames never crash here.
         if pair_key not in h2h_history:
             h2h_history[pair_key] = []
-        h2h_history[pair_key].append((ht, int(row["home_goals"]), int(row["away_goals"])))
+        try:
+            hg_val = row["home_goals"]
+            ag_val = row["away_goals"]
+            if pd.notna(hg_val) and pd.notna(ag_val):
+                h2h_history[pair_key].append((ht, int(hg_val), int(ag_val)))
+        except (ValueError, TypeError, KeyError):
+            pass
 
     matches_df["h2h_home_win_rate"] = h2h_h_win_rate
     matches_df["h2h_goal_diff"] = h2h_goal_diff
@@ -488,11 +514,25 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
     merged["target_home_goals"] = merged["home_goals"]
     merged["target_away_goals"] = merged["away_goals"]
 
-    # Fill any initial missing rolling averages with league median
+    # Fill any initial missing rolling averages with fixed league priors.
+    # Never use dataset medians here: they are computed from future rows and
+    # would leak validation/test information into training features.
     feature_columns = get_feature_column_names()
     for col in feature_columns:
-        if col in merged.columns:
-            merged[col] = merged[col].fillna(merged[col].median())
+        if col in merged.columns and merged[col].isna().any():
+            fallback = 0.0
+            for key, val in LEAGUE_DEFAULTS.items():
+                if col.endswith(key) or key in col:
+                    fallback = val
+                    break
+            # Elo columns fall back to neutral ratings rather than zero.
+            if col in ("home_elo", "away_elo"):
+                fallback = 1600.0
+            elif col == "elo_diff":
+                fallback = 65.0
+            elif "momentum" in col:
+                fallback = 0.0
+            merged[col] = merged[col].fillna(fallback)
 
     return merged
 
