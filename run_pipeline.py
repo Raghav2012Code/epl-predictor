@@ -38,7 +38,7 @@ def main():
 
     pipeline = PremierLeaguePredictionPipeline()
     pipeline.prepare_data()
-    pipeline.train_and_evaluate(split_date_str="2024-01-01")
+    pipeline.train_and_evaluate()
     pred_df = pipeline.forecast_2026_2027_season()
 
     elapsed = time.time() - start_time

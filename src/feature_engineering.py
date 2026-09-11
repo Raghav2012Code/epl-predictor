@@ -110,7 +110,7 @@ CLUB_POWER_INDEX: Dict[str, Dict[str, float]] = {
 def compute_dynamic_elo(
     matches_df: pd.DataFrame,
     initial_ratings: Optional[Dict[str, float]] = None,
-    home_adv: float = 65.0,
+    home_adv: Optional[float] = None,
     k_base: float = 20.0,
 ) -> Tuple[
     List[float],
@@ -139,6 +139,10 @@ def compute_dynamic_elo(
     # Always operate chronologically; callers may pass unsorted frames.
     if "date" in matches_df.columns:
         matches_df = matches_df.sort_values(by="date").reset_index(drop=True)
+    if home_adv is None:
+        from src.config import get_config
+
+        home_adv = float(get_config()["model"].get("home_advantage", 65.0))
     ratings: Dict[str, float] = dict(initial_ratings) if initial_ratings else dict(BASE_ELO)
     rating_histories: Dict[str, List[float]] = {t: [] for t in BASE_ELO.keys()}
     streaks: Dict[str, int] = {t: 0 for t in BASE_ELO.keys()}
@@ -529,7 +533,9 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
             if col in ("home_elo", "away_elo"):
                 fallback = 1600.0
             elif col == "elo_diff":
-                fallback = 65.0
+                from src.config import get_config
+
+                fallback = float(get_config()["model"].get("home_advantage", 65.0))
             elif "momentum" in col:
                 fallback = 0.0
             merged[col] = merged[col].fillna(fallback)
@@ -644,7 +650,10 @@ def build_fixture_features(
             a_base = BASE_ELO.get(away_team, 1420.0)
             row["home_elo"] = h_base
             row["away_elo"] = a_base
-            row["elo_diff"] = (h_base + 65.0) - a_base
+            from src.config import get_config as _get_cfg
+
+            _home_adv = float(_get_cfg()["model"].get("home_advantage", 65.0))
+            row["elo_diff"] = (h_base + _home_adv) - a_base
             row["home_elo_momentum_3"] = 0.0
             row["away_elo_momentum_3"] = 0.0
             row["diff_elo_momentum_3"] = 0.0
@@ -761,7 +770,9 @@ def build_fixture_features(
     # Elo and momentum features
     feature_dict["home_elo"] = h_elo
     feature_dict["away_elo"] = a_elo
-    feature_dict["elo_diff"] = (h_elo + 65.0) - a_elo
+    from src.config import get_config as _get_cfg2
+
+    feature_dict["elo_diff"] = (h_elo + float(_get_cfg2()["model"].get("home_advantage", 65.0))) - a_elo
     feature_dict["home_elo_momentum_3"] = round(h_m3, 2)
     feature_dict["away_elo_momentum_3"] = round(a_m3, 2)
     feature_dict["diff_elo_momentum_3"] = round(h_m3 - a_m3, 2)

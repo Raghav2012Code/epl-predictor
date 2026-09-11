@@ -79,8 +79,12 @@ class PremierLeaguePredictionPipeline:
         logger.info(f"      - Engineered dataset shape: {self.engineered_df.shape} ({len(self.feature_cols)} features).")
         return self
 
-    def train_and_evaluate(self, split_date_str: str = "2024-01-01") -> Dict[str, Any]:
+    def train_and_evaluate(self, split_date_str: Optional[str] = None) -> Dict[str, Any]:
         """Performs time-series cross-validation split, fits RF & XGBoost, and generates plots."""
+        from src.config import get_split_date
+
+        if split_date_str is None:
+            split_date_str = get_split_date()
         if self.engineered_df is None:
             self.prepare_data()
 

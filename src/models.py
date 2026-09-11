@@ -124,8 +124,15 @@ class MatchPredictorModel:
         probas = self.predict_outcome_proba(X_val, apply_temperature=False)
         y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
         eps = 1e-15
+        from src.config import get_config
+
+        grid_cfg = get_config()["model"]
+        gmin = float(grid_cfg.get("calibration_grid_min", 0.5))
+        gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
+        gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
         best_t, best_ll = 1.0, float("inf")
-        for t in [round(x, 2) for x in np.arange(0.5, 3.01, 0.05)]:
+        grid = np.arange(gmin, gmax + gstep / 2, gstep)
+        for t in [round(float(x), 2) for x in grid]:
             scaled = self._apply_temperature(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
             ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
@@ -190,10 +197,16 @@ class MatchPredictorModel:
         clf_probas = self.classifier.predict_proba(X)
         exp_hg, exp_ag = self.predict_expected_goals(X)
 
+        from src.config import get_config
+
+        blend_cfg = get_config()["model"]
+        w_clf = float(blend_cfg.get("blend_classifier", 0.60))
+        w_poiss = float(blend_cfg.get("blend_poisson", 0.40))
+
         blended = np.zeros_like(clf_probas)
         for i in range(len(X)):
             _, p_poiss = self.compute_poisson_grid(exp_hg[i], exp_ag[i])
-            p_comb = 0.60 * clf_probas[i] + 0.40 * p_poiss
+            p_comb = w_clf * clf_probas[i] + w_poiss * p_poiss
             p_comb /= p_comb.sum()
             blended[i] = p_comb
 

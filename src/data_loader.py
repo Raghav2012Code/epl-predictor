@@ -312,15 +312,15 @@ def load_historical_stats(
 
     Includes full results, goals, shots, shots on target, corners, and possession.
     """
+    from src.config import get_config
+
+    cfg = get_config()["data"]
     if seasons is None:
-        # Default seasons to load
-        seasons = ["2021", "2122", "2223", "2324", "2425", "2526"]
+        seasons = list(cfg["seasons"])
 
     all_dfs: List[pd.DataFrame] = []
     skipped: List[str] = []
-    base_url = (
-        "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-{}.csv"
-    )
+    base_url = str(cfg["historical_url_template"])
 
     def _num_col(frame: pd.DataFrame, key: str, default: float) -> pd.Series:
         # DataFrame.get(key, scalar) + pd.to_numeric(scalar) loses Series
@@ -429,5 +429,9 @@ def load_historical_stats(
 
 def load_2026_2027_fixtures() -> pd.DataFrame:
     """Loads and parses the 2026/2027 Premier League schedule from openfootball/england."""
-    url = "https://raw.githubusercontent.com/openfootball/england/master/2026-27/1-premierleague.txt"
-    return parse_openfootball_fixtures(url, season="2026-27", is_url=True)
+    from src.config import get_config
+
+    cfg = get_config()["data"]
+    url = str(cfg["fixture_url"])
+    season = str(cfg["fixture_season"])
+    return parse_openfootball_fixtures(url, season=season, is_url=True)

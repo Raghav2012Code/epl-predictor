@@ -1,0 +1,23 @@
+# Central pipeline configuration. Environment overrides (highest precedence):
+#   EPL_SEASONS        comma-separated season codes, e.g. "2021,2122,2223,2324,2425,2526"
+#   EPL_FIXTURE_URL    override for the openfootball fixture feed
+#   EPL_FIXTURE_SEASON season label for the fixture feed, e.g. "2026-27"
+#   EPL_SPLIT_DATE     time-series validation cutoff, e.g. "2024-01-01"
+#   LOG_LEVEL          DEBUG | INFO | WARNING | ERROR
+
+data:
+  seasons: ["2021", "2122", "2223", "2324", "2425", "2526"]
+  historical_url_template: "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-{}.csv"
+  fixture_url: "https://raw.githubusercontent.com/openfootball/england/master/2026-27/1-premierleague.txt"
+  fixture_season: "2026-27"
+
+pipeline:
+  split_date: "2024-01-01"
+
+model:
+  home_advantage: 65.0
+  blend_classifier: 0.60
+  blend_poisson: 0.40
+  calibration_grid_min: 0.5
+  calibration_grid_max: 3.0
+  calibration_grid_step: 0.05
