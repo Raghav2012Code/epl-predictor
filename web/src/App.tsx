@@ -56,6 +56,11 @@ export const App: React.FC = () => {
             logLoss={productionMetrics?.logLoss}
             goalMae={productionMetrics?.avgGoalMae}
             productionModel={dataset.benchmark.productionModel}
+            teams={dataset.teams}
+            standings={dataset.standings}
+            fixtures={dataset.fixtures}
+            onSelectClub={handleSelectTeamFromStandings}
+            onOpenFixture={handleOpenSimulator}
           />
 
           <main className="flex-1 w-full px-2.5 sm:px-4 py-3 sm:py-4 overflow-x-hidden">

@@ -1,5 +1,6 @@
-﻿import React from 'react';
-import { Activity, Search, ShieldCheck, Flame, Zap, Trophy } from 'lucide-react';
+﻿import React, { useEffect, useMemo, useRef } from 'react';
+import { Activity, Search, Trophy, Shield, CalendarDays } from 'lucide-react';
+import { Fixture, StandingsRow, TeamProfile } from '../types';
 
 interface TelemetryBarProps {
   searchQuery: string;
@@ -9,6 +10,11 @@ interface TelemetryBarProps {
   logLoss?: number;
   goalMae?: number;
   productionModel?: string;
+  teams?: Record<string, TeamProfile>;
+  standings?: StandingsRow[];
+  fixtures?: Fixture[];
+  onSelectClub?: (teamName: string) => void;
+  onOpenFixture?: (homeTeam: string, awayTeam: string) => void;
 }
 
 export const TelemetryBar: React.FC<TelemetryBarProps> = ({
@@ -19,7 +25,61 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({
   logLoss,
   goalMae,
   productionModel = 'RF + XGB',
+  teams = {},
+  standings = [],
+  fixtures = [],
+  onSelectClub,
+  onOpenFixture,
 }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Global shortcut: "/" focuses search from anywhere (unless typing already).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+      if (e.key === '/' && !typing) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      } else if (e.key === 'Escape' && document.activeElement === inputRef.current) {
+        setSearchQuery('');
+        inputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setSearchQuery]);
+
+  const query = searchQuery.trim().toLowerCase();
+  const clubHits = useMemo(() => {
+    if (!query) return [];
+    return Object.values(teams)
+      .filter((t) => t.name.toLowerCase().includes(query))
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 5);
+  }, [teams, query]);
+  const fixtureHits = useMemo(() => {
+    if (!query) return [];
+    return fixtures
+      .filter(
+        (f) =>
+          f.homeTeam.toLowerCase().includes(query) ||
+          f.awayTeam.toLowerCase().includes(query),
+      )
+      .slice(0, 6);
+  }, [fixtures, query]);
+  const hasResults = query !== '' && (clubHits.length > 0 || fixtureHits.length > 0);
+  const totalHits = clubHits.length + fixtureHits.length;
+
+  const pickClub = (name: string) => {
+    setSearchQuery('');
+    onSelectClub?.(name);
+  };
+  const pickFixture = (f: Fixture) => {
+    setSearchQuery('');
+    onOpenFixture?.(f.homeTeam, f.awayTeam);
+  };
+
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur-none select-none">
       {/* Upper Telemetry Bar */}
@@ -81,20 +141,96 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({
         <div className="relative w-48 sm:w-64 flex-shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
           <input
+            ref={inputRef}
             type="text"
-            placeholder="Search club or fixture..."
+            placeholder="Search club or fixture...  ( / )"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search club or fixture"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && totalHits > 0) {
+                if (clubHits.length > 0) pickClub(clubHits[0].name);
+                else if (fixtureHits.length > 0) pickFixture(fixtureHits[0]);
+              }
+            }}
+            aria-label="Search clubs, standings, and fixtures"
+            aria-expanded={hasResults}
+            role="combobox"
+            aria-autocomplete="list"
             className="w-full rounded-none border border-border bg-background px-2.5 py-1.5 pl-8 text-xs font-mono text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-text-muted hover:text-text-primary"
             >
               ESC
             </button>
+          )}
+
+          {/* Grouped global results */}
+          {query !== '' && (
+            <div
+              role="listbox"
+              aria-label="Search results"
+              className="absolute right-0 top-full z-50 mt-1 max-h-80 w-72 overflow-y-auto border border-border bg-surface shadow-lg"
+            >
+              <div className="border-b border-border-subtle px-2.5 py-1 text-[10px] font-mono text-text-muted">
+                {totalHits > 0 ? `${totalHits} result${totalHits === 1 ? '' : 's'}` : 'No matches'}
+                <span className="text-text-muted"> — Enter selects first</span>
+              </div>
+              {clubHits.length > 0 && (
+                <div>
+                  <div className="px-2.5 pt-1.5 text-[9px] font-mono uppercase tracking-wider text-text-muted">
+                    Clubs ({clubHits.length})
+                  </div>
+                  {clubHits.map((t) => {
+                    const row = standings.find((s) => s.team === t.name);
+                    return (
+                      <button
+                        key={t.name}
+                        role="option"
+                        aria-selected="false"
+                        onClick={() => pickClub(t.name)}
+                        className="flex w-full items-center justify-between px-2.5 py-1.5 text-left text-xs hover:bg-surface-hover"
+                      >
+                        <span className="flex items-center space-x-2 font-bold text-text-primary">
+                          <Shield className="h-3 w-3 text-brand-accent" />
+                          <span>{t.name}</span>
+                        </span>
+                        <span className="font-mono text-[10px] text-text-muted">
+                          {row ? `#${row.rank} • ${row.points}pts` : `#${t.rank}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {fixtureHits.length > 0 && (
+                <div>
+                  <div className="px-2.5 pt-1.5 text-[9px] font-mono uppercase tracking-wider text-text-muted">
+                    Fixtures ({fixtureHits.length})
+                  </div>
+                  {fixtureHits.map((f) => (
+                    <button
+                      key={f.id}
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => pickFixture(f)}
+                      className="flex w-full items-center justify-between px-2.5 py-1.5 text-left text-xs hover:bg-surface-hover"
+                    >
+                      <span className="flex items-center space-x-2 font-bold text-text-primary">
+                        <CalendarDays className="h-3 w-3 text-text-secondary" />
+                        <span className="truncate">
+                          {f.homeTeam} vs {f.awayTeam}
+                        </span>
+                      </span>
+                      <span className="font-mono text-[10px] text-text-muted">GW{f.gameweek}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
