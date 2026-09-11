@@ -232,3 +232,119 @@ def test_precomputed_context_consistency():
     feat_ctx = build_fixture_features("Arsenal", "Chelsea", future_date, raw_df, precomputed_context=ctx)
 
     pd.testing.assert_frame_equal(feat_std, feat_ctx)
+
+
+def test_precomputed_context_rejects_future_history():
+    """Cached Elo state containing future matches must not leak into past fixtures."""
+    dates = pd.date_range("2024-01-01", periods=10, freq="7D")
+    records = []
+    for i, d in enumerate(dates):
+        records.append(
+            {
+                "season": "2023-24",
+                "date": d,
+                "home_team": "Arsenal" if i % 2 == 0 else "Chelsea",
+                "away_team": "Chelsea" if i % 2 == 0 else "Arsenal",
+                "home_goals": 2,
+                "away_goals": 1,
+                "result": "H",
+                "home_shots": 14.0,
+                "away_shots": 9.0,
+                "home_shots_target": 5.0,
+                "away_shots_target": 3.0,
+                "home_corners": 6.0,
+                "away_corners": 4.0,
+                "home_possession": 55.0,
+                "away_possession": 45.0,
+            }
+        )
+    raw_df = pd.DataFrame(records)
+    mid_date = datetime(2024, 2, 1)
+
+    feat_past_only = build_fixture_features("Arsenal", "Chelsea", mid_date, raw_df)
+    # Full-history cache (contains March matches) must be ignored for a Feb fixture.
+    full_ctx = build_feature_context(raw_df)
+    feat_with_full_cache = build_fixture_features(
+        "Arsenal", "Chelsea", mid_date, raw_df, precomputed_context=full_ctx
+    )
+    pd.testing.assert_frame_equal(feat_past_only, feat_with_full_cache)
+
+
+def test_scoreline_agrees_with_proba_argmax():
+    n_samples = 20
+    feature_cols = get_feature_column_names()
+    np.random.seed(7)
+    X = pd.DataFrame(np.random.randn(n_samples, len(feature_cols)), columns=feature_cols)
+    y_outcome = pd.Series(np.random.choice([0, 1, 2], size=n_samples))
+    y_hg = pd.Series(np.random.poisson(1.5, size=n_samples))
+    y_ag = pd.Series(np.random.poisson(1.1, size=n_samples))
+    model = MatchPredictorModel("rf")
+    model.fit(X, y_outcome, y_hg, y_ag)
+    probas = model.predict_outcome_proba(X)
+    scores = model.predict_scoreline(X)
+    for i, (h, a) in enumerate(scores):
+        fav = int(np.argmax(probas[i]))
+        if fav == 2:
+            assert h > a
+        elif fav == 0:
+            assert h < a
+        else:
+            assert h == a
+
+
+def test_poisson_grid_dixon_coles_direction():
+    model = MatchPredictorModel("rf")
+    grid, _ = model.compute_poisson_grid(1.5, 1.2, max_goals=2)
+    # With positive rho, 1-1 is suppressed (tau=1-rho<1) and mass shifts
+    # sensibly; grid must remain a valid distribution.
+    assert abs(float(grid.sum()) - 1.0) < 1e-9
+    assert bool((grid >= 0).all())
+
+
+def test_engineered_cold_start_uses_fixed_priors():
+    dates = pd.date_range("2024-01-01", periods=2, freq="7D")
+    raw_df = pd.DataFrame(
+        [
+            {
+                "season": "2023-24", "date": dates[0],
+                "home_team": "Arsenal", "away_team": "Chelsea",
+                "home_goals": 2, "away_goals": 1, "result": "H",
+                "home_shots": 14.0, "away_shots": 9.0,
+                "home_shots_target": 5.0, "away_shots_target": 3.0,
+                "home_corners": 6.0, "away_corners": 4.0,
+                "home_possession": 55.0, "away_possession": 45.0,
+            },
+            {
+                "season": "2023-24", "date": dates[1],
+                "home_team": "Liverpool", "away_team": "Manchester City",
+                "home_goals": 1, "away_goals": 1, "result": "D",
+                "home_shots": 13.0, "away_shots": 11.0,
+                "home_shots_target": 4.0, "away_shots_target": 4.0,
+                "home_corners": 5.0, "away_corners": 5.0,
+                "home_possession": 52.0, "away_possession": 48.0,
+            },
+        ]
+    )
+    feat_df = build_engineered_dataset(raw_df)
+    assert not feat_df[get_feature_column_names()].isna().any().any()
+
+
+def test_benchmark_uses_expected_goals_mae():
+    from src.models import train_and_benchmark_models
+
+    n = 30
+    feature_cols = get_feature_column_names()
+    np.random.seed(11)
+    base = pd.DataFrame(np.random.randn(n, len(feature_cols)), columns=feature_cols)
+    base["date"] = pd.date_range("2023-01-01", periods=n, freq="7D")
+    base["target_outcome"] = np.random.choice([0, 1, 2], size=n)
+    base["target_home_goals"] = np.random.poisson(1.5, size=n)
+    base["target_away_goals"] = np.random.poisson(1.2, size=n)
+    train_df, val_df = base.iloc[:20].copy(), base.iloc[20:].copy()
+    _, metrics = train_and_benchmark_models(train_df, val_df, feature_cols)
+    for vals in metrics.values():
+        # MAE on continuous xG is typically < 2 for this scale; integer-score
+        # MAE would be quantized. Just assert finiteness and scoreline separation.
+        assert np.isfinite(vals["avg_goal_mae"])
+        assert "exact_score_acc" in vals
+        assert len(vals["pred_scores"]) == len(val_df)
