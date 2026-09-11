@@ -33,6 +33,9 @@ export const App: React.FC = () => {
     setActiveTab('clubs');
   };
 
+  const productionMetrics = dataset.benchmark.models.find((m) => m.isProduction)
+    ?? dataset.benchmark.models[0];
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row font-sans">
@@ -50,6 +53,9 @@ export const App: React.FC = () => {
             setSearchQuery={setSearchQuery}
             champion={dataset.standings[0]?.team}
             season={dataset.season}
+            logLoss={productionMetrics?.logLoss}
+            goalMae={productionMetrics?.avgGoalMae}
+            productionModel={dataset.benchmark.productionModel}
           />
 
           <main className="flex-1 w-full px-2.5 sm:px-4 py-3 sm:py-4 overflow-x-hidden">
@@ -73,6 +79,7 @@ export const App: React.FC = () => {
         {activeTab === 'standings' && (
           <StandingsView
             standings={dataset.standings}
+            clubSeries={dataset.clubSeries}
             onSelectTeam={handleSelectTeamFromStandings}
           />
         )}
@@ -107,7 +114,7 @@ export const App: React.FC = () => {
               PREMIER LEAGUE MATCH OUTCOME & SCORES INTELLIGENCE ENGINE (2026/27)
             </div>
             <div className="text-[11px] text-text-muted">
-              Trained on 2,280 EPL matches with zero-leakage rolling form, Poisson expected goals, and 3-way XGBoost classification.
+              Trained on historical EPL matches with zero-leakage rolling form, Poisson expected goals, and 3-way {dataset.benchmark.productionModel} classification. {dataset.totalMatches} fixtures • {dataset.gameweeksTotal} gameweeks.
             </div>
           </div>
 

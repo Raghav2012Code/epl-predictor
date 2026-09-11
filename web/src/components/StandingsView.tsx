@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { StandingsRow } from '../types';
+import { ClubGameweekPoint, StandingsRow } from '../types';
 import { Trophy, ShieldAlert, Award, ArrowUpDown } from 'lucide-react';
 
 interface StandingsViewProps {
   standings: StandingsRow[];
+  clubSeries?: Record<string, ClubGameweekPoint[]>;
   onSelectTeam?: (teamName: string) => void;
 }
 
 export const StandingsView: React.FC<StandingsViewProps> = ({
   standings,
+  clubSeries,
   onSelectTeam,
 }) => {
   const [sortField, setSortField] = useState<keyof StandingsRow>('points');
@@ -163,9 +165,21 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
               const isUEL = row.rank === 5;
               const isRel = row.rank >= 18;
 
-              // Sparkline points coordinate calculation (GW0 to GW38)
-              const maxPts = 100;
-              const yEnd = Math.max(2, 16 - (row.points / maxPts) * 14);
+              // Real cumulative-points trajectory from exported clubSeries.
+              // Falls back to a flat placeholder only when series is missing.
+              const series = clubSeries?.[row.team];
+              const maxSeriesPts = Math.max(1, ...(series?.map((p) => p.cumPoints) ?? [row.points]));
+              const toXY = (gw: number, pts: number): string => {
+                const x = (gw / 38) * 80;
+                const y = Math.max(2, 16 - (pts / maxSeriesPts) * 14);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+              };
+              const sparkPoints = series && series.length > 1
+                ? series.map((p) => toXY(p.gw, p.cumPoints)).join(' ')
+                : `0,16 80,${Math.max(2, 16 - (row.points / 100) * 14).toFixed(1)}`;
+              const yEnd = series && series.length
+                ? Math.max(2, 16 - ((series[series.length - 1].cumPoints / maxSeriesPts) * 14))
+                : Math.max(2, 16 - (row.points / 100) * 14);
               const strokeColor = isUCL ? '#ffffff' : isRel ? '#71717a' : '#a1a1aa';
 
               return (
@@ -225,7 +239,7 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                     </span>
                   </td>
 
-                  {/* Inline 38-GW Trajectory Sparkline */}
+                  {/* Inline 38-GW Trajectory Sparkline (real cumulative points) */}
                   <td className="py-2 px-3 text-center hidden md:table-cell">
                     <svg viewBox="0 0 80 18" className="w-20 h-3.5 inline-block" role="img" aria-label={`${row.team} trajectory`}>
                       <polyline
@@ -233,7 +247,8 @@ export const StandingsView: React.FC<StandingsViewProps> = ({
                         stroke={strokeColor}
                         strokeWidth="1.5"
                         strokeLinecap="round"
-                        points={`0,16 20,${Math.max(2, 16 - ((row.won * 0.4) / 38) * 14)} 45,${Math.max(2, 16 - ((row.points * 0.5) / 100) * 14)} 80,${yEnd}`}
+                        strokeLinejoin="round"
+                        points={sparkPoints}
                       />
                       <circle cx="80" cy={yEnd} r="2" fill={strokeColor} />
                     </svg>

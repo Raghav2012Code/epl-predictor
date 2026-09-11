@@ -29,7 +29,10 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
   const home = teams[homeTeam] || teams[teamNames[0]];
   const away = teams[awayTeam] || teams[teamNames[1]];
 
-  // Real-time calculation engine mirroring trained Poisson & XGBoost weights
+  // Heuristic what-if engine for instant sandbox play. This mirrors the
+  // pipeline's Poisson intuition (attack/defense averages, venue + rest
+  // factors) but is NOT the trained XGBoost/RF model — use CLI
+  // `predict.py --match` for production probabilities.
   const simulation = useMemo(() => {
     // Base attacking & defensive ratings adjusted for momentum
     const homeAttack = home.gfPerMatch * (1 + homeFormBoost / 100);
@@ -179,7 +182,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
                 </span>
               </h2>
               <p className="text-[11px] font-mono text-text-muted mt-0.5">
-                Stress-test match outcome distributions against fixture congestion, momentum shocks, and venue parity.
+                Stress-test match outcome distributions against fixture congestion, momentum shocks, and venue parity. Heuristic sandbox — not the trained production model.
               </p>
             </div>
           </div>
@@ -625,7 +628,7 @@ export const MatchSimulator: React.FC<MatchSimulatorProps> = ({
           </label>
 
           <span className="text-[11px] font-mono text-text-muted hidden sm:inline-block">
-            CALIBRATED XGBOOST POISSON REGRESSION WEIGHTS
+            HEURISTIC POISSON SANDBOX — PRODUCTION: CLI predict.py --match
           </span>
         </div>
       </div>

@@ -222,7 +222,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         </div>
 
         <p className="mt-3 text-xs text-text-secondary leading-relaxed font-mono">
-          The pipeline benchmarks Random Forest and XGBoost across 2,280 historical Premier League matches using strict time-series cross-validation (pre-2024 train, 2024–2026 validation). All features are calculated using historical chronological shift (<code className="font-mono text-brand-accent">shift(1)</code>) to guarantee zero future data leakage.
+          The pipeline benchmarks Random Forest and XGBoost using strict time-series cross-validation (pre-2024 train, 2024–2026 validation) over {totalMatches} season fixtures. All features are calculated using historical chronological shift (<code className="font-mono text-brand-accent">shift(1)</code>) with fixed league priors for cold starts to guarantee zero future data leakage.
         </p>
       </div>
 
@@ -313,7 +313,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="flex items-center space-x-2 border-b border-border pb-3 mb-3">
             <PieIcon className="h-4 w-4 text-brand-accent" />
             <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-text-primary">
-              FORECAST OUTCOME SPLIT (380 FIXTURES)
+              FORECAST OUTCOME SPLIT ({totalMatches} FIXTURES)
             </h3>
           </div>
           <OutcomeDonut dist={analytics.outcomeDistribution} total={totalMatches} />

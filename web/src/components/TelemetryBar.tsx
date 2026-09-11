@@ -6,6 +6,9 @@ interface TelemetryBarProps {
   setSearchQuery: (q: string) => void;
   champion?: string;
   season?: string;
+  logLoss?: number;
+  goalMae?: number;
+  productionModel?: string;
 }
 
 export const TelemetryBar: React.FC<TelemetryBarProps> = ({
@@ -13,6 +16,9 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({
   setSearchQuery,
   champion = 'Arsenal',
   season = '2026/27',
+  logLoss,
+  goalMae,
+  productionModel = 'RF + XGB',
 }) => {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur-none select-none">
@@ -27,15 +33,21 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({
             </span>
             <span className="text-border">|</span>
             <span className="text-text-secondary">
-              MODEL: <span className="text-text-primary font-bold">RF + XGB ENSEMBLE</span>
+              MODEL: <span className="text-text-primary font-bold">{productionModel} ENSEMBLE</span>
             </span>
             <span className="text-border hidden sm:inline">|</span>
             <span className="hidden sm:inline text-text-muted">
-              LOSS: <span className="text-brand-accent font-bold">0.962 LOG-LOSS</span>
+              LOSS:{' '}
+              <span className="text-brand-accent font-bold">
+                {logLoss !== undefined ? `${logLoss.toFixed(3)} LOG-LOSS` : '— LOG-LOSS'}
+              </span>
             </span>
             <span className="text-border hidden md:inline">|</span>
             <span className="hidden md:inline text-text-muted">
-              xG ENGINE: <span className="text-text-secondary font-bold">POISSON (MAE 0.74)</span>
+              xG ENGINE:{' '}
+              <span className="text-text-secondary font-bold">
+                {goalMae !== undefined ? `POISSON (MAE ${goalMae.toFixed(2)})` : 'POISSON'}
+              </span>
             </span>
           </div>
 
