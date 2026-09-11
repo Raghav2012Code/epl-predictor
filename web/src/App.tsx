@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import eplDataRaw from './data/eplData.json';
 import { EPLDataset } from './types';
 import { Sidebar } from './components/Sidebar';
 import { TelemetryBar } from './components/TelemetryBar';
@@ -10,11 +9,11 @@ import { StandingsView } from './components/StandingsView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { ClubView } from './components/ClubView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppSkeleton, DataErrorPanel } from './components/DataStates';
+import { useEPLData } from './hooks/useEPLData';
 import { ExternalLink, Github, Terminal } from 'lucide-react';
 
-const dataset = eplDataRaw as unknown as EPLDataset;
-
-export const App: React.FC = () => {
+const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [activeTab, setActiveTab] = useState<NavTab>('fixtures');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedClub, setSelectedClub] = useState<string>('Arsenal');
@@ -146,6 +145,28 @@ export const App: React.FC = () => {
         </footer>
         </div>
       </div>
+  );
+};
+
+export const App: React.FC = () => {
+  const state = useEPLData();
+  if (state.status === 'loading') {
+    return (
+      <ErrorBoundary>
+        <AppSkeleton />
+      </ErrorBoundary>
+    );
+  }
+  if (state.status === 'error') {
+    return (
+      <ErrorBoundary>
+        <DataErrorPanel error={state.error} onRetry={state.retry} />
+      </ErrorBoundary>
+    );
+  }
+  return (
+    <ErrorBoundary>
+      <Dashboard dataset={state.dataset} />
     </ErrorBoundary>
   );
 };
