@@ -259,6 +259,7 @@ def train_and_benchmark_models(
         # Predictions on validation
         val_proba = model.predict_outcome_proba(X_val)
         val_preds = np.argmax(val_proba, axis=1)
+        exp_hg, exp_ag = model.predict_expected_goals(X_val)
         pred_scores = model.predict_scoreline(X_val)
         pred_hg = np.array([s[0] for s in pred_scores])
         pred_ag = np.array([s[1] for s in pred_scores])
@@ -287,9 +288,11 @@ def train_and_benchmark_models(
             f1_scores.append(f1)
         macro_f1 = float(np.mean(f1_scores))
 
-        # Goal prediction metrics
-        mae_hg = float(np.mean(np.abs(pred_hg - y_val_hg.values)))
-        mae_ag = float(np.mean(np.abs(pred_ag - y_val_ag.values)))
+        # Goal prediction metrics: MAE on continuous expected goals
+        # (regressor quality). Integer scorelines are evaluated separately via
+        # exact-score / within-1-goal accuracy below.
+        mae_hg = float(np.mean(np.abs(exp_hg - y_val_hg.values)))
+        mae_ag = float(np.mean(np.abs(exp_ag - y_val_ag.values)))
         avg_mae = (mae_hg + mae_ag) / 2.0
 
         exact_score_acc = float(np.mean((pred_hg == y_val_hg.values) & (pred_ag == y_val_ag.values)))
