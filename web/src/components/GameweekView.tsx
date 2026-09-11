@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Fixture, TeamProfile } from '../types';
 import { MatchCard } from './MatchCard';
-import { ChevronLeft, ChevronRight, X, Swords, Shield, Target, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Swords, Shield, Target, Activity, Radio } from 'lucide-react';
 
 interface GameweekViewProps {
   fixtures: Fixture[];
@@ -25,6 +25,27 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
   const [currentGW, setCurrentGW] = useState<number>(currentActiveGW);
   const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'played'>('all');
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
+  // Tracks whether the user manually navigated away from the live gameweek,
+  // so late fixture updates don't yank the view out from under them.
+  const userNavigatedRef = useRef(false);
+
+  // Re-sync when the dataset's live gameweek changes (e.g. statuses flip
+  // Played->Upcoming on refresh), unless the user deliberately navigated.
+  useEffect(() => {
+    if (!userNavigatedRef.current) {
+      setCurrentGW(currentActiveGW);
+    }
+  }, [currentActiveGW]);
+
+  const goToGW = (gw: number) => {
+    userNavigatedRef.current = gw !== currentActiveGW;
+    setCurrentGW(gw);
+  };
+
+  const jumpToLive = () => {
+    userNavigatedRef.current = false;
+    setCurrentGW(currentActiveGW);
+  };
 
   // Map each gameweek to played, current, or upcoming for clean dropdown telemetry
   const gwStatusMap = React.useMemo(() => {
@@ -135,7 +156,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
         {/* Navigation & Selector */}
         <div className="flex items-center space-x-1.5">
           <button
-            onClick={() => setCurrentGW((prev) => Math.max(1, prev - 1))}
+            onClick={() => goToGW(Math.max(1, currentGW - 1))}
             disabled={currentGW === 1}
             aria-label="Previous gameweek"
             className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors"
@@ -149,7 +170,7 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
             </span>
             <select
               value={currentGW}
-              onChange={(e) => setCurrentGW(Number(e.target.value))}
+              onChange={(e) => goToGW(Number(e.target.value))}
               aria-label="Select gameweek"
               className="rounded-none border border-border bg-background px-2 py-0.5 text-xs font-mono font-bold text-text-primary focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
             >
@@ -166,13 +187,24 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
           </div>
 
           <button
-            onClick={() => setCurrentGW((prev) => Math.min(38, prev + 1))}
+            onClick={() => goToGW(Math.min(38, currentGW + 1))}
             disabled={currentGW === 38}
             aria-label="Next gameweek"
             className="flex h-6 w-6 items-center justify-center rounded-none border border-border bg-surface-subtle text-text-secondary hover:text-text-primary hover:border-brand-accent/40 disabled:opacity-30 disabled:pointer-events-none transition-colors"
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
+
+          {currentGW !== currentActiveGW && (
+            <button
+              onClick={jumpToLive}
+              aria-label={`Jump to live gameweek ${currentActiveGW}`}
+              className="flex h-6 items-center space-x-1 rounded-none border border-brand-accent/40 bg-brand-accent/15 px-2 text-[10px] font-mono font-bold text-brand-accent hover:bg-brand-accent/25 transition-colors"
+            >
+              <Radio className="h-3 w-3" />
+              <span>LIVE GW{currentActiveGW}</span>
+            </button>
+          )}
         </div>
 
         {/* Filter Pills */}
