@@ -128,6 +128,7 @@ TEAM_ALIASES: Dict[str, str] = {
     # West Bromwich Albion
     "west brom": "West Brom",
     "west bromwich albion": "West Brom",
+    "west bromwich albion fc": "West Brom",
 }
 
 
@@ -229,7 +230,9 @@ def parse_openfootball_fixtures(
         # Check match with " v "
         m_v = match_v_score_regex.match(line)
         if m_v:
-            time_val = m_v.group(1) or "15:00"
+            # Missing kickoff times are unknown, not 15:00. Use empty string
+            # so downstream consumers don't mistake a default for a real time.
+            time_val = m_v.group(1) or ""
             team1_raw = m_v.group(2).strip()
             team2_raw = m_v.group(3).strip()
             hg = m_v.group(4)
@@ -237,6 +240,10 @@ def parse_openfootball_fixtures(
 
             # Avoid headers captured erroneously
             if "Matchday" in team1_raw or "League" in team1_raw:
+                continue
+
+            # Guard against matches appearing before any date header.
+            if not current_date_str:
                 continue
 
             home_team = standardize_team_name(team1_raw)
@@ -261,7 +268,9 @@ def parse_openfootball_fixtures(
         # Check match with score in middle (Burnley FC 0-3 (0-2) Manchester City FC)
         m_mid = match_score_middle_regex.match(line)
         if m_mid:
-            time_val = m_mid.group(1) or "15:00"
+            if not current_date_str:
+                continue
+            time_val = m_mid.group(1) or ""
             team1_raw = m_mid.group(2).strip()
             hg = m_mid.group(3)
             ag = m_mid.group(4)
@@ -304,9 +313,18 @@ def load_historical_stats(
         seasons = ["2021", "2122", "2223", "2324", "2425", "2526"]
 
     all_dfs: List[pd.DataFrame] = []
+    skipped: List[str] = []
     base_url = (
         "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-{}.csv"
     )
+
+    def _num_col(frame: pd.DataFrame, key: str, default: float) -> pd.Series:
+        # DataFrame.get(key, scalar) + pd.to_numeric(scalar) loses Series
+        # semantics; always coerce via a Series so missing columns fall back
+        # to a constant instead of raising AttributeError on .fillna.
+        if key in frame.columns:
+            return pd.to_numeric(frame[key], errors="coerce").fillna(default)
+        return pd.Series(default, index=frame.index, dtype=float)
 
     for s_code in seasons:
         url = base_url.format(s_code)
@@ -314,11 +332,14 @@ def load_historical_stats(
         try:
             download_file(url, local_path, force_download=force_download)
             df = pd.read_csv(local_path)
-        except Exception:
-            # If download fails or season file is not yet available, continue
+        except Exception as exc:
+            # Never fail silently: record which seasons were skipped so the
+            # caller/UI can report reduced training size instead of claiming 2280.
+            skipped.append(f"{s_code} ({type(exc).__name__})")
             continue
 
         if df.empty or "HomeTeam" not in df.columns or "AwayTeam" not in df.columns:
+            skipped.append(f"{s_code} (missing team columns)")
             continue
 
         # Format standardized season label (e.g. 2023-24)
@@ -346,18 +367,19 @@ def load_historical_stats(
                 np.where(df["home_goals"] < df["away_goals"], "A", "D"),
             )
 
-        # In-match statistics: Shots and Shots on Target
-        df["home_shots"] = pd.to_numeric(df.get("HS", 12), errors="coerce").fillna(12.0)
-        df["away_shots"] = pd.to_numeric(df.get("AS", 10), errors="coerce").fillna(10.0)
-        df["home_shots_target"] = pd.to_numeric(df.get("HST", 4), errors="coerce").fillna(4.0)
-        df["away_shots_target"] = pd.to_numeric(df.get("AST", 3), errors="coerce").fillna(3.0)
+        # In-match statistics: Shots and Shots on Target (missing-column safe)
+        df["home_shots"] = _num_col(df, "HS", 12.0)
+        df["away_shots"] = _num_col(df, "AS", 10.0)
+        df["home_shots_target"] = _num_col(df, "HST", 4.0)
+        df["away_shots_target"] = _num_col(df, "AST", 3.0)
 
-        # Corners
-        df["home_corners"] = pd.to_numeric(df.get("HC", 5), errors="coerce").fillna(5.0)
-        df["away_corners"] = pd.to_numeric(df.get("AC", 4), errors="coerce").fillna(4.0)
+        # Corners (missing-column safe)
+        df["home_corners"] = _num_col(df, "HC", 5.0)
+        df["away_corners"] = _num_col(df, "AC", 4.0)
 
-        # Possession calculation:
-        # If not explicitly present, compute realistic match possession from shot & corner share
+        # Possession proxy:
+        # Datasets do not ship possession; derive it from shot & corner share.
+        # Callers must treat this as synthetic, not measured possession.
         total_shots = df["home_shots"] + df["away_shots"]
         shot_ratio = np.where(total_shots > 0, df["home_shots"] / total_shots, 0.5)
 
@@ -389,7 +411,12 @@ def load_historical_stats(
         all_dfs.append(df[keep_cols].dropna(subset=["home_goals", "away_goals", "date"]))
 
     if not all_dfs:
+        if skipped:
+            print(f"[warn] No historical seasons loaded. Skipped: {', '.join(skipped)}")
         return pd.DataFrame()
+
+    if skipped:
+        print(f"[warn] Partial historical load. Skipped seasons: {', '.join(skipped)}")
 
     full_df = pd.concat(all_dfs, ignore_index=True)
     full_df = full_df.sort_values(by="date").reset_index(drop=True)
