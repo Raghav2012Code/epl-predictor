@@ -18,6 +18,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   return (
     <div
       onClick={() => onSelect(fixture)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(fixture);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`${fixture.homeTeam} versus ${fixture.awayTeam}, predicted ${fixture.predictedScore}`}
       className={`group relative flex flex-col justify-between border p-3 transition-all duration-100 cursor-pointer rounded-none select-none ${
         isSelected
           ? 'border-brand-accent bg-surface-active ring-1 ring-brand-accent/40 shadow-sm'

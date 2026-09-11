@@ -72,9 +72,21 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
   const avgHomeProb = Math.round(
     gwFixtures.reduce((sum, f) => sum + f.homeWinProb, 0) / (gwFixtures.length || 1)
   );
+  // Marquee = most decisive forecast (highest max outcome prob, draws included).
   const marqueeMatch = [...gwFixtures].sort(
-    (a, b) => Math.max(b.homeWinProb, b.awayWinProb) - Math.max(a.homeWinProb, a.awayWinProb)
+    (a, b) =>
+      Math.max(b.homeWinProb, b.drawProb, b.awayWinProb) -
+      Math.max(a.homeWinProb, a.drawProb, a.awayWinProb)
   )[0];
+  const marqueeLabel = marqueeMatch
+    ? (() => {
+        const best = Math.max(marqueeMatch.homeWinProb, marqueeMatch.drawProb, marqueeMatch.awayWinProb);
+        if (best === marqueeMatch.drawProb) return { team: 'Draw', pct: marqueeMatch.drawProb };
+        return marqueeMatch.homeWinProb >= marqueeMatch.awayWinProb
+          ? { team: marqueeMatch.homeTeam, pct: marqueeMatch.homeWinProb }
+          : { team: marqueeMatch.awayTeam, pct: marqueeMatch.awayWinProb };
+      })()
+    : null;
 
   return (
     <div className="space-y-3">
@@ -103,12 +115,12 @@ export const GameweekView: React.FC<GameweekViewProps> = ({
 
         <div className="border border-border bg-surface p-2.5 rounded-none flex flex-col justify-between">
           <span className="text-[9px] text-text-muted uppercase tracking-wider">TOP FAVORITE PICK</span>
-          <div className="text-sm font-black text-text-primary mt-0.5 truncate">
-            {marqueeMatch ? (
+          <div className="text-sm font-black text-text-primary mt-0.5 truncate" title={marqueeLabel ? `${marqueeLabel.team} — most decisive forecast this round` : 'No fixtures'}>
+            {marqueeLabel ? (
               <span className="truncate">
-                {marqueeMatch.homeWinProb >= marqueeMatch.awayWinProb ? marqueeMatch.homeTeam : marqueeMatch.awayTeam}{' '}
+                {marqueeLabel.team}{' '}
                 <span className="text-brand-accent font-bold">
-                  ({Math.max(marqueeMatch.homeWinProb, marqueeMatch.awayWinProb)}%)
+                  ({marqueeLabel.pct}%)
                 </span>
               </span>
             ) : (

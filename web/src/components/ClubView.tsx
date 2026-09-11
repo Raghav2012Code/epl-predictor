@@ -307,11 +307,11 @@ export const ClubView: React.FC<ClubViewProps> = ({
                 { label: 'WIN RATE', value: `${profile.winRate}%` },
                 { label: 'GF / MATCH', value: String(profile.gfPerMatch) },
                 { label: 'GA / MATCH', value: String(profile.gaPerMatch) },
-                { label: 'POSSESSION', value: `${profile.possessionAvg}%` },
+                { label: 'POSSESSION*', value: `${profile.possessionAvg}%` },
                 { label: 'SHOTS ON TGT', value: String(profile.shotsTargetAvg) },
                 { label: 'AVG REST', value: `${profile.restDaysAvg}d` },
               ].map((s) => (
-                <div key={s.label} className="border border-border-subtle bg-background px-2.5 py-2 rounded-none">
+                <div key={s.label} className="border border-border-subtle bg-background px-2.5 py-2 rounded-none" title={s.label === 'POSSESSION*' ? 'Derived shots/corners proxy, not measured tracking data' : undefined}>
                   <div className="text-[9px] text-text-muted">{s.label}</div>
                   <div className="font-bold text-text-primary mt-0.5">{s.value}</div>
                 </div>
