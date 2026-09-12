@@ -24,7 +24,9 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -93,6 +95,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="EPL Predictor API", version="1.0.0", lifespan=lifespan)
+cors_origins = [origin.strip() for origin in os.environ.get("EPL_CORS_ORIGINS", "*").split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 def _require_pipeline() -> PremierLeaguePredictionPipeline:
@@ -114,11 +124,31 @@ def _checkpoint_sha() -> Optional[str]:
 
 @app.get("/health")
 def health() -> Dict[str, Any]:
-    return {
+    payload = {
         "status": "ok" if _pipeline is not None else "degraded",
         "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
         "model_error": _model_error,
     }
+    if _pipeline is None:
+        return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
+    return payload
+
+
+@app.get("/dataset")
+def dataset() -> Dict[str, Any]:
+    """Return the same validated dataset consumed by the static dashboard."""
+    import json
+
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "src", "data", "eplData.json")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=503, detail="Web dataset missing. Run export_web_data.py first.")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        return payload
+    except (OSError, ValueError) as exc:
+        logger.warning("Dataset load failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Web dataset is invalid.") from exc
 
 
 @app.get("/model-info")
@@ -177,9 +207,9 @@ def gameweek(gameweek: int) -> List[Dict[str, Any]]:
         raise HTTPException(status_code=404, detail=f"No fixtures for gameweek {gw}.")
     out: List[Dict[str, Any]] = []
     for _, r in gw_df.iterrows():
-        time_val = r.get("time", "15:00")
+        time_val = r.get("time", "TBC")
         if not isinstance(time_val, str) or not time_val.strip():
-            time_val = "15:00"
+            time_val = "TBC"
         out.append(
             {
                 "date": str(r["date"]),
@@ -201,3 +231,8 @@ def gameweek(gameweek: int) -> List[Dict[str, Any]]:
 @app.exception_handler(HTTPException)
 async def _http_error_handler(request, exc: HTTPException):  # type: ignore[no-untyped-def]
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"error": "Invalid request.", "details": exc.errors()})
