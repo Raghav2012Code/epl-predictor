@@ -121,6 +121,9 @@ export interface LeagueAnalytics {
   goalsPerGameweek: GameweekGoals[];
   totalGoals: number;
   avgGoalsPerMatch: number;
+  playedMatches?: number;
+  projectedMatches?: number;
+  basis?: string;
 }
 
 export interface ClubGameweekPoint {
