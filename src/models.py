@@ -329,38 +329,53 @@ def train_and_benchmark_models(
 
     for name, model in models.items():
         model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
-        # Calibrate blended probabilities on validation (temperature scaling).
-        try:
-            model.calibrate_temperature(X_val, y_val_outcome)
-        except Exception:
-            model.calibration_temperature = 1.0
+        # Keep calibration rows separate from benchmark rows.  Fitting a
+        # temperature on the same validation slice used for headline metrics
+        # makes the reported log-loss optimistic.
+        calibration_n = int(len(X_val) * 0.5)
+        if len(X_val) >= 8 and calibration_n >= 3 and len(X_val) - calibration_n >= 3:
+            calibration_slice = slice(0, calibration_n)
+            evaluation_slice = slice(calibration_n, None)
+        else:
+            calibration_slice = slice(0, 0)
+            evaluation_slice = slice(0, None)
+        if calibration_slice.stop:
+            try:
+                model.calibrate_temperature(X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice])
+            except Exception:
+                model.calibration_temperature = 1.0
 
         # Predictions on validation (calibrated)
-        val_proba = model.predict_outcome_proba(X_val)
+        eval_X = X_val.iloc[evaluation_slice]
+        eval_y_outcome = y_val_outcome.iloc[evaluation_slice]
+        eval_y_hg = y_val_hg.iloc[evaluation_slice]
+        eval_y_ag = y_val_ag.iloc[evaluation_slice]
+        val_proba = model.predict_outcome_proba(eval_X)
         val_preds = np.argmax(val_proba, axis=1)
-        exp_hg, exp_ag = model.predict_expected_goals(X_val)
-        pred_scores = model.predict_scoreline(X_val)
+        exp_hg, exp_ag = model.predict_expected_goals(eval_X)
+        pred_scores = model.predict_scoreline(eval_X)
+        all_pred_scores = model.predict_scoreline(X_val)
         pred_hg = np.array([s[0] for s in pred_scores])
         pred_ag = np.array([s[1] for s in pred_scores])
 
         # Classification metrics
-        acc = float(np.mean(val_preds == y_val_outcome.values))
+        acc = float(np.mean(val_preds == eval_y_outcome.values))
 
         # Multi-class log loss
         eps = 1e-15
         clipped_proba = np.clip(val_proba, eps, 1 - eps)
         # One-hot true outcomes
         y_val_onehot = np.zeros_like(val_proba)
-        for row_idx, true_cls in enumerate(y_val_outcome.values):
+        for row_idx, true_cls in enumerate(eval_y_outcome.values):
             y_val_onehot[row_idx, int(true_cls)] = 1.0
         log_loss = float(-np.mean(np.sum(y_val_onehot * np.log(clipped_proba), axis=1)))
 
         # Macro F1
         f1_scores = []
         for c in [0, 1, 2]:
-            tp = np.sum((val_preds == c) & (y_val_outcome.values == c))
-            fp = np.sum((val_preds == c) & (y_val_outcome.values != c))
-            fn = np.sum((val_preds != c) & (y_val_outcome.values == c))
+            tp = np.sum((val_preds == c) & (eval_y_outcome.values == c))
+            fp = np.sum((val_preds == c) & (eval_y_outcome.values != c))
+            fn = np.sum((val_preds != c) & (eval_y_outcome.values == c))
             prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
@@ -370,13 +385,13 @@ def train_and_benchmark_models(
         # Goal prediction metrics: MAE on continuous expected goals
         # (regressor quality). Integer scorelines are evaluated separately via
         # exact-score / within-1-goal accuracy below.
-        mae_hg = float(np.mean(np.abs(exp_hg - y_val_hg.values)))
-        mae_ag = float(np.mean(np.abs(exp_ag - y_val_ag.values)))
+        mae_hg = float(np.mean(np.abs(exp_hg - eval_y_hg.values)))
+        mae_ag = float(np.mean(np.abs(exp_ag - eval_y_ag.values)))
         avg_mae = (mae_hg + mae_ag) / 2.0
 
-        exact_score_acc = float(np.mean((pred_hg == y_val_hg.values) & (pred_ag == y_val_ag.values)))
+        exact_score_acc = float(np.mean((pred_hg == eval_y_hg.values) & (pred_ag == eval_y_ag.values)))
         within_1_goal = float(
-            np.mean((np.abs(pred_hg - y_val_hg.values) <= 1) & (np.abs(pred_ag - y_val_ag.values) <= 1))
+            np.mean((np.abs(pred_hg - eval_y_hg.values) <= 1) & (np.abs(pred_ag - eval_y_ag.values) <= 1))
         )
 
         metrics[name] = {
@@ -390,11 +405,18 @@ def train_and_benchmark_models(
             "within_1_goal_acc": within_1_goal,
             "val_preds": val_preds,
             "val_proba": val_proba,
-            "pred_scores": pred_scores,
+            # Keep the historical public shape for callers that use this as a
+            # validation-length diagnostic; metrics themselves use the
+            # calibration-independent evaluation tail below.
+            "pred_scores": all_pred_scores,
+            "eval_pred_scores": pred_scores,
             "feature_importances": model.get_feature_importances(),
             "calibration_temperature": model.calibration_temperature,
             "home_goal_correction": model.home_goal_correction,
             "away_goal_correction": model.away_goal_correction,
+            "eval_y_outcome": eval_y_outcome.values,
+            "eval_y_home_goals": eval_y_hg.values,
+            "eval_y_away_goals": eval_y_ag.values,
         }
 
     return models, metrics
