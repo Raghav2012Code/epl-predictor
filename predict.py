@@ -77,7 +77,7 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offl
         gameweek_num = validate_gameweek(gameweek_num)
     except ValueError as exc:
         print(f"\n[!] {exc}\n")
-        return
+        return 2
     csv_path = os.path.join(os.path.dirname(__file__), "data", "predictions_2026_2027.csv")
 
     if not os.path.exists(csv_path) or force_retrain:
@@ -92,7 +92,7 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offl
     gw_matches = df[df["gameweek"] == gameweek_num]
     if gw_matches.empty:
         print(f"\n[!] Gameweek {gameweek_num} not found. Valid gameweeks are 1 to 38.\n")
-        return
+        return 2
 
     print("\n" + "=" * 94)
     print(f"       PREMIER LEAGUE 2026/2027 - GAMEWEEK {gameweek_num} PREDICTIONS")
@@ -105,9 +105,9 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offl
         score_str = f"[{r['predicted_score']}]"
         prob_str = f"H: {r['home_win_prob']}% | D: {r['draw_prob']}% | A: {r['away_win_prob']}%"
         status_note = f"Actual: {r['actual_score']}" if r.get("status") == "Played" else "Upcoming"
-        time_val = r.get("time", "15:00")
+        time_val = r.get("time", "TBC")
         if not isinstance(time_val, str) or not time_val.strip():
-            time_val = "15:00"
+            time_val = "TBC"
 
         table_data.append([
             r["date"],
@@ -122,6 +122,7 @@ def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offl
     headers = ["Date", "Time", "Fixture", "Predicted Score", "Win / Draw / Loss Probs", "Favorite", "Status"]
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     print("\n")
+    return 0
 
 
 def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = False, offline: bool | None = None):
@@ -133,18 +134,18 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
         away_team = canonical_team(away_team)
     except ValueError as exc:
         print(f"\n[!] {exc}\n")
-        return
+        return 2
     if home_team == away_team:
         print("\n[!] Home and away clubs must differ.\n")
-        return
+        return 2
     model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
     fast = not force_retrain and os.path.exists(model_path)
     pipeline = get_pipeline(force_retrain=force_retrain, fast_mode=fast, offline=offline)
     try:
-        assert_model_compatible(pipeline.best_model, strict=False)
+        assert_model_compatible(pipeline.best_model, strict=True)
     except RuntimeError as exc:
         print(f"\n[!] {exc}\n")
-        return
+        return 2
     pred = pipeline.predict_custom_match(home_team, away_team)
 
     print("\n" + "=" * 65)
@@ -164,6 +165,7 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
     print("-" * 65)
     print(f" FAVORED OUTCOME:      {pred['predicted_outcome'].upper()}")
     print("=" * 65 + "\n")
+    return 0
 
 
 def run_benchmark(force_retrain: bool = False, offline: bool | None = None):
@@ -196,6 +198,7 @@ def run_benchmark(force_retrain: bool = False, offline: bool | None = None):
     print("  - visuals/confusion_matrix.png")
     print("  - visuals/model_metrics_comparison.png")
     print("  - visuals/goal_error_distribution.png\n")
+    return 0
 
 
 def main():
@@ -254,15 +257,16 @@ def main():
         configure_logging("WARNING")
 
     if args.benchmark:
-        run_benchmark(force_retrain=args.retrain, offline=args.offline)
+        return run_benchmark(force_retrain=args.retrain, offline=args.offline)
     elif args.match:
-        run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain, offline=args.offline)
+        return run_custom_matchup(args.match[0], args.match[1], force_retrain=args.retrain, offline=args.offline)
     elif args.gameweek is not None:
-        run_gameweek_prediction(args.gameweek, force_retrain=args.retrain, offline=args.offline)
+        return run_gameweek_prediction(args.gameweek, force_retrain=args.retrain, offline=args.offline)
     elif args.export:
         pipeline = get_pipeline(force_retrain=args.retrain, offline=args.offline)
         pipeline.forecast_2026_2027_season()
         print("\n[+] Predictions for all 380 fixtures exported successfully!")
+        return 0
     else:
         # Default behavior: show current upcoming gameweek (e.g. Gameweek 4)
         csv_path = os.path.join(os.path.dirname(__file__), "data", "predictions_2026_2027.csv")
@@ -278,9 +282,10 @@ def main():
 
         print("\nWelcome to the Premier League Match Outcome & Scoreline Predictor!")
         print(f"Showing current upcoming Gameweek {default_gw} predictions as default...\n")
-        run_gameweek_prediction(default_gw)
+        return run_gameweek_prediction(default_gw)
         print(f"Tip: Use --help to see all options (e.g. --match 'Arsenal' 'Chelsea', --gameweek {default_gw}, --benchmark).")
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

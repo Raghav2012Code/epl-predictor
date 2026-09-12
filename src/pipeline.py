@@ -44,6 +44,21 @@ MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 DEFAULT_MODEL_PATH = os.path.join(MODELS_DIR, "production_model.joblib")
 
 
+def _round_probabilities(probabilities: List[float]) -> List[float]:
+    """Round percentages to one decimal place while preserving a 100% total."""
+    raw = np.asarray(probabilities, dtype=float) * 1000.0
+    units = np.floor(raw + 1e-9).astype(int)
+    remaining = int(1000 - units.sum())
+    remainders = raw - units
+    order = np.argsort(-remainders, kind="stable")
+    for idx in order[:max(0, remaining)]:
+        units[int(idx)] += 1
+    if remaining < 0:
+        for idx in np.argsort(remainders, kind="stable")[:abs(remaining)]:
+            units[int(idx)] -= 1
+    return [round(int(value) / 10.0, 1) for value in units]
+
+
 class PremierLeaguePredictionPipeline:
     """End-to-end management pipeline for training, evaluation, and inference."""
 
@@ -122,9 +137,11 @@ class PremierLeaguePredictionPipeline:
 
         # Generate Matplotlib visualizations
         logger.info("[4/5] Generating Matplotlib diagnostic visualization suite...")
-        y_val_outcome = val_df["target_outcome"].values
-        y_val_hg = val_df["target_home_goals"].values
-        y_val_ag = val_df["target_away_goals"].values
+        # The benchmark metrics use the held-out tail after the calibration
+        # slice.  Reuse those exact labels for diagnostic plots.
+        y_val_outcome = self.metrics[self.best_model_name]["eval_y_outcome"]
+        y_val_hg = self.metrics[self.best_model_name]["eval_y_home_goals"]
+        y_val_ag = self.metrics[self.best_model_name]["eval_y_away_goals"]
 
         plot_feature_importance(
             self.metrics["Random Forest"]["feature_importances"],
@@ -139,7 +156,7 @@ class PremierLeaguePredictionPipeline:
         plot_goal_error_distribution(
             y_val_hg,
             y_val_ag,
-            self.metrics[self.best_model_name]["pred_scores"],
+            self.metrics[self.best_model_name]["eval_pred_scores"],
         )
         logger.info("      - Diagnostic charts saved to 'visuals/' directory.")
 
@@ -199,12 +216,8 @@ class PremierLeaguePredictionPipeline:
         path = filepath or DEFAULT_MODEL_PATH
         self.best_model = MatchPredictorModel.load(path)
         self.best_model_name = "Random Forest" if self.best_model.model_type == "rf" else "XGBoost"
-        expected = set(get_feature_column_names())
-        loaded = set(self.best_model.feature_names)
-        if loaded != expected:
-            logger.warning(f"Checkpoint feature set differs from code ({len(loaded)} vs {len(expected)}). "
-                  f"Missing: {sorted(expected - loaded)[:5]}, Extra: {sorted(loaded - expected)[:5]}. "
-                  "Consider retraining with --retrain.")
+        from src.validation import assert_model_compatible
+        assert_model_compatible(self.best_model, strict=True)
         self.feature_cols = self.best_model.feature_names
         return self.best_model
 
@@ -239,7 +252,7 @@ class PremierLeaguePredictionPipeline:
             at = fix["away_team"]
             gw = fix["gameweek"]
             raw_time = fix.get("time", "")
-            m_time = raw_time if isinstance(raw_time, str) and raw_time.strip() else "15:00"
+            m_time = raw_time.strip() if isinstance(raw_time, str) and raw_time.strip() else "TBC"
 
             # Feature vector using precomputed context for sub-millisecond extraction
             X_match = build_fixture_features(ht, at, m_date, rolling_history, precomputed_context=feature_context)
@@ -258,15 +271,16 @@ class PremierLeaguePredictionPipeline:
             fav_idx = int(np.argmax(probas))
             fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
+            rounded_probs = _round_probabilities([p_home, p_draw, p_away])
             pred_item = {
                 "gameweek": gw,
                 "date": m_date.strftime("%Y-%m-%d") if isinstance(m_date, datetime) or hasattr(m_date, "strftime") else str(m_date),
                 "time": m_time,
                 "home_team": ht,
                 "away_team": at,
-                "home_win_prob": round(p_home * 100, 1),
-                "draw_prob": round(p_draw * 100, 1),
-                "away_win_prob": round(p_away * 100, 1),
+                "home_win_prob": rounded_probs[0],
+                "draw_prob": rounded_probs[1],
+                "away_win_prob": rounded_probs[2],
                 "predicted_outcome": fav_outcome,
                 "predicted_score": f"{pred_hg} - {pred_ag}",
                 "pred_home_goals": pred_hg,
@@ -382,7 +396,7 @@ class PremierLeaguePredictionPipeline:
 
         from src.validation import assert_model_compatible, canonical_team
 
-        assert_model_compatible(self.best_model, strict=False)
+        assert_model_compatible(self.best_model, strict=True)
         ht_std = canonical_team(home_team)
         at_std = canonical_team(away_team)
         if ht_std == at_std:
@@ -398,6 +412,7 @@ class PremierLeaguePredictionPipeline:
         fav_idx = int(np.argmax(probas))
         fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
+        rounded_probs = _round_probabilities([float(p_home), float(p_draw), float(p_away)])
         return {
             "home_team": ht_std,
             "away_team": at_std,
@@ -407,9 +422,9 @@ class PremierLeaguePredictionPipeline:
             "pred_away_goals": pred_scores[1],
             "expected_home_goals": round(float(exp_hg[0]), 2),
             "expected_away_goals": round(float(exp_ag[0]), 2),
-            "home_win_prob": round(p_home * 100, 1),
-            "draw_prob": round(p_draw * 100, 1),
-            "away_win_prob": round(p_away * 100, 1),
+            "home_win_prob": rounded_probs[0],
+            "draw_prob": rounded_probs[1],
+            "away_win_prob": rounded_probs[2],
             "predicted_outcome": fav_outcome,
             "model_used": self.best_model_name,
         }
