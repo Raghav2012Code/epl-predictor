@@ -123,3 +123,19 @@ All agents must verify changes by running the test suite before submitting:
 
 3. **Team Name Normalization**:
    - Any new club or variation must be added to `TEAM_ALIASES` in `src/data_loader.py`.
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical triage labels used as-is. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
