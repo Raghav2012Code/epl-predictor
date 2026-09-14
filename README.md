@@ -112,7 +112,6 @@ web/src/styles/index.css   Dashboard design system and responsive rules
 api.py                     FastAPI serving surface
 predict.py                 CLI query surface
 export_web_data.py         Pipeline-to-dashboard serializer
-nginx.conf                 Static deployment configuration
 ```
 
 ## License
