@@ -272,8 +272,8 @@ def build_web_dataset() -> str:
     fixtures: List[Dict[str, Any]] = []
     for idx, r in df_preds.sort_values(["gameweek", "date"]).reset_index(drop=True).iterrows():
         ht, at = str(r["home_team"]), str(r["away_team"])
-        raw_time = r.get("time", "15:00")
-        time_str = str(raw_time).strip() if isinstance(raw_time, str) and str(raw_time).strip() else "15:00"
+        raw_time = r.get("time", "TBC")
+        time_str = str(raw_time).strip() if isinstance(raw_time, str) and str(raw_time).strip() else "TBC"
         fixtures.append(
             {
                 "id": int(idx) + 1,
@@ -348,7 +348,7 @@ def build_web_dataset() -> str:
                 }
                 rest_gaps[club] = []
         try:
-            f_time = str(f.get("time", "15:00") or "15:00")
+            f_time = str(f.get("time", "TBC") or "TBC")
             f_dt = pd.to_datetime(f"{f['date']} {f_time}", errors="coerce")
             if pd.isna(f_dt):
                 f_dt = pd.to_datetime(f["date"])
@@ -411,15 +411,19 @@ def build_web_dataset() -> str:
         item["rank"] = rank
         item["last5"] = item["form"][-5:] if len(item["form"]) >= 5 else item["form"]
 
-    # 3. League-wide analytics derived from the same fixtures
-    home_wins = sum(1 for f in fixtures if f["predictedOutcome"] == "Home Win")
-    draws = sum(1 for f in fixtures if f["predictedOutcome"] == "Draw")
-    away_wins = sum(1 for f in fixtures if f["predictedOutcome"] == "Away Win")
+    # 3. League-wide analytics derived from the same effective score source as
+    # standings: official scores for played matches, model scorelines for
+    # upcoming matches. This prevents the dashboard from showing one total in
+    # the table and another in analytics.
+    effective_results = [_resolve_result(*effective_goals(f)) for f in fixtures]
+    home_wins = sum(1 for result in effective_results if result == "H")
+    draws = sum(1 for result in effective_results if result == "D")
+    away_wins = sum(1 for result in effective_results if result == "A")
     goals_per_gw: List[Dict[str, Any]] = []
     for gw in range(1, 39):
         gw_f = [f for f in fixtures if f["gameweek"] == gw]
-        gh = sum(int(f["predHomeGoals"]) for f in gw_f)
-        ga = sum(int(f["predAwayGoals"]) for f in gw_f)
+        gh = sum(effective_goals(f)[0] for f in gw_f)
+        ga = sum(effective_goals(f)[1] for f in gw_f)
         goals_per_gw.append(
             {"gw": gw, "goals": gh + ga, "homeGoals": gh, "awayGoals": ga,
              "avgPerMatch": round((gh + ga) / max(1, len(gw_f)), 2)}
@@ -434,6 +438,9 @@ def build_web_dataset() -> str:
         "goalsPerGameweek": goals_per_gw,
         "totalGoals": sum(g["goals"] for g in goals_per_gw),
         "avgGoalsPerMatch": round(sum(g["goals"] for g in goals_per_gw) / max(1, len(fixtures)), 2),
+        "playedMatches": sum(1 for f in fixtures if f["status"] == "Played"),
+        "projectedMatches": sum(1 for f in fixtures if f["status"] != "Played"),
+        "basis": "Official scores for played matches; model scorelines for upcoming fixtures.",
     }
 
     # 4. Benchmark from live metrics

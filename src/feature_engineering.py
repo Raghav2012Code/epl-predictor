@@ -15,6 +15,21 @@ import pandas as pd
 
 WINDOWS: List[int] = [3, 5, 10]
 
+
+def _chronological(df: pd.DataFrame, *extra_keys: str) -> pd.DataFrame:
+    """Return a stable chronological copy.
+
+    Several matches can share a kickoff date.  A plain date sort is not a
+    sufficient ordering for recursive features because the sort implementation
+    is free to rearrange ties.  Preserve the caller's order as the final key,
+    while allowing a real match id to provide a stronger deterministic key.
+    """
+    out = df.copy()
+    if "_source_order" not in out.columns:
+        out["_source_order"] = np.arange(len(out), dtype=int)
+    keys = ["date", *[key for key in extra_keys if key in out.columns], "_source_order"]
+    return out.sort_values(keys, kind="mergesort").reset_index(drop=True)
+
 # Zero-leakage fallbacks for cold-start rolling features. These are fixed
 # league-average priors, NOT dataset medians (which would leak future info).
 LEAGUE_DEFAULTS: Dict[str, float] = {
@@ -138,7 +153,7 @@ def compute_dynamic_elo(
     """
     # Always operate chronologically; callers may pass unsorted frames.
     if "date" in matches_df.columns:
-        matches_df = matches_df.sort_values(by="date").reset_index(drop=True)
+        matches_df = _chronological(matches_df, "match_id")
     if home_adv is None:
         from src.config import get_config
 
@@ -297,7 +312,7 @@ def transform_matches_to_team_perspective(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
 
-    df = df.copy().sort_values(by="date").reset_index(drop=True)
+    df = _chronological(df, "match_id")
     n = len(df)
     m_ids = df.index.values
 
@@ -359,7 +374,7 @@ def transform_matches_to_team_perspective(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     team_df = pd.concat([home_df, away_df], ignore_index=True)
-    team_df = team_df.sort_values(by=["date", "match_id"]).reset_index(drop=True)
+    team_df = team_df.sort_values(by=["date", "match_id", "is_home"], kind="mergesort").reset_index(drop=True)
     return team_df
 
 
@@ -375,7 +390,7 @@ def compute_team_rolling_features(team_df: pd.DataFrame) -> pd.DataFrame:
         "points",
     ]
 
-    team_df = team_df.sort_values(by=["team", "date"]).reset_index(drop=True)
+    team_df = team_df.sort_values(by=["team", "date", "match_id"], kind="mergesort").reset_index(drop=True)
 
     # Rest days calculation
     team_df["prev_date"] = team_df.groupby("team")["date"].shift(1)
@@ -392,7 +407,7 @@ def compute_team_rolling_features(team_df: pd.DataFrame) -> pd.DataFrame:
             )
 
     # Venue-specific rolling metrics (home form for home games, away form for away games)
-    team_df = team_df.sort_values(by=["team", "is_home", "date"]).reset_index(drop=True)
+    team_df = team_df.sort_values(by=["team", "is_home", "date", "match_id"], kind="mergesort").reset_index(drop=True)
     venue_metrics = ["goals_for", "goals_against", "points"]
     for m in venue_metrics:
         team_df[f"venue_roll_{m}_5"] = (
@@ -400,13 +415,13 @@ def compute_team_rolling_features(team_df: pd.DataFrame) -> pd.DataFrame:
             .transform(lambda s: s.shift(1).rolling(5, min_periods=1).mean())
         )
 
-    team_df = team_df.sort_values(by=["match_id", "is_home"], ascending=[True, False]).reset_index(drop=True)
+    team_df = team_df.sort_values(by=["match_id", "is_home"], ascending=[True, False], kind="mergesort").reset_index(drop=True)
     return team_df
 
 
 def compute_head_to_head_features(matches_df: pd.DataFrame) -> pd.DataFrame:
     """Computes historical head-to-head records prior to each match."""
-    matches_df = matches_df.sort_values(by="date").reset_index(drop=True)
+    matches_df = _chronological(matches_df, "match_id")
 
     h2h_h_win_rate = []
     h2h_goal_diff = []
@@ -466,7 +481,9 @@ def compute_head_to_head_features(matches_df: pd.DataFrame) -> pd.DataFrame:
 
 def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
     """End-to-end dataset builder merging rolling stats and H2H features for modeling."""
-    raw_matches = raw_matches.copy().sort_values(by="date").reset_index(drop=True)
+    raw_matches = raw_matches.copy()
+    raw_matches["_source_order"] = np.arange(len(raw_matches), dtype=int)
+    raw_matches = _chronological(raw_matches, "match_id")
     raw_matches["match_id"] = raw_matches.index
 
     # 1. Transform and compute team rolling stats
@@ -594,7 +611,7 @@ def build_feature_context(
         history = history_matches_df[history_matches_df["date"] < as_of_date].copy()
     else:
         history = history_matches_df.copy()
-    history = history.sort_values(by="date").reset_index(drop=True)
+    history = _chronological(history, "match_id")
     _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
     team_df = transform_matches_to_team_perspective(history)
     return {
@@ -639,33 +656,18 @@ def build_fixture_features(
         team_df = precomputed_context["team_df"]
     else:
         history = history_matches_df[history_matches_df["date"] < match_date].copy()
+        # An empty history still gets team-specific priors below.  Returning a
+        # zero-filled row here made the differential features meaningless for
+        # true cold starts and diverged from the serving path's shrinkage.
         if history.empty:
-            # Fallback to zero-diff defaults if no history
-            row = {c: 0.0 for c in feature_cols}
-            row["home_rest_days"] = 7.0
-            row["away_rest_days"] = 7.0
-            row["home_roll_possession_5"] = 50.0
-            row["away_roll_possession_5"] = 50.0
-            h_base = BASE_ELO.get(home_team, 1420.0)
-            a_base = BASE_ELO.get(away_team, 1420.0)
-            row["home_elo"] = h_base
-            row["away_elo"] = a_base
-            from src.config import get_config as _get_cfg
-
-            _home_adv = float(_get_cfg()["model"].get("home_advantage", 65.0))
-            row["elo_diff"] = (h_base + _home_adv) - a_base
-            row["home_elo_momentum_3"] = 0.0
-            row["away_elo_momentum_3"] = 0.0
-            row["diff_elo_momentum_3"] = 0.0
-            row["home_elo_momentum_5"] = 0.0
-            row["away_elo_momentum_5"] = 0.0
-            row["diff_elo_momentum_5"] = 0.0
-            return pd.DataFrame([row])[feature_cols]
-
-        # Compute current dynamic Elo and rating history up to match date
-        history = history.sort_values(by="date").reset_index(drop=True)
-        _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
-        team_df = transform_matches_to_team_perspective(history)
+            current_ratings = dict(BASE_ELO)
+            rating_histories = {team: [] for team in BASE_ELO}
+            team_df = pd.DataFrame(columns=["team", "date", "is_home"])
+        else:
+            # Compute current dynamic Elo and rating history up to match date.
+            history = _chronological(history, "match_id")
+            _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
+            team_df = transform_matches_to_team_perspective(history)
 
     h_elo = current_ratings.get(home_team, BASE_ELO.get(home_team, 1420.0))
     a_elo = current_ratings.get(away_team, BASE_ELO.get(away_team, 1420.0))

@@ -1,176 +1,44 @@
-import React, { useState } from 'react';
-import { EPLDataset } from './types';
-import { Sidebar } from './components/Sidebar';
-import { TelemetryBar } from './components/TelemetryBar';
-import { NavTab } from './components/Navbar';
-import { GameweekView } from './components/GameweekView';
-import { MatchSimulator } from './components/MatchSimulator';
-import { StandingsView } from './components/StandingsView';
-import { AnalyticsView } from './components/AnalyticsView';
-import { ClubView } from './components/ClubView';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { EPLDataset, Fixture, TeamProfile } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppSkeleton, DataErrorPanel } from './components/DataStates';
 import { useEPLData } from './hooks/useEPLData';
-import { ExternalLink, Github, Terminal } from 'lucide-react';
 
-const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
-  const [activeTab, setActiveTab] = useState<NavTab>('fixtures');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedClub, setSelectedClub] = useState<string>('Arsenal');
-  const [simulatorSelection, setSimulatorSelection] = useState<{ home: string; away: string }>({
-    home: 'Arsenal',
-    away: 'Chelsea',
-  });
+type Tab = 'fixtures' | 'simulator' | 'standings' | 'clubs' | 'analytics';
+type SortKey = 'rank' | 'team' | 'played' | 'won' | 'drawn' | 'lost' | 'gd' | 'points';
+const tabs: Array<{ id: Tab; label: string; note: string }> = [
+  { id: 'fixtures', label: 'Fixtures', note: 'Gameweeks and forecasts' },
+  { id: 'simulator', label: 'Simulator', note: 'Explore a matchup' },
+  { id: 'standings', label: 'Table', note: 'Current and projected table' },
+  { id: 'clubs', label: 'Clubs', note: 'Team profiles' },
+  { id: 'analytics', label: 'Model', note: 'Benchmark and diagnostics' },
+];
+const pct = (value: number) => `${Number(value).toFixed(1)}%`;
+const displayDate = (value: string) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
+const scoreParts = (score: string): [number, number] | null => { const match = score.match(/(\d+)\s*[-–]\s*(\d+)/); return match ? [Number(match[1]), Number(match[2])] : null; };
+const resultFor = (fixture: Fixture) => { const score = scoreParts(fixture.actualScore); if (!score) return null; return score[0] === score[1] ? 'Draw' : score[0] > score[1] ? 'Home win' : 'Away win'; };
+const clubResultFor = (fixture: Fixture, club: string) => { const result = resultFor(fixture); if (!result) return null; if (result === 'Draw') return 'Draw'; const clubWasHome = fixture.homeTeam === club; const clubWon = result === 'Home win' ? clubWasHome : !clubWasHome; return clubWon ? 'Win' : 'Loss'; };
+const resultTone = (result: string | null) => result === 'Home win' || result === 'Win' ? 'tone-win' : result === 'Away win' || result === 'Loss' ? 'tone-loss' : 'tone-draw';
 
-  const handleOpenSimulator = (homeTeam: string, awayTeam: string) => {
-    setSimulatorSelection({ home: homeTeam, away: awayTeam });
-    setActiveTab('simulator');
-  };
+const TeamMark: React.FC<{ team?: TeamProfile; short?: string }> = ({ team, short }) => <span className="team-mark" style={{ borderColor: team?.color ?? '#1d6f52' }} aria-hidden="true">{(short ?? team?.short ?? 'FC').slice(0, 3)}</span>;
+const ProbabilityStrip: React.FC<{ fixture: Fixture }> = ({ fixture }) => <div className="probability-strip" aria-label={`Home ${pct(fixture.homeWinProb)}, draw ${pct(fixture.drawProb)}, away ${pct(fixture.awayWinProb)}`}><span className="prob-home" style={{ width: `${fixture.homeWinProb}%` }} /><span className="prob-draw" style={{ width: `${fixture.drawProb}%` }} /><span className="prob-away" style={{ width: `${fixture.awayWinProb}%` }} /></div>;
 
-  const handleSelectTeamFromStandings = (teamName: string) => {
-    setSelectedClub(teamName);
-    setActiveTab('clubs');
-  };
+const FixtureRow: React.FC<{ fixture: Fixture; selected: boolean; onSelect: () => void }> = ({ fixture, selected, onSelect }) => { const actual = fixture.status === 'Played' ? fixture.actualScore : null; return <button className={`fixture-row ${selected ? 'is-selected' : ''}`} onClick={onSelect} aria-pressed={selected}><span className="fixture-date">{displayDate(fixture.date)}<small>GW{fixture.gameweek} · {fixture.time === 'TBC' ? 'Kickoff TBC' : fixture.time}</small></span><span className="fixture-teams"><span><TeamMark short={fixture.homeShort} />{fixture.homeTeam}</span><span><TeamMark short={fixture.awayShort} />{fixture.awayTeam}</span></span><span className="fixture-score"><small>{actual ? 'Final' : 'Model score'}</small>{actual ?? fixture.predictedScore}</span><span className="fixture-favorite"><small>{fixture.status === 'Played' ? resultFor(fixture) : fixture.predictedOutcome}</small>{fixture.status === 'Played' ? 'Result logged' : `${pct(Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb))} strongest signal`}</span><ArrowUpRight className="row-arrow" size={16} aria-hidden="true" /></button>; };
 
-  const productionMetrics = dataset.benchmark.models.find((m) => m.isProduction)
-    ?? dataset.benchmark.models[0];
+const FixtureDetail: React.FC<{ fixture: Fixture | null; onSimulate: (home: string, away: string) => void }> = ({ fixture, onSimulate }) => { if (!fixture) return <div className="detail-panel empty-state">Choose a fixture to inspect it.</div>; const isPlayed = fixture.status === 'Played'; return <article className="detail-panel"><div className="detail-top"><span className={`status-pill ${isPlayed ? 'status-played' : 'status-upcoming'}`}>{isPlayed ? 'Final result' : 'Forecast'}</span><span>GW{fixture.gameweek} · {displayDate(fixture.date)} · {fixture.time === 'TBC' ? 'Kickoff TBC' : fixture.time}</span></div><div className="matchup"><div><TeamMark short={fixture.homeShort} /><strong>{fixture.homeTeam}</strong><small>Home</small></div><div className="matchup-score"><span>{isPlayed ? fixture.actualScore : fixture.predictedScore}</span><small>{isPlayed ? 'official score' : 'most likely scoreline'}</small></div><div><TeamMark short={fixture.awayShort} /><strong>{fixture.awayTeam}</strong><small>Away</small></div></div><ProbabilityStrip fixture={fixture} /><div className="probability-labels"><span><b>{pct(fixture.homeWinProb)}</b> Home</span><span><b>{pct(fixture.drawProb)}</b> Draw</span><span><b>{pct(fixture.awayWinProb)}</b> Away</span></div><div className="detail-copy"><p><strong>{isPlayed ? 'Model review' : 'Model read'}</strong> {isPlayed ? `The model selected ${fixture.predictedOutcome.toLowerCase()} and the official result was ${fixture.actualScore}.` : `The model leans ${fixture.predictedOutcome.toLowerCase()} with a ${fixture.predictedScore} scoreline.`}</p><p className="muted">Percentages are rounded to one decimal place and always total 100%. Exact scores are illustrative Poisson modes, not certainties.</p></div><button className="primary-button" onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}>Open in simulator <ArrowUpRight size={16} /></button></article>; };
 
-  return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row font-sans">
-        {/* Left Rail Studio Sidebar */}
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          season={dataset.season}
-        />
+const FixturesPage: React.FC<{ dataset: EPLDataset; query: string; onSimulate: (home: string, away: string) => void }> = ({ dataset, query, onSimulate }) => { const gameweeks = useMemo(() => [...new Set(dataset.fixtures.map((fixture) => fixture.gameweek))].sort((a, b) => a - b), [dataset.fixtures]); const firstUpcoming = dataset.fixtures.find((fixture) => fixture.status !== 'Played')?.gameweek ?? 1; const [gameweek, setGameweek] = useState(firstUpcoming); const [selectedId, setSelectedId] = useState<number | null>(null); const filtered = useMemo(() => dataset.fixtures.filter((fixture) => fixture.gameweek === gameweek && (!query || `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(query.toLowerCase()))), [dataset.fixtures, gameweek, query]); useEffect(() => setSelectedId(filtered[0]?.id ?? null), [gameweek, query, filtered]); const selected = filtered.find((fixture) => fixture.id === selectedId) ?? filtered[0] ?? null; const played = dataset.fixtures.filter((fixture) => fixture.status === 'Played').length; const model = dataset.benchmark.models.find((entry) => entry.isProduction) ?? dataset.benchmark.models[0]; return <section className="page-stack"><div className="page-intro"><div><p className="eyebrow">2026/27 season workspace</p><h1>Fixtures, with the model beside them.</h1><p className="lede">Browse each gameweek, see the forecast in plain language, and open a matchup when you want to inspect the assumptions.</p></div><div className="intro-stat"><strong>{played}/{dataset.totalMatches}</strong><span>results recorded</span></div></div><div className="stat-grid"><div><span>Production model</span><strong>{dataset.benchmark.productionModel}</strong></div><div><span>Validation accuracy</span><strong>{model?.accuracy ?? '—'}%</strong></div><div><span>Average goal error</span><strong>{model?.avgGoalMae ?? '—'}</strong></div><div><span>Data basis</span><strong>Time series</strong></div></div><div className="section-heading"><div><p className="eyebrow">Schedule</p><h2>Gameweek {gameweek}</h2></div><div className="stepper"><button onClick={() => setGameweek((current) => Math.max(gameweeks[0] ?? 1, current - 1))} disabled={gameweek <= (gameweeks[0] ?? 1)} aria-label="Previous gameweek"><ChevronLeft size={18} /></button><select value={gameweek} onChange={(event) => setGameweek(Number(event.target.value))} aria-label="Select gameweek">{gameweeks.map((gw) => <option key={gw} value={gw}>Gameweek {gw}</option>)}</select><button onClick={() => setGameweek((current) => Math.min(gameweeks[gameweeks.length - 1] ?? 38, current + 1))} disabled={gameweek >= (gameweeks[gameweeks.length - 1] ?? 38)} aria-label="Next gameweek"><ChevronRight size={18} /></button></div></div><div className="fixture-layout"><div className="fixture-list" aria-label={`Gameweek ${gameweek} fixtures`}>{filtered.length ? filtered.map((fixture) => <FixtureRow key={fixture.id} fixture={fixture} selected={fixture.id === selected?.id} onSelect={() => setSelectedId(fixture.id)} />) : <div className="empty-state">No fixtures match this gameweek and search.</div>}</div><FixtureDetail fixture={selected} onSimulate={onSimulate} /></div></section>; };
 
-        {/* Main Workstation Canvas */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <TelemetryBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            champion={dataset.standings[0]?.team}
-            season={dataset.season}
-            logLoss={productionMetrics?.logLoss}
-            goalMae={productionMetrics?.avgGoalMae}
-            productionModel={dataset.benchmark.productionModel}
-            teams={dataset.teams}
-            standings={dataset.standings}
-            fixtures={dataset.fixtures}
-            onSelectClub={handleSelectTeamFromStandings}
-            onOpenFixture={handleOpenSimulator}
-          />
+const SimulatorPage: React.FC<{ dataset: EPLDataset; initialHome: string; initialAway: string }> = ({ dataset, initialHome, initialAway }) => { const names = useMemo(() => Object.keys(dataset.teams).sort(), [dataset.teams]); const [homeTeam, setHomeTeam] = useState(initialHome); const [awayTeam, setAwayTeam] = useState(initialAway); const [homeBoost, setHomeBoost] = useState(0); const [awayBoost, setAwayBoost] = useState(0); const [neutral, setNeutral] = useState(false); useEffect(() => { setHomeTeam(initialHome); setAwayTeam(initialAway); }, [initialHome, initialAway]); const home = dataset.teams[homeTeam] ?? dataset.teams[names[0]]; const away = dataset.teams[awayTeam] ?? dataset.teams[names[1]]; const production = useMemo(() => { const direct = dataset.fixtures.find((fixture) => fixture.homeTeam === homeTeam && fixture.awayTeam === awayTeam); if (direct) return direct; const reverse = dataset.fixtures.find((fixture) => fixture.homeTeam === awayTeam && fixture.awayTeam === homeTeam); if (!reverse) return null; const score = scoreParts(reverse.predictedScore); return { ...reverse, homeTeam, awayTeam, homeShort: reverse.awayShort, awayShort: reverse.homeShort, homeColor: reverse.awayColor, awayColor: reverse.homeColor, predictedScore: score ? `${score[1]} - ${score[0]}` : reverse.predictedScore, predHomeGoals: reverse.predAwayGoals, predAwayGoals: reverse.predHomeGoals, homeWinProb: reverse.awayWinProb, awayWinProb: reverse.homeWinProb }; }, [awayTeam, dataset.fixtures, homeTeam]); const scenario = useMemo(() => { if (!home || !away) return null; const homeAttack = Math.max(0.2, home.gfPerMatch * (1 + homeBoost / 100)); const awayAttack = Math.max(0.2, away.gfPerMatch * (1 + awayBoost / 100)); const homeExpected = Math.max(0.2, ((homeAttack + away.gaPerMatch) / 2) * (neutral ? 1 : 1.18)); const awayExpected = Math.max(0.15, ((awayAttack + home.gaPerMatch) / 2) * (neutral ? 1 : 0.9)); const denominator = Math.exp(homeExpected) + Math.exp(awayExpected) + 1.2; const homeProb = Math.round((Math.exp(homeExpected) / denominator) * 1000) / 10; const drawProb = Math.round(((1 - (Math.exp(homeExpected) + Math.exp(awayExpected)) / denominator) * 1000)) / 10; const awayProb = Math.round((100 - homeProb - drawProb) * 10) / 10; return { homeExpected, awayExpected, homeProb, drawProb, awayProb, homeScore: Math.round(homeExpected), awayScore: Math.round(awayExpected) }; }, [away, awayBoost, home, homeBoost, neutral]); if (!home || !away || !scenario) return <div className="empty-state">Club data is unavailable.</div>; const scenarioFixture = { homeWinProb: scenario.homeProb, drawProb: scenario.drawProb, awayWinProb: scenario.awayProb } as Fixture; return <section className="page-stack"><div className="page-intro"><div><p className="eyebrow">Scenario tool</p><h1>Ask a different question.</h1><p className="lede">Adjust form and venue assumptions to see how the matchup moves. Scenario numbers are browser estimates; the scheduled forecast remains the production reference.</p></div></div><div className="simulator-layout"><div className="control-panel"><label>Home club<select value={homeTeam} onChange={(event) => setHomeTeam(event.target.value)}>{names.map((name) => <option key={name} disabled={name === awayTeam}>{name}</option>)}</select></label><label>Away club<select value={awayTeam} onChange={(event) => setAwayTeam(event.target.value)}>{names.map((name) => <option key={name} disabled={name === homeTeam}>{name}</option>)}</select></label><label>Home form <input type="range" min="-30" max="30" value={homeBoost} onChange={(event) => setHomeBoost(Number(event.target.value))} /><span>{homeBoost > 0 ? '+' : ''}{homeBoost}%</span></label><label>Away form <input type="range" min="-30" max="30" value={awayBoost} onChange={(event) => setAwayBoost(Number(event.target.value))} /><span>{awayBoost > 0 ? '+' : ''}{awayBoost}%</span></label><label className="check-row"><input type="checkbox" checked={neutral} onChange={(event) => setNeutral(event.target.checked)} /> Neutral venue</label></div><div className="scenario-panel"><div className="scenario-score"><div><TeamMark team={home} /><strong>{homeTeam}</strong></div><span>{scenario.homeScore} — {scenario.awayScore}</span><div><TeamMark team={away} /><strong>{awayTeam}</strong></div></div><ProbabilityStrip fixture={scenarioFixture} /><div className="probability-labels"><span><b>{pct(scenario.homeProb)}</b> Home</span><span><b>{pct(scenario.drawProb)}</b> Draw</span><span><b>{pct(scenario.awayProb)}</b> Away</span></div><div className="scenario-grid"><div><span>Expected home goals</span><strong>{scenario.homeExpected.toFixed(2)}</strong></div><div><span>Expected away goals</span><strong>{scenario.awayExpected.toFixed(2)}</strong></div><div><span>Scheduled forecast</span><strong>{production?.predictedScore ?? 'Not scheduled'}</strong></div><div><span>Forecast source</span><strong>{dataset.benchmark.productionModel}</strong></div></div></div></div></section>; };
 
-          <main className="flex-1 w-full px-2.5 sm:px-4 py-3 sm:py-4 overflow-x-hidden">
-        {activeTab === 'fixtures' && (
-          <GameweekView
-            fixtures={dataset.fixtures}
-            teams={dataset.teams}
-            searchQuery={searchQuery}
-            onOpenSimulator={handleOpenSimulator}
-          />
-        )}
+const StandingsPage: React.FC<{ dataset: EPLDataset; onClub: (team: string) => void }> = ({ dataset, onClub }) => { const [sortKey, setSortKey] = useState<SortKey>('rank'); const [ascending, setAscending] = useState(true); const sorted = useMemo(() => [...dataset.standings].sort((a, b) => { const av = a[sortKey]; const bv = b[sortKey]; const comparison = typeof av === 'string' ? String(av).localeCompare(String(bv)) : Number(av) - Number(bv); return ascending ? comparison : -comparison; }), [ascending, dataset.standings, sortKey]); const chooseSort = (key: SortKey) => { if (sortKey === key) setAscending((value) => !value); else { setSortKey(key); setAscending(key === 'rank'); } }; const headers: Array<[SortKey, string]> = [['rank', '#'], ['team', 'Club'], ['played', 'P'], ['won', 'W'], ['drawn', 'D'], ['lost', 'L'], ['gd', 'GD'], ['points', 'Pts']]; return <section className="page-stack"><div className="page-intro"><div><p className="eyebrow">Projected league table</p><h1>See the full season projection.</h1><p className="lede">Every row is a full-season projection built from the model-s scorelines. Browse Fixtures for official results and individual forecast reviews.</p></div></div><div className="table-note"><span className="dot dot-amber" /> Full-season projection <span className="muted">Sorted by {sortKey === 'rank' ? 'table position' : sortKey}</span></div><div className="table-wrap"><table><caption className="sr-only">Premier League standings</caption><thead><tr>{headers.map(([key, label]) => <th key={key} aria-sort={sortKey === key ? (ascending ? 'ascending' : 'descending') : 'none'}><button onClick={() => chooseSort(key)}>{label}<span aria-hidden="true">{sortKey === key ? (ascending ? ' ↑' : ' ↓') : ''}</span></button></th>)}</tr></thead><tbody>{sorted.map((row) => <tr key={row.team} onClick={() => onClub(row.team)}><td>{row.rank}</td><td><span className="club-cell"><TeamMark team={dataset.teams[row.team]} short={row.short} /><strong>{row.team}</strong></span></td><td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td><td>{row.gd > 0 ? `+${row.gd}` : row.gd}</td><td><strong>{row.points}</strong></td></tr>)}</tbody></table></div></section>; };
 
-        {activeTab === 'simulator' && (
-          <MatchSimulator
-            teams={dataset.teams}
-            initialHomeTeam={simulatorSelection.home}
-            initialAwayTeam={simulatorSelection.away}
-            fixtures={dataset.fixtures}
-            productionModel={dataset.benchmark.productionModel}
-          />
-        )}
+const ClubsPage: React.FC<{ dataset: EPLDataset; selectedClub: string; setSelectedClub: (club: string) => void; onSimulate: (home: string, away: string) => void }> = ({ dataset, selectedClub, setSelectedClub, onSimulate }) => { const names = useMemo(() => Object.values(dataset.teams).sort((a, b) => a.rank - b.rank).map((team) => team.name), [dataset.teams]); const profile = dataset.teams[selectedClub] ?? dataset.teams[names[0]]; if (!profile) return <div className="empty-state">No club data available.</div>; const clubFixtures = dataset.fixtures.filter((fixture) => fixture.homeTeam === profile.name || fixture.awayTeam === profile.name).sort((a, b) => a.gameweek - b.gameweek); const upcoming = clubFixtures.filter((fixture) => fixture.status !== 'Played').slice(0, 5); const recent = clubFixtures.filter((fixture) => fixture.status === 'Played').slice(-5).reverse(); return <section className="page-stack"><div className="section-heading"><div><p className="eyebrow">Club profile</p><h1>Follow one club through the season.</h1></div><select className="compact-select" value={profile.name} onChange={(event) => setSelectedClub(event.target.value)} aria-label="Select a club">{names.map((name) => <option key={name}>{name}</option>)}</select></div><article className="club-hero" style={{ borderTopColor: profile.color }}><div className="club-identity"><TeamMark team={profile} /><div><p className="eyebrow">#{profile.rank} · {profile.points} points</p><h2>{profile.name}</h2><p className="muted">{profile.stadium}</p></div></div><div className="club-kpis"><div><span>Record</span><strong>{profile.won}–{profile.drawn}–{profile.lost}</strong></div><div><span>Goals</span><strong>{profile.gf}–{profile.ga}</strong></div><div><span>Win rate</span><strong>{profile.winRate}%</strong></div><div><span>Avg rest</span><strong>{profile.restDaysAvg}d</strong></div></div></article><div className="two-column"><div className="content-card"><div className="section-heading small"><h2>Recent results</h2><span className="muted">Official</span></div>{recent.length ? recent.map((fixture) => <div className="mini-fixture" key={fixture.id}><span className={`result-badge ${resultTone(clubResultFor(fixture, profile.name))}`}>{clubResultFor(fixture, profile.name)?.[0] ?? '—'}</span><span>{fixture.homeTeam === profile.name ? 'vs' : '@'} {fixture.homeTeam === profile.name ? fixture.awayTeam : fixture.homeTeam}</span><strong>{fixture.actualScore}</strong></div>) : <p className="muted">No completed fixtures.</p>}</div><div className="content-card"><div className="section-heading small"><h2>Next fixtures</h2><span className="muted">Model score</span></div>{upcoming.length ? upcoming.map((fixture) => <button className="mini-fixture interactive" key={fixture.id} onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}><span className="muted">GW{fixture.gameweek}</span><span>{fixture.homeTeam === profile.name ? 'vs' : '@'} {fixture.homeTeam === profile.name ? fixture.awayTeam : fixture.homeTeam}</span><strong>{fixture.predictedScore}</strong></button>) : <p className="muted">Season complete.</p>}</div></div></section>; };
 
-        {activeTab === 'standings' && (
-          <StandingsView
-            standings={dataset.standings}
-            clubSeries={dataset.clubSeries}
-            onSelectTeam={handleSelectTeamFromStandings}
-          />
-        )}
+const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => { const [selectedImage, setSelectedImage] = useState<{ src: string; title: string; caption: string } | null>(null); const closeRef = useRef<HTMLButtonElement>(null); useEffect(() => { if (!selectedImage) return; closeRef.current?.focus(); const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedImage(null); }; window.addEventListener('keydown', handleKey); return () => window.removeEventListener('keydown', handleKey); }, [selectedImage]); const model = dataset.benchmark.models.find((entry) => entry.isProduction) ?? dataset.benchmark.models[0]; const playedMatches = dataset.fixtures.filter((fixture) => fixture.status === 'Played').length; const projectedMatches = dataset.fixtures.length - playedMatches; const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\.?\//, '')}`; return <section className="page-stack"><div className="page-intro"><div><p className="eyebrow">Model report</p><h1>Evidence for the forecast.</h1><p className="lede">Metrics are calculated on a time ordered holdout. This page separates validation evidence from the season projection so the interface never presents a scenario as a measured result.</p></div><div className="intro-stat"><strong>{dataset.benchmark.productionModel}</strong><span>selected for production</span></div></div><div className="metric-grid"><div><span>Accuracy</span><strong>{model?.accuracy ?? '—'}%</strong><small>Outcome argmax</small></div><div><span>Log loss</span><strong>{model?.logLoss ?? '—'}</strong><small>Probability quality</small></div><div><span>Goal MAE</span><strong>{model?.avgGoalMae ?? '—'}</strong><small>Expected goals</small></div><div><span>Within one goal</span><strong>{model?.within1Goal ?? '—'}%</strong><small>Scoreline tolerance</small></div></div><div className="content-card"><div className="section-heading small"><div><p className="eyebrow">Validation</p><h2>Model comparison</h2></div><span className="muted">Lower log loss and goal error are better</span></div><div className="model-table"><div className="model-row model-header"><span>Model</span><span>Accuracy</span><span>Log loss</span><span>Goal MAE</span></div>{dataset.benchmark.models.map((entry) => <div className={`model-row ${entry.isProduction ? 'selected-row' : ''}`} key={entry.name}><strong>{entry.name}{entry.isProduction && <em>Production</em>}</strong><span>{entry.accuracy}%</span><span>{entry.logLoss}</span><span>{entry.avgGoalMae}</span></div>)}</div></div><div className="analytics-grid"><div className="content-card"><div className="section-heading small"><h2>Outcome mix</h2><span className="muted">{playedMatches} official · {projectedMatches} projected</span></div><div className="outcome-bars"><div><span>Home</span><strong>{dataset.analytics.outcomeDistribution.home} · {dataset.analytics.outcomeDistribution.homePct}%</strong><i style={{ width: `${dataset.analytics.outcomeDistribution.homePct}%`, background: '#1d6f52' }} /></div><div><span>Draw</span><strong>{dataset.analytics.outcomeDistribution.draw} · {dataset.analytics.outcomeDistribution.drawPct}%</strong><i style={{ width: `${dataset.analytics.outcomeDistribution.drawPct}%`, background: '#b46b2a' }} /></div><div><span>Away</span><strong>{dataset.analytics.outcomeDistribution.away} · {dataset.analytics.outcomeDistribution.awayPct}%</strong><i style={{ width: `${dataset.analytics.outcomeDistribution.awayPct}%`, background: '#3d5a80' }} /></div></div><p className="muted">{dataset.analytics.basis ?? 'Official scores for played matches; model scorelines for upcoming fixtures.'}</p></div><div className="content-card"><div className="section-heading small"><h2>Season goals</h2><span className="muted">{dataset.analytics.totalGoals} total · {dataset.analytics.avgGoalsPerMatch}/match</span></div><div className="goal-grid">{dataset.analytics.goalsPerGameweek.map((entry) => <div key={entry.gw} title={`GW${entry.gw}: ${entry.goals} goals`}><span style={{ height: `${Math.min(100, entry.goals * 5)}%` }} /><small>{entry.gw}</small></div>)}</div></div></div><div className="content-card"><div className="section-heading small"><div><p className="eyebrow">Diagnostics</p><h2>Training signals</h2></div><span className="muted">Generated from the current benchmark</span></div><div className="diagnostic-grid">{dataset.benchmark.diagnostics.map((diagnostic) => <button key={diagnostic.id} onClick={() => setSelectedImage(diagnostic)}><img src={asset(diagnostic.src)} alt={diagnostic.title} loading="lazy" /><span><strong>{diagnostic.title}</strong><small>{diagnostic.caption}</small></span></button>)}</div></div>{selectedImage && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedImage(null); }}><div className="image-dialog" role="dialog" aria-modal="true" aria-labelledby="diagnostic-title"><div className="section-heading small"><h2 id="diagnostic-title">{selectedImage.title}</h2><button ref={closeRef} onClick={() => setSelectedImage(null)} aria-label="Close diagnostic preview"><X size={18} /></button></div><img src={asset(selectedImage.src)} alt={selectedImage.title} /><p className="muted">{selectedImage.caption}</p></div></div>}</section>; };
 
-        {activeTab === 'clubs' && (
-          <ClubView
-            key={selectedClub}
-            teams={dataset.teams}
-            clubSeries={dataset.clubSeries}
-            fixtures={dataset.fixtures}
-            standings={dataset.standings}
-            initialClub={selectedClub}
-            onOpenSimulator={handleOpenSimulator}
-          />
-        )}
+const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => { const [activeTab, setActiveTab] = useState<Tab>('fixtures'); const [query, setQuery] = useState(''); const [searchOpen, setSearchOpen] = useState(false); const [selectedClub, setSelectedClub] = useState('Arsenal'); const [simulatorSelection, setSimulatorSelection] = useState({ home: 'Arsenal', away: 'Chelsea' }); const searchRef = useRef<HTMLDivElement>(null); useEffect(() => { const onPointer = (event: PointerEvent) => { if (!searchRef.current?.contains(event.target as Node)) setSearchOpen(false); }; document.addEventListener('pointerdown', onPointer); return () => document.removeEventListener('pointerdown', onPointer); }, []); useEffect(() => { const onKey = (event: KeyboardEvent) => { if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') { event.preventDefault(); (searchRef.current?.querySelector('input') as HTMLInputElement | null)?.focus(); } }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, []); const selectClub = (club: string) => { setSelectedClub(club); setQuery(''); setSearchOpen(false); setActiveTab('clubs'); }; const openSimulator = (home: string, away: string) => { setSimulatorSelection({ home, away }); setQuery(''); setSearchOpen(false); setActiveTab('simulator'); }; const clubHits = query ? Object.values(dataset.teams).filter((team) => team.name.toLowerCase().includes(query.toLowerCase())).slice(0, 4) : []; const fixtureHits = query ? dataset.fixtures.filter((fixture) => `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(query.toLowerCase())).slice(0, 4) : []; const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]; return <div className="app-shell"><aside className="site-rail"><div className="brand"><span className="brand-mark">E</span><div><strong>EPL Predictor</strong><small>Match analysis · {dataset.season}</small></div></div><nav aria-label="Primary navigation">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)} aria-current={activeTab === tab.id ? 'page' : undefined}><span>{tab.label}</span><small>{tab.note}</small></button>)}</nav><div className="rail-footer"><span>Data snapshot</span><strong>{dataset.totalMatches} fixtures</strong><small>Scores and schedules are versioned with the export.</small></div></aside><div className="site-content"><header className="site-header"><div><p className="eyebrow">Premier League · {dataset.season}</p><h2>{active.label}</h2></div><div className="search-box" ref={searchRef}><Search size={17} aria-hidden="true" /><input value={query} onChange={(event) => { setQuery(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} placeholder="Search clubs or fixtures" aria-label="Search clubs or fixtures" /><kbd>/</kbd>{searchOpen && query && <div className="search-results" role="listbox">{clubHits.map((team) => <button key={team.name} onClick={() => selectClub(team.name)} role="option"><TeamMark team={team} />{team.name}<small>Club profile</small></button>)}{fixtureHits.map((fixture) => <button key={fixture.id} onClick={() => openSimulator(fixture.homeTeam, fixture.awayTeam)} role="option"><span>{fixture.homeTeam} v {fixture.awayTeam}</span><small>Open simulator</small></button>)}{!clubHits.length && !fixtureHits.length && <p className="muted">No matches found.</p>}</div>}</div></header><main>{activeTab === 'fixtures' && <FixturesPage dataset={dataset} query={query} onSimulate={openSimulator} />}{activeTab === 'simulator' && <SimulatorPage dataset={dataset} initialHome={simulatorSelection.home} initialAway={simulatorSelection.away} />}{activeTab === 'standings' && <StandingsPage dataset={dataset} onClub={selectClub} />}{activeTab === 'clubs' && <ClubsPage dataset={dataset} selectedClub={selectedClub} setSelectedClub={setSelectedClub} onSimulate={openSimulator} />}{activeTab === 'analytics' && <AnalyticsPage dataset={dataset} />}</main><footer className="site-footer"><span>Forecasts are probabilities, not guarantees.</span><a href="https://github.com/abivan100-stack/epl-predictor" target="_blank" rel="noreferrer">View source <ArrowUpRight size={14} /></a></footer></div></div>; };
 
-        {activeTab === 'analytics' && (
-          <AnalyticsView
-            benchmark={dataset.benchmark}
-            analytics={dataset.analytics}
-            standings={dataset.standings}
-            totalMatches={dataset.totalMatches}
-          />
-        )}
-      </main>
-
-      {/* Professional Editorial Footer */}
-      <footer className="w-full border-t border-border bg-surface py-6 px-4 text-xs font-mono text-text-muted mt-12">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center sm:text-left">
-            <div className="text-text-secondary font-bold">
-              PREMIER LEAGUE MATCH OUTCOME & SCORES INTELLIGENCE ENGINE (2026/27)
-            </div>
-            <div className="text-[11px] text-text-muted">
-              Trained on historical EPL matches with zero-leakage rolling form, Poisson expected goals, and 3-way {dataset.benchmark.productionModel} classification. {dataset.totalMatches} fixtures • {dataset.gameweeksTotal} gameweeks.
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <a
-              href="https://github.com/Raghav2012Code/epl-predictor"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center space-x-1 text-text-secondary hover:text-brand-accent transition-colors"
-            >
-              <Github className="h-3.5 w-3.5" />
-              <span>GitHub Repository</span>
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-
-            <span className="text-text-muted" aria-hidden="true">|</span>
-
-            <span className="inline-flex items-center text-text-muted text-[11px]">
-              <Terminal className="mr-1 h-3 w-3 text-brand-accent" />
-              CLI: <code className="ml-1 text-text-secondary">python predict.py --gameweek 4</code>
-            </span>
-          </div>
-        </div>
-        </footer>
-        </div>
-      </div>
-  );
-};
-
-export const App: React.FC = () => {
-  const state = useEPLData();
-  if (state.status === 'loading') {
-    return (
-      <ErrorBoundary>
-        <AppSkeleton />
-      </ErrorBoundary>
-    );
-  }
-  if (state.status === 'error') {
-    return (
-      <ErrorBoundary>
-        <DataErrorPanel error={state.error} onRetry={state.retry} />
-      </ErrorBoundary>
-    );
-  }
-  return (
-    <ErrorBoundary>
-      <Dashboard dataset={state.dataset} />
-    </ErrorBoundary>
-  );
-};
-
+export const App: React.FC = () => { const state = useEPLData(); if (state.status === 'loading') return <ErrorBoundary><AppSkeleton /></ErrorBoundary>; if (state.status === 'error') return <ErrorBoundary><DataErrorPanel error={state.error} onRetry={state.retry} /></ErrorBoundary>; return <ErrorBoundary><Dashboard dataset={state.dataset} /></ErrorBoundary>; };
 export default App;

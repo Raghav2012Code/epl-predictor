@@ -50,15 +50,23 @@ def assert_model_compatible(model, *, strict: bool = True) -> bool:
     Returns True when compatible. In strict mode raises RuntimeError with a
     retrain hint; otherwise logs a warning and returns False.
     """
-    expected = set(get_feature_column_names())
-    loaded = set(getattr(model, "feature_names", []) or [])
+    expected = list(get_feature_column_names())
+    loaded = list(getattr(model, "feature_names", []) or [])
     if loaded == expected:
         return True
-    missing = sorted(expected - loaded)[:5]
-    extra = sorted(loaded - expected)[:5]
+    expected_set = set(expected)
+    loaded_set = set(loaded)
+    missing = sorted(expected_set - loaded_set)[:5]
+    extra = sorted(loaded_set - expected_set)[:5]
+    order_mismatch = next(
+        (f"position {idx}: expected {want!r}, loaded {got!r}"
+         for idx, (want, got) in enumerate(zip(expected, loaded)) if want != got),
+        None,
+    )
     msg = (
         f"Model checkpoint feature drift: {len(loaded)} vs {len(expected)} expected. "
-        f"Missing: {missing}, Extra: {extra}. Retrain with `python run_pipeline.py` "
+        f"Missing: {missing}, Extra: {extra}. "
+        f"Order: {order_mismatch or 'compatible'}. Retrain with `python run_pipeline.py` "
         "or `predict.py --retrain`."
     )
     if strict:
