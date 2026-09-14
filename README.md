@@ -1,6 +1,6 @@
 # Premier League Match Predictor
 
-An evidence-led Premier League forecasting project for the 2026/27 season. The pipeline produces calibrated Home Win / Draw / Away Win probabilities, expected goals, and a most likely scoreline from historical match data and the published 380-fixture schedule.
+An evidence-led Premier League forecasting project for the 2026/27 season. The pipeline produces calibrated Home Win / Draw / Away Win probabilities, expected goals, and a most likely scoreline from historical match data, pre-kickoff bookmaker market signals, and the published 380-fixture schedule. A stacked ensemble (tuned Random Forest, XGBoost, logistic regression, and Elo-Poisson members) is benchmarked with time ordered validation; production is selected by Ranked Probability Score.
 
 The repository has two entry points:
 
@@ -11,7 +11,7 @@ The repository has two entry points:
 
 The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
 
-The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for temperature calibration; the reported metrics use the later evaluation tail.
+The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for temperature calibration; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
@@ -57,7 +57,13 @@ Use `--offline` when the raw datasets already exist in `data/raw`:
 .venv\Scripts\python.exe run_pipeline.py --offline
 ```
 
-The full pipeline trains both models, writes diagnostics, saves `models/production_model.joblib` and `models/metrics.json`, then exports the forecast CSV and Markdown report. To refresh the dashboard data after a pipeline run:
+Bookmaker odds are fetched from football-data.co.uk's free archive and cached under `data/raw/odds` (no scraping). Live upcoming odds need a free key and are strictly optional — the pipeline falls back to historical priors without one:
+
+```powershell
+$env:EPL_ODDS_API_KEY = "<your-theoddsapi-key>"
+```
+
+The full pipeline trains the Random Forest, XGBoost, and stacked ensemble, writes diagnostics, saves `models/production_model.joblib` and `models/metrics.json`, then exports the forecast CSV and Markdown report. To refresh the dashboard data after a pipeline run:
 
 ```powershell
 .venv\Scripts\python.exe export_web_data.py
@@ -100,18 +106,23 @@ cd web
 npm run build
 ```
 
-The test suite covers zero leakage, stable same-date ordering, cold-start priors, Dixon–Coles direction, model save/load, scoreline consistency, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 58 passing tests.
+The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 58 passing tests.
 
 ## Repository layout
 
 ```text
-src/                       Python data, feature, model, validation, and pipeline code
-tests/                     Python unit and interface contract tests
-data/                      Cached inputs and generated season forecasts
-models/                    Generated checkpoint metadata (the binary checkpoint is ignored)
+src/                       Python data, feature, model, validation, tuning, and pipeline code
+src/odds_loader.py         Cached football-data.co.uk odds ingestion + implied probabilities
+src/live_odds.py           Optional live odds via The Odds API (env key, offline-safe)
+src/tuning.py              Deterministic Optuna search for tree hyperparameters
+tests/                     Python unit and interface contract tests (odds, tuning, ensemble)
+data/                      Cached inputs, odds archive, and generated season forecasts
+models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
+web/                       React 19 + TypeScript + Vite 8 + Tailwind CSS 4 dashboard
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
+config.yaml                Central pipeline/model/training configuration
 api.py                     FastAPI serving surface
 predict.py                 CLI query surface
 export_web_data.py         Pipeline-to-dashboard serializer
