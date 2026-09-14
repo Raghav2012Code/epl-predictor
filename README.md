@@ -15,9 +15,9 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 46.6% | 0.423 | 1.016 | 0.207 | 0.90 | 60.8% | Production |
-| XGBoost | 48.9% | 0.383 | 1.027 | 0.208 | 0.89 | 56.4% | Benchmark |
-| Stacked | 49.6% | 0.381 | 1.018 | 0.209 | 0.90 | 55.3% | Benchmark |
+| Random Forest | 47.5% | 0.431 | 1.014 | 0.207 | 0.90 | 59.5% | Production |
+| XGBoost | 49.6% | 0.390 | 1.026 | 0.208 | 0.89 | 57.2% | Benchmark |
+| Stacked | 49.8% | 0.380 | 1.017 | 0.208 | 0.90 | 55.5% | Benchmark |
 
 Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on accuracy; Random Forest keeps production on RPS.
 
@@ -106,7 +106,7 @@ cd web
 npm run build
 ```
 
-The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 58 passing tests.
+The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 63 passing tests.
 
 ## Repository layout
 

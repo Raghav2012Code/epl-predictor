@@ -86,6 +86,41 @@ def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
     return int(np.argmax(probas))
 
 
+def blend_weights() -> Tuple[float, float, float]:
+    """Normalized (classifier, hg/ag-Poisson, supremacy/totals) blend weights.
+
+    Read from config.yaml (keys blend_classifier, blend_poisson,
+    blend_supremacy); normalized to sum to 1 so partial configs stay valid.
+    """
+    from src.config import get_config
+
+    cfg = get_config()["model"]
+    raw = (
+        float(cfg.get("blend_classifier", 0.6)),
+        float(cfg.get("blend_poisson", 0.0)),
+        float(cfg.get("blend_supremacy", 0.4)),
+    )
+    total = sum(raw)
+    if total <= 0:
+        return (0.6, 0.0, 0.4)
+    return (raw[0] / total, raw[1] / total, raw[2] / total)
+
+
+def supremacy_to_means(
+    supremacy: np.ndarray, totals: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Splits supremacy/total goal expectations into home/away means.
+
+    lam_h = (total + supremacy) / 2, lam_a = (total - supremacy) / 2,
+    floored at 0.05 so Poisson grids stay valid.
+    """
+    sup = np.asarray(supremacy, dtype=float)
+    tot = np.maximum(0.0, np.asarray(totals, dtype=float))
+    lam_h = np.maximum(0.05, (tot + sup) / 2.0)
+    lam_a = np.maximum(0.05, (tot - sup) / 2.0)
+    return lam_h, lam_a
+
+
 # Outcome label mapping: 0 -> Away Win (A), 1 -> Draw (D), 2 -> Home Win (H)
 OUTCOME_NAMES = {0: "Away Win", 1: "Draw", 2: "Home Win"}
 OUTCOME_CODES = {0: "A", 1: "D", 2: "H"}
@@ -119,6 +154,22 @@ class MatchPredictorModel:
                 random_state=42,
                 n_jobs=-1,
             )
+            # Supremacy (signed goal difference) and totals heads. Supremacy
+            # uses squared error (it can go negative); totals are counts.
+            self.supremacy_regressor = RandomForestRegressor(
+                n_estimators=250,
+                max_depth=6,
+                min_samples_leaf=4,
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.totals_regressor = RandomForestRegressor(
+                n_estimators=250,
+                max_depth=6,
+                min_samples_leaf=4,
+                random_state=42,
+                n_jobs=-1,
+            )
         elif self.model_type == "logreg":
             # Linear member for the stack: standardized multinomial logistic
             # regression (C fixed; the meta-learner, not this member, is what
@@ -143,6 +194,26 @@ class MatchPredictorModel:
                 n_jobs=-1,
             )
             self.away_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="count:poisson",
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.supremacy_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="reg:squarederror",
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.totals_regressor = XGBRegressor(
                 n_estimators=200,
                 max_depth=3,
                 learning_rate=0.03,
@@ -185,6 +256,26 @@ class MatchPredictorModel:
                 random_state=42,
                 n_jobs=-1,
             )
+            self.supremacy_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="reg:squarederror",
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.totals_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="count:poisson",
+                random_state=42,
+                n_jobs=-1,
+            )
 
         self.feature_names: List[str] = []
         self.is_fitted: bool = False
@@ -203,7 +294,8 @@ class MatchPredictorModel:
         (e.g. min_samples_leaf reaches the forests, learning_rate the
         boosters). Must be called before fit; unknown keys are ignored.
         """
-        for est in (self.classifier, self.home_regressor, self.away_regressor):
+        for est in (self.classifier, self.home_regressor, self.away_regressor,
+                    self.supremacy_regressor, self.totals_regressor):
             try:
                 valid = est.get_params()
             except Exception:
@@ -214,11 +306,17 @@ class MatchPredictorModel:
         return self
 
     def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series) -> MatchPredictorModel:
-        """Fits the outcome classifier and both goal regressors."""
+        """Fits the outcome classifier and all four goal regressors."""
         self.feature_names = list(X.columns)
         self.classifier.fit(X, y_outcome)
         self.home_regressor.fit(X, y_hg)
         self.away_regressor.fit(X, y_ag)
+        # Supremacy/total heads derive from the same goal targets (no new
+        # plumbing): supremacy is signed, totals are counts.
+        y_sup = np.asarray(y_hg, dtype=float) - np.asarray(y_ag, dtype=float)
+        y_tot = np.asarray(y_hg, dtype=float) + np.asarray(y_ag, dtype=float)
+        self.supremacy_regressor.fit(X, y_sup)
+        self.totals_regressor.fit(X, y_tot)
         # Fit goal bias correction on training means (guarded, bounded).
         try:
             pred_h = np.maximum(0.05, np.asarray(self.home_regressor.predict(X), dtype=float))
@@ -311,23 +409,43 @@ class MatchPredictorModel:
         Blends multi-class tree probabilities with count Poisson probabilities,
         then applies fitted temperature scaling (if calibrated).
         """
+    def _source_probas(self, X: pd.DataFrame) -> Dict[str, np.ndarray]:
+        """Untempered per-source probability matrices (each (N, 3)).
+
+        Sources: classifier, Poisson grid from hg/ag regressors, Poisson
+        grid from the supremacy/totals decomposition. Shared by blending
+        and by blend-weight tuning.
+        """
         clf_probas = align_probas(
             self.classifier.classes_, self.classifier.predict_proba(X)
         )
         exp_hg, exp_ag = self.predict_expected_goals(X)
-
-        from src.config import get_config
-
-        blend_cfg = get_config()["model"]
-        w_clf = float(blend_cfg.get("blend_classifier", 0.60))
-        w_poiss = float(blend_cfg.get("blend_poisson", 0.40))
-
-        blended = np.zeros_like(clf_probas)
+        sup = np.asarray(self.supremacy_regressor.predict(X), dtype=float)
+        tot = np.asarray(self.totals_regressor.predict(X), dtype=float)
+        lam_h, lam_a = supremacy_to_means(sup, tot)
+        poisson = np.zeros_like(clf_probas)
+        supremacy = np.zeros_like(clf_probas)
         for i in range(len(X)):
-            _, p_poiss = self.compute_poisson_grid(exp_hg[i], exp_ag[i])
-            p_comb = w_clf * clf_probas[i] + w_poiss * p_poiss
-            p_comb /= p_comb.sum()
-            blended[i] = p_comb
+            _, poisson[i] = self.compute_poisson_grid(float(exp_hg[i]), float(exp_ag[i]))
+            _, supremacy[i] = self.compute_poisson_grid(float(lam_h[i]), float(lam_a[i]))
+        return {"clf": clf_probas, "poisson": poisson, "supremacy": supremacy}
+
+    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
+        """Returns calibrated probability matrix of shape (N, 3): [p_away, p_draw, p_home].
+
+        Blends classifier, hg/ag-Poisson, and supremacy/totals-Poisson
+        sources with configured weights, then applies fitted temperature
+        scaling (if calibrated).
+        """
+        sources = self._source_probas(X)
+        w_clf, w_poiss, w_sup = blend_weights()
+
+        blended = (
+            w_clf * sources["clf"]
+            + w_poiss * sources["poisson"]
+            + w_sup * sources["supremacy"]
+        )
+        blended /= blended.sum(axis=1, keepdims=True)
 
         if apply_temperature and self.calibration_temperature != 1.0:
             blended = self._apply_temperature(blended, self.calibration_temperature)
@@ -396,6 +514,8 @@ class MatchPredictorModel:
             "classifier": self.classifier,
             "home_regressor": self.home_regressor,
             "away_regressor": self.away_regressor,
+            "supremacy_regressor": self.supremacy_regressor,
+            "totals_regressor": self.totals_regressor,
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
             "calibration_temperature": self.calibration_temperature,
@@ -417,6 +537,13 @@ class MatchPredictorModel:
         instance.classifier = payload["classifier"]
         instance.home_regressor = payload["home_regressor"]
         instance.away_regressor = payload["away_regressor"]
+        if "supremacy_regressor" not in payload or "totals_regressor" not in payload:
+            raise RuntimeError(
+                "Checkpoint predates the supremacy/totals head; retrain with "
+                "`python run_pipeline.py` or `predict.py --retrain`."
+            )
+        instance.supremacy_regressor = payload["supremacy_regressor"]
+        instance.totals_regressor = payload["totals_regressor"]
         instance.feature_names = payload["feature_names"]
         instance.is_fitted = payload["is_fitted"]
         # Backward-compatible: checkpoints saved before calibration default to 1.0.

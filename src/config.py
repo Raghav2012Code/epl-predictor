@@ -35,8 +35,9 @@ _DEFAULTS: Dict[str, Any] = {
     "pipeline": {"split_date": "2024-01-01"},
     "model": {
         "home_advantage": 65.0,
-        "blend_classifier": 0.60,
-        "blend_poisson": 0.40,
+        "blend_classifier": 0.6,
+        "blend_poisson": 0.0,
+        "blend_supremacy": 0.4,
         "calibration_grid_min": 1.0,
         "calibration_grid_max": 3.0,
         "calibration_grid_step": 0.05,
