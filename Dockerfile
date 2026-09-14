@@ -1,5 +1,5 @@
-# Stage 1: Build static web assets
-FROM node:20-alpine AS builder
+# Stage 1: Build static web assets (Node 22 LTS satisfies Vite 8's engine floor)
+FROM node:22-alpine AS builder
 
 WORKDIR /app/web
 
