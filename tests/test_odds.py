@@ -15,6 +15,21 @@ from src.odds_loader import (
     parse_odds_csv,
     select_odds_triple,
 )
+from src.validation import assert_odds_coverage, assert_odds_frame_clean
+
+
+def _clean_odds_frame():
+    return pd.DataFrame({
+        "date": pd.to_datetime(["2024-08-16", "2024-08-17"]),
+        "home_team": ["Arsenal", "Chelsea"],
+        "away_team": ["Wolves", "Manchester City"],
+        "odds_implied_home": [0.70, 0.40],
+        "odds_implied_draw": [0.18, 0.27],
+        "odds_implied_away": [0.12, 0.33],
+        "odds_overround": [0.05, 0.06],
+        "odds_move_home": [0.02, -0.01],
+        "odds_source": ["avg_close", "avg_close"],
+    })
 
 
 def _write_csv(tmp_path, name, content):
@@ -139,3 +154,53 @@ def test_load_odds_frame_offline_missing_cache_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(odds_mod, "COMBINED_CACHE", str(tmp_path / "empty" / "e0_combined.csv"))
     with pytest.raises(FileNotFoundError, match="Offline mode"):
         load_odds_frame(seasons=["2021"], offline=True)
+
+
+def test_odds_frame_clean_passes():
+    assert assert_odds_frame_clean(_clean_odds_frame()) is True
+
+
+def test_odds_frame_clean_rejects_result_columns():
+    dirty = _clean_odds_frame().copy()
+    dirty["FTHG"] = [2, 1]
+    dirty["FTR"] = ["H", "H"]
+    with pytest.raises(ValueError, match="post-kickoff columns"):
+        assert_odds_frame_clean(dirty)
+
+
+def test_odds_frame_clean_rejects_missing_columns():
+    thin = _clean_odds_frame().drop(columns=["odds_overround"])
+    with pytest.raises(ValueError, match="missing required columns"):
+        assert_odds_frame_clean(thin)
+
+
+def test_odds_frame_clean_rejects_bad_triples():
+    bad = _clean_odds_frame().copy()
+    bad.loc[0, "odds_implied_home"] = 0.99  # triple sums to 1.29
+    with pytest.raises(ValueError, match="do not sum to 1"):
+        assert_odds_frame_clean(bad)
+
+
+def test_odds_frame_clean_rejects_empty():
+    with pytest.raises(ValueError, match="empty"):
+        assert_odds_frame_clean(pd.DataFrame())
+
+
+def test_odds_coverage_full_pass_returns_one():
+    matches = pd.DataFrame({
+        "date": pd.to_datetime(["2024-08-16", "2024-08-17"]),
+        "home_team": ["Arsenal", "Chelsea"],
+        "away_team": ["Wolves", "Manchester City"],
+    })
+    assert assert_odds_coverage(matches, _clean_odds_frame()) == pytest.approx(1.0)
+
+
+def test_odds_coverage_fails_loudly_below_minimum():
+    matches = pd.DataFrame({
+        "date": pd.to_datetime(["2024-08-16"] + ["2024-08-18"] * 19),
+        "home_team": ["Arsenal"] + ["Everton"] * 19,
+        "away_team": ["Wolves"] + ["Fulham"] * 19,
+    })
+    thin_odds = _clean_odds_frame().iloc[:1]  # only 1 of 20 rows covered
+    with pytest.raises(ValueError, match="below minimum"):
+        assert_odds_coverage(matches, thin_odds, min_coverage=0.95)
