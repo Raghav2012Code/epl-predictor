@@ -23,6 +23,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 @keyframes loading-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .site-rail { width: 248px; flex: 0 0 248px; min-height: 100vh; display: flex; flex-direction: column; padding: 28px 18px 22px; background: #173c32; color: #f7f5ef; }
 .brand { display: flex; gap: 11px; align-items: center; padding: 0 10px 28px; border-bottom: 1px solid rgba(255,255,255,.18); }
+.brand-home { width: 100%; border-left: 0; border-right: 0; border-top: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.brand-home:hover .brand-mark { border-color: #fff; color: #fff; }
 .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #d7a35a; color: #d7a35a; font-family: Georgia, serif; font-size: 22px; font-weight: 700; }
 .brand strong, .brand small, .rail-footer span, .rail-footer strong, .rail-footer small { display: block; }
 .brand strong { font-family: Georgia, serif; font-size: 17px; font-weight: 500; letter-spacing: -.02em; }
