@@ -1,35 +1,35 @@
 {
   "production_model": "Random Forest",
   "calibration_temperature": 1.0,
-  "home_goal_correction": 1.002435848004368,
-  "away_goal_correction": 1.0035894250321569,
-  "feature_count": 78,
+  "home_goal_correction": 1.002188374350603,
+  "away_goal_correction": 1.003577677027146,
+  "feature_count": 84,
   "models": {
     "Random Forest": {
-      "accuracy": 0.464,
-      "log_loss": 1.0278,
-      "macro_f1": 0.4152,
-      "mae_home_goals": 0.944,
-      "mae_away_goals": 0.8581,
-      "avg_goal_mae": 0.9011,
-      "exact_score_acc": 0.0911,
-      "within_1_goal_acc": 0.5805,
+      "accuracy": 0.4534,
+      "log_loss": 1.0204,
+      "macro_f1": 0.419,
+      "mae_home_goals": 0.9417,
+      "mae_away_goals": 0.8543,
+      "avg_goal_mae": 0.898,
+      "exact_score_acc": 0.1081,
+      "within_1_goal_acc": 0.5953,
       "calibration_temperature": 1.0,
-      "home_goal_correction": 0.9975,
-      "away_goal_correction": 1.0033
+      "home_goal_correction": 0.9976,
+      "away_goal_correction": 1.0023
     },
     "XGBoost": {
-      "accuracy": 0.4725,
-      "log_loss": 1.0392,
-      "macro_f1": 0.3971,
-      "mae_home_goals": 0.9454,
-      "mae_away_goals": 0.8547,
-      "avg_goal_mae": 0.9,
+      "accuracy": 0.4936,
+      "log_loss": 1.0341,
+      "macro_f1": 0.4049,
+      "mae_home_goals": 0.9415,
+      "mae_away_goals": 0.8493,
+      "avg_goal_mae": 0.8954,
       "exact_score_acc": 0.0996,
-      "within_1_goal_acc": 0.5826,
-      "calibration_temperature": 1.25,
+      "within_1_goal_acc": 0.589,
+      "calibration_temperature": 1.2,
       "home_goal_correction": 0.9998,
-      "away_goal_correction": 1.0006
+      "away_goal_correction": 1.0011
     }
   }
 }

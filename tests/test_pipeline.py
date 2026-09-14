@@ -291,8 +291,11 @@ def test_scoreline_agrees_with_shared_outcome_rule():
     scores = model.predict_scoreline(X)
     for i, (h, a) in enumerate(scores):
         # Scorelines must agree with the shared draw-aware decision rule
-        # (favor_outcome_from_proba), not raw argmax.
-        fav = favor_outcome_from_proba(probas[i])
+        # (favor_outcome_from_proba), using the same market-regime flag
+        # the model sees for that row.
+        fav = favor_outcome_from_proba(
+            probas[i], odds_missing=float(X["odds_missing"].iloc[i])
+        )
         if fav == 2:
             assert h > a
         elif fav == 0:

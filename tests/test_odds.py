@@ -264,6 +264,22 @@ def test_engineered_dataset_without_odds_is_neutral():
     assert (eng["odds_move_home"] == 0.0).all()
 
 
+def test_shared_outcome_rule_is_regime_aware():
+    from src.models import favor_outcome_from_proba
+
+    # Close race, decent draw prob: draw under both regimes.
+    probas = [0.30, 0.30, 0.40]
+    assert favor_outcome_from_proba(probas, odds_missing=0.0) == 1
+    assert favor_outcome_from_proba(probas, odds_missing=1.0) == 1
+    # |h-a| = 0.13: draw with market present (margin 0.16), home win
+    # without market (tighter 0.12 regime).
+    probas = [0.28, 0.30, 0.41]
+    assert favor_outcome_from_proba(probas, odds_missing=0.0) == 1
+    assert favor_outcome_from_proba(probas, odds_missing=1.0) == 2
+    # Clear favorite: argmax everywhere.
+    assert favor_outcome_from_proba([0.15, 0.20, 0.65], odds_missing=1.0) == 2
+
+
 def test_fixture_features_prefer_live_override_then_history():
     raw = _mini_history()
     future = datetime(2024, 3, 1)

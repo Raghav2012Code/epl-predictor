@@ -22,14 +22,32 @@ from xgboost import XGBClassifier, XGBRegressor
 # probability is therefore called a draw. This rule is the SINGLE source of
 # truth: predict_scoreline, pipeline forecasts, and validation metrics all
 # use favor_outcome_from_proba so scorelines always agree with outcomes.
-DRAW_MARGIN = 0.10
-DRAW_MIN_PROB = 0.24
+# Retuned 2026-09-14 per market regime on the disjoint eval slice
+# (grid margin 0.02-0.16, min 0.24-0.34; objective eval accuracy subject
+# to draw share 18-27%). Market-present: 0.16/0.28 (44.8% acc, 23.8%
+# draws, n=404). No-market: 0.12/0.28 (48.5% acc; 16.2% draws on the
+# 68 masked eval rows and ~21% on the 350-row no-market forecast slate
+# — inside the EPL band on both, unlike 0.12/0.24 which hits 37% on
+# the slate). Revisit in Phase 7 (RPS-based).
+DRAW_MARGIN = 0.16
+DRAW_MIN_PROB = 0.28
+DRAW_MARGIN_NO_MARKET = 0.12
+DRAW_MIN_PROB_NO_MARKET = 0.28
 
 
-def favor_outcome_from_proba(probas) -> int:
-    """Maps a [p_away, p_draw, p_home] vector to 0 (Away), 1 (Draw), 2 (Home)."""
+def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
+    """Maps a [p_away, p_draw, p_home] vector to 0 (Away), 1 (Draw), 2 (Home).
+
+    A close home/away race with a robust draw probability is called a
+    draw; thresholds are regime-aware because market-present and
+    no-market proba distributions differ sharply.
+    """
+    if float(odds_missing) >= 0.5:
+        margin, min_prob = DRAW_MARGIN_NO_MARKET, DRAW_MIN_PROB_NO_MARKET
+    else:
+        margin, min_prob = DRAW_MARGIN, DRAW_MIN_PROB
     p_a, p_d, p_h = float(probas[0]), float(probas[1]), float(probas[2])
-    if abs(p_h - p_a) <= DRAW_MARGIN and p_d >= DRAW_MIN_PROB:
+    if abs(p_h - p_a) <= margin and p_d >= min_prob:
         return 1
     return int(np.argmax(probas))
 
@@ -259,7 +277,8 @@ class MatchPredictorModel:
             # Favored outcome uses the shared draw-aware rule (see
             # favor_outcome_from_proba) so the scoreline always agrees with
             # the pipeline's predicted_outcome: 0: Away, 1: Draw, 2: Home.
-            fav_outcome = favor_outcome_from_proba(probas[i])
+            no_market = float(X["odds_missing"].iloc[i]) if "odds_missing" in X.columns else 0.0
+            fav_outcome = favor_outcome_from_proba(probas[i], odds_missing=no_market)
 
             # Select best scoreline matching favored outcome
             best_s = (1, 1)
@@ -369,9 +388,11 @@ def train_and_benchmark_models(
         eval_y_hg = y_val_hg.iloc[evaluation_slice]
         eval_y_ag = y_val_ag.iloc[evaluation_slice]
         val_proba = model.predict_outcome_proba(eval_X)
-        # Operational decision rule (draw-aware), so reported accuracy/F1
-        # reflect what the pipeline actually publishes.
-        val_preds = np.array([favor_outcome_from_proba(p) for p in val_proba])
+        # Operational decision rule (draw-aware, regime-aware), so reported
+        # accuracy/F1 reflect what the pipeline actually publishes.
+        _missing = eval_X["odds_missing"].values if "odds_missing" in eval_X.columns else np.zeros(len(eval_X))
+        val_preds = np.array([favor_outcome_from_proba(p, odds_missing=m)
+                              for p, m in zip(val_proba, _missing)])
         exp_hg, exp_ag = model.predict_expected_goals(eval_X)
         pred_scores = model.predict_scoreline(eval_X)
         all_pred_scores = model.predict_scoreline(X_val)

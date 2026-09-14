@@ -541,12 +541,16 @@ def resolve_odds_features(
 def build_engineered_dataset(
     raw_matches: pd.DataFrame,
     odds_df: Optional[pd.DataFrame] = None,
+    odds_mask_rate: float = 0.0,
 ) -> pd.DataFrame:
     """End-to-end dataset builder merging rolling stats and H2H features for modeling.
 
     ``odds_df`` (historical pre-kickoff odds frame) is left-joined on
     (date, home, away); unmatched rows are neutral-filled and flagged via
     ``odds_missing``. When None, every row is neutral (tests/offline).
+    ``odds_mask_rate`` randomly neutralizes that fraction of TRAINING rows
+    (seeded) so the model also learns the no-market regime served for
+    fixtures without live odds; 0.0 disables (tests).
     """
     raw_matches = raw_matches.copy()
     raw_matches["_source_order"] = np.arange(len(raw_matches), dtype=int)
@@ -622,6 +626,20 @@ def build_engineered_dataset(
     merged["odds_implied_away"] = merged["odds_implied_away"].fillna(1.0 / 3.0)
     merged["odds_overround"] = merged["odds_overround"].fillna(0.0)
     merged["odds_move_home"] = merged["odds_move_home"].fillna(0.0)
+
+    # Market dropout for the no-live-odds serving regime: neutralize a
+    # seeded fraction of rows so the model learns odds_missing=1 inputs.
+    # Coverage gates run on the unmasked join, so data drift still fails
+    # loudly upstream of here.
+    if odds_mask_rate and 0.0 < odds_mask_rate < 1.0:
+        rng = np.random.RandomState(42)
+        mask = rng.rand(len(merged)) < float(odds_mask_rate)
+        merged.loc[mask, "odds_implied_home"] = 1.0 / 3.0
+        merged.loc[mask, "odds_implied_draw"] = 1.0 / 3.0
+        merged.loc[mask, "odds_implied_away"] = 1.0 / 3.0
+        merged.loc[mask, "odds_overround"] = 0.0
+        merged.loc[mask, "odds_move_home"] = 0.0
+        merged.loc[mask, "odds_missing"] = 1.0
 
     # Target encodings:
     # result: H -> 2, D -> 1, A -> 0

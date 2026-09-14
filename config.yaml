@@ -21,3 +21,7 @@ model:
   calibration_grid_min: 1.0
   calibration_grid_max: 3.0
   calibration_grid_step: 0.05
+  # Fraction of training rows whose market features are masked to neutral
+  # (odds_missing=1). Teaches the model the no-market regime so serving
+  # rows without live odds behave sanely. Seeded; deterministic.
+  odds_mask_rate: 0.15

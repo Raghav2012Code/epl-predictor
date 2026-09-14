@@ -9,14 +9,14 @@ The repository has two entry points:
 
 ## What the model does
 
-The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, and dynamic Elo ratings. A match never sees a result from the same date or a later date. Cold starts use club-specific priors rather than zeros or future dataset medians.
+The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
 
 The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for temperature calibration; the reported metrics use the later evaluation tail.
 
 | Model | Accuracy | Macro F1 | Log loss | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 49.4% | 0.372 | 1.024 | 0.90 | 55.9% | Production |
-| XGBoost | 49.8% | 0.371 | 1.042 | 0.90 | 56.8% | Benchmark |
+| Random Forest | 45.3% | 0.419 | 1.020 | 0.90 | 59.5% | Production |
+| XGBoost | 49.4% | 0.405 | 1.034 | 0.90 | 58.9% | Benchmark |
 
 These are validation measurements, not a promise of future accuracy. Exact scorelines are especially uncertain; probabilities should be read as distributions.
 
@@ -97,7 +97,7 @@ cd web
 npm run build
 ```
 
-The test suite covers zero leakage, stable same-date ordering, cold-start priors, Dixon–Coles direction, model save/load, scoreline consistency, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 18 passing tests.
+The test suite covers zero leakage, stable same-date ordering, cold-start priors, Dixon–Coles direction, model save/load, scoreline consistency, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 46 passing tests.
 
 ## Repository layout
 

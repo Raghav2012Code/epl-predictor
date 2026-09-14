@@ -163,6 +163,14 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
     print(f"   [D] {'Draw':<22} :  {pred['draw_prob']:>5.1f}%")
     print(f"   [A] {pred['away_team']:<22} :  {pred['away_win_prob']:>5.1f}%")
     print("-" * 65)
+    if not pred.get("market_missing"):
+        print(" MARKET-IMPLIED (pre-kickoff odds):")
+        print(f"   [H] {pred['home_team']:<22} :  {pred['market_home_prob']:>5.1f}%")
+        print(f"   [D] {'Draw':<22} :  {pred['market_draw_prob']:>5.1f}%")
+        print(f"   [A] {pred['away_team']:<22} :  {pred['market_away_prob']:>5.1f}%")
+    else:
+        print(" MARKET-IMPLIED:  unavailable (no pre-kickoff odds for this date).")
+    print("-" * 65)
     print(f" FAVORED OUTCOME:      {pred['predicted_outcome'].upper()}")
     print("=" * 65 + "\n")
     return 0

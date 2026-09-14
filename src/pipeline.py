@@ -106,7 +106,12 @@ class PremierLeaguePredictionPipeline:
         assert_odds_frame_clean(self.odds_df)
         coverage = assert_odds_coverage(self.raw_historical, self.odds_df)
         logger.info(f"      - Odds coverage on historical rows: {coverage:.3f}.")
-        self.engineered_df = build_engineered_dataset(self.raw_historical, odds_df=self.odds_df)
+        from src.config import get_config as _get_cfg
+
+        mask_rate = float(_get_cfg()["model"].get("odds_mask_rate", 0.15))
+        self.engineered_df = build_engineered_dataset(
+            self.raw_historical, odds_df=self.odds_df, odds_mask_rate=mask_rate
+        )
         logger.info(f"      - Engineered dataset shape: {self.engineered_df.shape} ({len(self.feature_cols)} features).")
         return self
 
@@ -337,7 +342,9 @@ class PremierLeaguePredictionPipeline:
             # Favorite outcome uses the shared draw-aware rule so it always
             # agrees with home/draw/away probs (scoreline is already
             # constrained to that outcome in predict_scoreline).
-            fav_idx = favor_outcome_from_proba(probas)
+            fav_idx = favor_outcome_from_proba(
+                probas, odds_missing=float(X_match["odds_missing"].iloc[0])
+            )
             fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
             rounded_probs = _round_probabilities([p_home, p_draw, p_away])
@@ -491,7 +498,9 @@ class PremierLeaguePredictionPipeline:
         exp_hg, exp_ag = self.best_model.predict_expected_goals(X_match)
 
         p_away, p_draw, p_home = probas[0], probas[1], probas[2]
-        fav_idx = favor_outcome_from_proba(probas)
+        fav_idx = favor_outcome_from_proba(
+            probas, odds_missing=float(X_match["odds_missing"].iloc[0])
+        )
         fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
         rounded_probs = _round_probabilities([float(p_home), float(p_draw), float(p_away)])
