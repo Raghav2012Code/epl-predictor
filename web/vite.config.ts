@@ -1,19 +1,24 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+
+const rootDir = import.meta.dirname;
 
 export default defineConfig({
-  root: resolve(__dirname),
+  root: rootDir,
   base: './',
   plugins: [react()],
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    outDir: `${rootDir}/dist`,
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-icons': ['lucide-react'],
+        // Rolldown (Vite 8) only accepts function-form manualChunks.
+        manualChunks: (id: string) => {
+          if (!id.includes('node_modules')) return undefined;
+          const normalized = id.replace(/\\/g, '/');
+          if (/node_modules\/lucide-react\//.test(normalized)) return 'vendor-icons';
+          if (/node_modules\/(react|react-dom|scheduler)(\/|$)/.test(normalized)) return 'vendor-react';
+          return undefined;
         },
       },
     },
