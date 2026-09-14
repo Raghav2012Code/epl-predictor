@@ -129,6 +129,23 @@ class MatchPredictorModel:
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
 
+    def apply_params(self, params: Dict[str, Any]) -> MatchPredictorModel:
+        """Applies hyperparameter overrides to classifier + regressors.
+
+        Each key is routed only to sub-estimators that accept it
+        (e.g. min_samples_leaf reaches the forests, learning_rate the
+        boosters). Must be called before fit; unknown keys are ignored.
+        """
+        for est in (self.classifier, self.home_regressor, self.away_regressor):
+            try:
+                valid = est.get_params()
+            except Exception:
+                continue
+            routed = {k: v for k, v in (params or {}).items() if k in valid}
+            if routed:
+                est.set_params(**routed)
+        return self
+
     def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series) -> MatchPredictorModel:
         """Fits the outcome classifier and both goal regressors."""
         self.feature_names = list(X.columns)
@@ -341,6 +358,22 @@ class MatchPredictorModel:
         return instance
 
 
+def split_calibration_evaluation(
+    n_rows: int,
+) -> Tuple[slice, slice]:
+    """Splits a validation slice into disjoint calibration/eval halves.
+
+    Fitting a temperature on the same rows used for headline metrics makes
+    reported log-loss optimistic, so calibration takes the first half and
+    metrics the second. Single source of truth shared by benchmarking and
+    hyperparameter tuning.
+    """
+    calibration_n = int(n_rows * 0.5)
+    if n_rows >= 8 and calibration_n >= 3 and n_rows - calibration_n >= 3:
+        return slice(0, calibration_n), slice(calibration_n, None)
+    return slice(0, 0), slice(0, None)
+
+
 def train_and_benchmark_models(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
@@ -361,21 +394,18 @@ def train_and_benchmark_models(
         "Random Forest": MatchPredictorModel("rf"),
         "XGBoost": MatchPredictorModel("xgboost"),
     }
+    # Tuned hyperparameters from models/tuning.json when present;
+    # missing file degrades to the built-in defaults above.
+    from src.tuning import get_tuned_params
+
+    models["Random Forest"].apply_params(get_tuned_params("rf"))
+    models["XGBoost"].apply_params(get_tuned_params("xgboost"))
 
     metrics: Dict[str, Dict[str, Any]] = {}
 
     for name, model in models.items():
         model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
-        # Keep calibration rows separate from benchmark rows.  Fitting a
-        # temperature on the same validation slice used for headline metrics
-        # makes the reported log-loss optimistic.
-        calibration_n = int(len(X_val) * 0.5)
-        if len(X_val) >= 8 and calibration_n >= 3 and len(X_val) - calibration_n >= 3:
-            calibration_slice = slice(0, calibration_n)
-            evaluation_slice = slice(calibration_n, None)
-        else:
-            calibration_slice = slice(0, 0)
-            evaluation_slice = slice(0, None)
+        calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
         if calibration_slice.stop:
             try:
                 model.calibrate_temperature(X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice])

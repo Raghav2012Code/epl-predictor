@@ -1,0 +1,30 @@
+{
+  "metric": "rps",
+  "seed": 42,
+  "n_trials": 40,
+  "models": {
+    "rf": {
+      "params": {
+        "n_estimators": 450,
+        "max_depth": 11,
+        "min_samples_leaf": 2
+      },
+      "value": 0.2072370481258488,
+      "trials": 40,
+      "metric": "rps"
+    },
+    "xgboost": {
+      "params": {
+        "n_estimators": 400,
+        "max_depth": 3,
+        "learning_rate": 0.012046476808538896,
+        "subsample": 0.7632555128972418,
+        "colsample_bytree": 0.6400124298607971,
+        "reg_lambda": 1.755538553983262
+      },
+      "value": 0.20838843893547696,
+      "trials": 40,
+      "metric": "rps"
+    }
+  }
+}

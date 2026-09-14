@@ -26,6 +26,27 @@ MONO_CMAP = LinearSegmentedColormap.from_list(
 )
 
 
+def ranked_probability_score(y_true, probas) -> float:
+    """Ranked Probability Score for ordered Home/Draw/Away outcomes.
+
+    Classes are ordered Away(0) < Draw(1) < Home(2); RPS averages the
+    squared error of cumulative (threshold) forecasts, so near-misses
+    (predicted Home, actual Draw) score better than far misses. Lower
+    is better.
+    """
+    y = np.asarray(list(y_true), dtype=int).ravel()
+    proba = np.asarray(probas, dtype=float)
+    if proba.ndim != 2 or len(y) != len(proba):
+        raise ValueError("probas must be an (N, K) matrix matching y_true.")
+    n_classes = proba.shape[1]
+    if n_classes < 2:
+        raise ValueError("RPS needs at least 2 ordered classes.")
+    thresholds = np.arange(n_classes - 1)
+    cum_pred = np.cumsum(proba, axis=1)[:, thresholds]
+    cum_true = (y[:, None] <= thresholds[None, :]).astype(float)
+    return float(np.mean(np.sum((cum_pred - cum_true) ** 2, axis=1)) / (n_classes - 1))
+
+
 def plot_feature_importance(
     rf_importances: pd.Series,
     xgb_importances: pd.Series,
