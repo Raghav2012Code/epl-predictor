@@ -126,6 +126,27 @@ OUTCOME_NAMES = {0: "Away Win", 1: "Draw", 2: "Home Win"}
 OUTCOME_CODES = {0: "A", 1: "D", 2: "H"}
 
 
+def _fit_with_weights(estimator, X, y, sample_weight) -> None:
+    """Fits one estimator, routing sample weights through Pipelines.
+
+    Plain estimators take ``sample_weight`` directly; sklearn Pipelines
+    need the ``<step>__sample_weight`` prefix (here ``clf__``). Falls
+    back to unweighted fit when neither is accepted.
+    """
+    if sample_weight is None:
+        estimator.fit(X, y)
+        return
+    try:
+        estimator.fit(X, y, sample_weight=sample_weight)
+        return
+    except (TypeError, ValueError):
+        pass
+    try:
+        estimator.fit(X, y, clf__sample_weight=sample_weight)
+    except (TypeError, ValueError):
+        estimator.fit(X, y)
+
+
 class MatchPredictorModel:
     """Wrapper encapsulating an outcome classifier and home/away goal regressors."""
 
@@ -305,18 +326,18 @@ class MatchPredictorModel:
                 est.set_params(**routed)
         return self
 
-    def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series) -> MatchPredictorModel:
+    def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series, sample_weight=None) -> MatchPredictorModel:
         """Fits the outcome classifier and all four goal regressors."""
         self.feature_names = list(X.columns)
-        self.classifier.fit(X, y_outcome)
-        self.home_regressor.fit(X, y_hg)
-        self.away_regressor.fit(X, y_ag)
+        _fit_with_weights(self.classifier, X, y_outcome, sample_weight)
+        self.home_regressor.fit(X, y_hg, sample_weight=sample_weight)
+        self.away_regressor.fit(X, y_ag, sample_weight=sample_weight)
         # Supremacy/total heads derive from the same goal targets (no new
         # plumbing): supremacy is signed, totals are counts.
         y_sup = np.asarray(y_hg, dtype=float) - np.asarray(y_ag, dtype=float)
         y_tot = np.asarray(y_hg, dtype=float) + np.asarray(y_ag, dtype=float)
-        self.supremacy_regressor.fit(X, y_sup)
-        self.totals_regressor.fit(X, y_tot)
+        self.supremacy_regressor.fit(X, y_sup, sample_weight=sample_weight)
+        self.totals_regressor.fit(X, y_tot, sample_weight=sample_weight)
         # Fit goal bias correction on training means (guarded, bounded).
         try:
             pred_h = np.maximum(0.05, np.asarray(self.home_regressor.predict(X), dtype=float))
@@ -702,15 +723,27 @@ def train_and_benchmark_models(
 
     metrics: Dict[str, Dict[str, Any]] = {}
 
+    # Recency decay: recent seasons teach current strength (None = uniform).
+    from src.config import get_config as _get_cfg_weights
+    from src.feature_engineering import recency_weights as _recency_weights
+
+    _half_life = float(_get_cfg_weights()["model"].get("recency_half_life_days", 730))
+    _train_weights = _recency_weights(
+        train_df["date"] if "date" in train_df.columns else None,
+        half_life_days=_half_life,
+    )
+
     for name, model in models.items():
-        model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
+        model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag,
+                  sample_weight=_train_weights)
         metrics[name] = _score_benchmark_model(
             model, X_val, y_val_outcome, y_val_hg, y_val_ag
         )
 
     # Stacked ensemble: level-0 members fit on train rows, meta-learner
     # fit on the calibration slice only; scored on the same eval slice.
-    stacked = train_stacked_ensemble(train_df, val_df, feature_cols)
+    stacked = train_stacked_ensemble(train_df, val_df, feature_cols,
+                                     sample_weight=_train_weights)
     models["Stacked"] = stacked
     metrics["Stacked"] = _score_benchmark_model(
         stacked, X_val, y_val_outcome, y_val_hg, y_val_ag
@@ -743,22 +776,28 @@ class EloPoissonModel:
         self.is_fitted: bool = False
 
     def fit(
-        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series
+        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series,
+        sample_weight=None,
     ) -> EloPoissonModel:
         """Fits league means (train only) and the Elo slope via Poisson NLL."""
         self.feature_names = list(X.columns)
         true_h = np.asarray(y_hg, dtype=float)
         true_a = np.asarray(y_ag, dtype=float)
-        self.mu_h = float(np.mean(true_h))
-        self.mu_a = float(np.mean(true_a))
+        if sample_weight is None:
+            weights = np.ones(len(true_h))
+        else:
+            weights = np.asarray(sample_weight, dtype=float)
+            weights = weights / max(1e-12, weights.mean())
+        self.mu_h = float(np.sum(weights * true_h) / max(1e-12, weights.sum()))
+        self.mu_a = float(np.sum(weights * true_a) / max(1e-12, weights.sum()))
         gap = (X["home_elo"].to_numpy(dtype=float) - X["away_elo"].to_numpy(dtype=float)) / 400.0
         best_beta, best_nll = 1.0, float("inf")
         for beta in np.arange(0.0, 2.0 + 1e-9, 0.05):
             lam_h = np.maximum(0.05, self.mu_h * np.exp(beta * gap))
             lam_a = np.maximum(0.05, self.mu_a * np.exp(-beta * gap))
             nll = float(
-                np.sum(lam_h - true_h * np.log(lam_h))
-                + np.sum(lam_a - true_a * np.log(lam_a))
+                np.sum(weights * (lam_h - true_h * np.log(lam_h)))
+                + np.sum(weights * (lam_a - true_a * np.log(lam_a)))
             )
             if nll < best_nll:
                 best_nll, best_beta = nll, float(beta)
@@ -876,7 +915,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         return self
 
     def fit(
-        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series
+        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series,
+        sample_weight=None,
     ) -> StackedEnsembleModel:
         """Refits members on new data; meta weights stay frozen."""
         self.feature_names = list(X.columns)
@@ -885,7 +925,7 @@ class StackedEnsembleModel(MatchPredictorModel):
             spec = self.member_specs.get(key, {})
             if hasattr(member, "apply_params"):
                 member.apply_params(spec)
-            member.fit(X, y_outcome, y_hg, y_ag)
+            member.fit(X, y_outcome, y_hg, y_ag, sample_weight=sample_weight)
         self.is_fitted = True
         return self
 
@@ -973,9 +1013,11 @@ def _fit_and_calibrate_member(
     y_train_ag: pd.Series,
     X_cal: pd.DataFrame,
     y_cal: pd.Series,
+    sample_weight=None,
 ) -> Any:
     """Fits one member on train rows and calibrates it on the cal slice."""
-    member.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
+    member.fit(X_train, y_train_outcome, y_train_hg, y_train_ag,
+               sample_weight=sample_weight)
     if len(X_cal) > 0:
         try:
             member.calibrate_temperature(X_cal, y_cal)
@@ -989,6 +1031,7 @@ def train_stacked_ensemble(
     val_df: pd.DataFrame,
     feature_cols: List[str],
     n_oof_splits: int = 5,
+    sample_weight=None,
 ) -> StackedEnsembleModel:
     """Builds the stacked ensemble with honest out-of-fold meta training.
 
@@ -1011,12 +1054,14 @@ def train_stacked_ensemble(
     y_cal = val_df["target_outcome"].iloc[calibration_slice] if calibration_slice.stop else val_df["target_outcome"].iloc[0:0]
 
     n_members = len(STACK_MEMBER_ORDER)
+    sw_full = None if sample_weight is None else np.asarray(sample_weight, dtype=float)
     # Production members fit first: they serve degenerate OOF folds below
     # (micro-frames with < 3 classes, synthetic-only) and are refit-free.
     members = _build_level_zero_members()
     for key in STACK_MEMBER_ORDER:
         _fit_and_calibrate_member(
-            members[key], X_train, y_train_outcome, y_train_hg, y_train_ag, X_cal, y_cal
+            members[key], X_train, y_train_outcome, y_train_hg, y_train_ag, X_cal, y_cal,
+            sample_weight=sw_full,
         )
 
     oof_probas = np.zeros((len(X_train), 3 * n_members))
@@ -1031,12 +1076,14 @@ def train_stacked_ensemble(
             )
             continue
         fold_members = _build_level_zero_members()
+        sw_fold = None if sw_full is None else sw_full[np.asarray(train_idx)]
         for key in STACK_MEMBER_ORDER:
             _fit_and_calibrate_member(
                 fold_members[key],
                 X_train.iloc[train_idx], y_train_outcome.iloc[train_idx],
                 y_train_hg.iloc[train_idx], y_train_ag.iloc[train_idx],
                 X_cal, y_cal,
+                sample_weight=sw_fold,
             )
         oof_probas[held_idx] = np.concatenate(
             [np.asarray(fold_members[key].predict_outcome_proba(X_train.iloc[held_idx]))

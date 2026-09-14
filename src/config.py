@@ -42,6 +42,7 @@ _DEFAULTS: Dict[str, Any] = {
         "calibration_grid_max": 3.0,
         "calibration_grid_step": 0.05,
         "odds_mask_rate": 0.15,
+        "recency_half_life_days": 730,
     },
 }
 

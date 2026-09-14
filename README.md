@@ -9,15 +9,15 @@ The repository has two entry points:
 
 ## What the model does
 
-The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
+The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, fixture congestion, away-travel distance, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). Training rows carry exponential recency weights. A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
 
 The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for temperature calibration; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.5% | 0.431 | 1.014 | 0.207 | 0.90 | 59.5% | Production |
-| XGBoost | 49.6% | 0.390 | 1.026 | 0.208 | 0.89 | 57.2% | Benchmark |
-| Stacked | 49.8% | 0.380 | 1.017 | 0.208 | 0.90 | 55.5% | Benchmark |
+| Random Forest | 45.1% | 0.397 | 1.010 | 0.205 | 0.91 | 58.5% | Production |
+| XGBoost | 50.4% | 0.384 | 1.028 | 0.209 | 0.90 | 56.4% | Benchmark |
+| Stacked | 49.4% | 0.377 | 1.016 | 0.208 | 0.90 | 55.1% | Benchmark |
 
 Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on accuracy; Random Forest keeps production on RPS.
 
@@ -106,7 +106,7 @@ cd web
 npm run build
 ```
 
-The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 63 passing tests.
+The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 70 passing tests.
 
 ## Repository layout
 

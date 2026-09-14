@@ -25,4 +25,8 @@ model:
   # Fraction of training rows whose market features are masked to neutral
   # (odds_missing=1). Teaches the model the no-market regime so serving
   # rows without live odds behave sanely. Seeded; deterministic.
+  # Exponential training-sample decay by age (days halving time). Recent
+  # seasons teach current strength; ancient ones stabilize estimates.
+  # Falsy disables (uniform weights).
+  recency_half_life_days: 730
   odds_mask_rate: 0.15

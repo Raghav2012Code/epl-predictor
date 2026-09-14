@@ -243,7 +243,8 @@ def _mini_odds_frame(dates):
 def test_feature_columns_include_market_signals():
     cols = get_feature_column_names()
     assert cols[-6:] == ODDS_FEATURE_COLUMNS
-    assert len(cols) == 84
+    assert len(cols) == 88
+    assert "away_travel_km" in cols
 
 
 def test_engineered_dataset_joins_odds():

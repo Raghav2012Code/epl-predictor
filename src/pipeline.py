@@ -183,11 +183,19 @@ class PremierLeaguePredictionPipeline:
 
         # Re-train best model on 100% of historical data for maximum forecasting accuracy
         logger.info("      - Refitting best model on full historical dataset for upcoming forecasts...")
+        from src.config import get_config as _get_cfg_refit
+        from src.feature_engineering import recency_weights as _recency_weights_refit
+
+        _refit_weights = _recency_weights_refit(
+            self.engineered_df["date"],
+            half_life_days=float(_get_cfg_refit()["model"].get("recency_half_life_days", 730)),
+        )
         self.best_model.fit(
             self.engineered_df[self.feature_cols],
             self.engineered_df["target_outcome"],
             self.engineered_df["target_home_goals"],
             self.engineered_df["target_away_goals"],
+            sample_weight=_refit_weights,
         )
         self.save_model(DEFAULT_MODEL_PATH)
 

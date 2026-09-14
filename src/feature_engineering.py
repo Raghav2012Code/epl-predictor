@@ -34,6 +34,7 @@ def _chronological(df: pd.DataFrame, *extra_keys: str) -> pd.DataFrame:
 # league-average priors, NOT dataset medians (which would leak future info).
 LEAGUE_DEFAULTS: Dict[str, float] = {
     "rest_days": 7.0,
+    "congestion_14d": 0.0,
     "roll_goals_for": 1.35,
     "roll_goals_against": 1.35,
     "roll_goal_diff": 0.0,
@@ -48,6 +49,82 @@ LEAGUE_DEFAULTS: Dict[str, float] = {
     "h2h_goal_diff": 0.0,
     "h2h_matches_count": 0.0,
 }
+
+# Stadium coordinates (decimal degrees, verified against Wikipedia infobox
+# data; 2dp is ~1km precision, ample for a travel-fatigue feature).
+# Unknown clubs fall back to AWAY_TRAVEL_FALLBACK_KM (league-average trip).
+STADIUM_COORDS: Dict[str, Tuple[float, float]] = {
+    "Arsenal": (51.56, -0.11),
+    "Aston Villa": (52.51, -1.88),
+    "Bournemouth": (50.74, -1.84),
+    "Brentford": (51.49, -0.29),
+    "Brighton": (50.86, -0.08),
+    "Burnley": (53.79, -2.23),
+    "Cardiff": (51.47, -3.20),
+    "Chelsea": (51.48, -0.19),
+    "Coventry": (52.45, -1.50),
+    "Crystal Palace": (51.40, -0.09),
+    "Everton": (53.44, -2.97),
+    "Fulham": (51.48, -0.22),
+    "Huddersfield": (53.65, -1.77),
+    "Hull": (53.75, -0.37),
+    "Ipswich": (52.06, 1.15),
+    "Leeds": (53.78, -1.57),
+    "Leicester": (52.62, -1.14),
+    "Liverpool": (53.43, -2.96),
+    "Luton": (51.88, -0.43),
+    "Manchester City": (53.48, -2.20),
+    "Manchester United": (53.46, -2.29),
+    "Newcastle": (54.98, -1.62),
+    "Norwich": (52.62, 1.31),
+    "Nottingham Forest": (52.94, -1.13),
+    "Sheffield United": (53.37, -1.47),
+    "Southampton": (50.91, -1.39),
+    "Sunderland": (54.91, -1.39),
+    "Tottenham": (51.60, -0.07),
+    "Watford": (51.65, -0.40),
+    "West Brom": (52.51, -1.96),
+    "West Ham": (51.54, -0.02),
+    "Wolves": (52.59, -2.13),
+}
+
+AWAY_TRAVEL_FALLBACK_KM = 180.0
+
+
+def haversine_km(home_team: str, away_team: str) -> float:
+    """One-way away-team travel distance between home stadiums (km).
+
+    Static geography: zero leakage by construction. Unknown clubs return
+    the league-average fallback instead of crashing.
+    """
+    home = STADIUM_COORDS.get(home_team)
+    away = STADIUM_COORDS.get(away_team)
+    if home is None or away is None:
+        return AWAY_TRAVEL_FALLBACK_KM
+    lat1, lon1 = np.radians(home)
+    lat2, lon2 = np.radians(away)
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    h = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
+    return float(2.0 * 6371.0 * np.arcsin(np.sqrt(h)))
+
+
+def recency_weights(dates, half_life_days: float = 730.0, ref=None):
+    """Exponential sample weights by age: 0.5 ** (age_days / half_life).
+
+    Anchored at the max date by default (deterministic given data).
+    Returns None when disabled (half_life_days falsy/non-positive) or when
+    no dates are available (synthetic frames without a date column).
+    """
+    if not half_life_days or half_life_days <= 0:
+        return None
+    if dates is None:
+        return None
+    stamps = pd.to_datetime(pd.Series(list(dates))).reset_index(drop=True)
+    ref_stamp = pd.to_datetime(ref) if ref is not None else stamps.max()
+    age_days = (ref_stamp - stamps).dt.total_seconds() / (24 * 3600)
+    age_days = age_days.clip(lower=0.0).to_numpy(dtype=float)
+    return np.power(0.5, age_days / float(half_life_days))
+
 
 # Historical baseline Elo ratings & power parameters across 2020-2026
 BASE_ELO: Dict[str, float] = {
@@ -397,6 +474,20 @@ def compute_team_rolling_features(team_df: pd.DataFrame) -> pd.DataFrame:
     team_df["rest_days"] = (team_df["date"] - team_df["prev_date"]).dt.total_seconds() / (24 * 3600)
     team_df["rest_days"] = team_df["rest_days"].fillna(7.0).clip(lower=1.0, upper=30.0)
 
+    # Congestion: prior matches in the trailing 14-day window (shift-safe:
+    # only rows strictly before the current one are counted).
+    team_vals = team_df["team"].values
+    date_vals = team_df["date"].values
+    congestion = np.zeros(len(team_df), dtype=int)
+    start = 0
+    for end in range(1, len(team_df) + 1):
+        if end == len(team_df) or team_vals[end] != team_vals[start]:
+            block = date_vals[start:end]
+            left = np.searchsorted(block, block - np.timedelta64(14, "D"))
+            congestion[start:end] = np.arange(end - start) - left
+            start = end
+    team_df["congestion_14d"] = congestion
+
     # Rolling overall metrics
     for w in WINDOWS:
         for m in metrics:
@@ -566,7 +657,7 @@ def build_engineered_dataset(
     away_feats = team_features[team_features["is_home"] == 0].copy()
 
     # Prefix columns
-    feat_cols = [c for c in home_feats.columns if c.startswith("roll_") or c.startswith("venue_roll_") or c == "rest_days"]
+    feat_cols = [c for c in home_feats.columns if c.startswith("roll_") or c.startswith("venue_roll_") or c in ("rest_days", "congestion_14d")]
 
     home_rename = {c: f"home_{c}" for c in feat_cols}
     away_rename = {c: f"away_{c}" for c in feat_cols}
@@ -598,6 +689,12 @@ def build_engineered_dataset(
         merged[f"diff_roll_possession_{w}"] = merged[f"home_roll_possession_{w}"] - merged[f"away_roll_possession_{w}"]
 
     merged["diff_rest_days"] = merged["home_rest_days"] - merged["away_rest_days"]
+    merged["diff_congestion_14d"] = merged["home_congestion_14d"] - merged["away_congestion_14d"]
+
+    # Away-team travel distance from static stadium geography (zero leakage).
+    merged["away_travel_km"] = [
+        haversine_km(ht, at) for ht, at in zip(merged["home_team"], merged["away_team"])
+    ]
 
     # 5. Pre-kickoff market signals, joined on (date, home, away).
     # Unmatched rows stay NaN here and are neutral-filled + flagged below.
@@ -699,6 +796,7 @@ def get_feature_column_names() -> List[str]:
     # Home & Away rolling metrics
     for side in ["home", "away"]:
         cols.append(f"{side}_rest_days")
+        cols.append(f"{side}_congestion_14d")
         for w in WINDOWS:
             for m in ["goals_for", "goals_against", "goal_diff", "shots_for", "shots_target_for", "possession", "points"]:
                 cols.append(f"{side}_roll_{m}_{w}")
@@ -715,9 +813,13 @@ def get_feature_column_names() -> List[str]:
             f"diff_roll_possession_{w}",
         ])
     cols.append("diff_rest_days")
+    cols.append("diff_congestion_14d")
 
     # H2H features
     cols.extend(["h2h_home_win_rate", "h2h_goal_diff", "h2h_matches_count"])
+
+    # Away-team travel distance (static geography, leakage-free)
+    cols.append("away_travel_km")
 
     # Pre-kickoff bookmaker market signals (neutral-filled when unavailable)
     cols.extend(ODDS_FEATURE_COLUMNS)
@@ -822,6 +924,7 @@ def build_fixture_features(
 
         if sub.empty:
             stats["rest_days"] = 7.0
+            stats["congestion_14d"] = 0
             for w in WINDOWS:
                 stats[f"roll_goals_for_{w}"] = p_info["gf_baseline"]
                 stats[f"roll_goals_against_{w}"] = p_info["ga_baseline"]
@@ -838,6 +941,11 @@ def build_fixture_features(
         last_date = sub["date"].max()
         rest = (match_date - last_date).total_seconds() / (24 * 3600)
         stats["rest_days"] = float(np.clip(rest, 1.0, 30.0))
+        # Congestion mirrors training: prior team matches in [T-14d, T).
+        window_start = match_date - pd.Timedelta(days=14)
+        stats["congestion_14d"] = int(
+            ((sub["date"] >= window_start) & (sub["date"] < match_date)).sum()
+        )
 
         # NOTE (train/serve consistency): training rolling features in
         # compute_team_rolling_features use raw observed means, so serving
@@ -901,6 +1009,10 @@ def build_fixture_features(
         feature_dict[f"diff_roll_shots_target_{w}"] = feature_dict[f"home_roll_shots_target_for_{w}"] - feature_dict[f"away_roll_shots_target_for_{w}"]
         feature_dict[f"diff_roll_possession_{w}"] = feature_dict[f"home_roll_possession_{w}"] - feature_dict[f"away_roll_possession_{w}"]
     feature_dict["diff_rest_days"] = feature_dict["home_rest_days"] - feature_dict["away_rest_days"]
+    feature_dict["diff_congestion_14d"] = (
+        feature_dict["home_congestion_14d"] - feature_dict["away_congestion_14d"]
+    )
+    feature_dict["away_travel_km"] = haversine_km(home_team, away_team)
 
     # H2H
     h2h_sub = history[

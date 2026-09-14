@@ -97,8 +97,16 @@ def evaluate_params(
     parts = _slice_frames(train_df, val_df, feature_cols)
     if len(parts["X_eval"]) == 0:
         return float("inf")
+    from src.config import get_config as _get_cfg_tune
+    from src.feature_engineering import recency_weights as _recency_weights_tune
+
+    _sw = _recency_weights_tune(
+        train_df["date"] if "date" in train_df.columns else None,
+        half_life_days=float(_get_cfg_tune()["model"].get("recency_half_life_days", 730)),
+    )
     model = MatchPredictorModel(model_type).apply_params(params)
-    model.fit(parts["X_train"], parts["y_outcome"], parts["y_hg"], parts["y_ag"])
+    model.fit(parts["X_train"], parts["y_outcome"], parts["y_hg"], parts["y_ag"],
+              sample_weight=_sw)
     if len(parts["X_cal"]) > 0:
         try:
             model.calibrate_temperature(parts["X_cal"], parts["y_cal"])

@@ -26,8 +26,10 @@ def _frames(n_train=120, n_val=40, seed=5):
         X["away_elo"] = elos[start:start + n, 1]
         X["elo_diff"] = (X["home_elo"] + 65.0) - X["away_elo"]
         X["odds_missing"] = 0.0
-        hg = rng.poisson(1.4, size=n)
-        ag = rng.poisson(1.1, size=n)
+        # Goals carry a real Elo signal so slope fitting is meaningful.
+        strength = (X["home_elo"].values - X["away_elo"].values) / 400.0
+        hg = rng.poisson(np.maximum(0.3, 1.4 + strength))
+        ag = rng.poisson(np.maximum(0.3, 1.1 - strength))
         res = np.where(hg > ag, 2, np.where(hg < ag, 0, 1))
         df = X.copy()
         df["target_outcome"] = res
