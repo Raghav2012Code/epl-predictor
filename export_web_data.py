@@ -69,6 +69,12 @@ FEATURE_CATEGORIES: Dict[str, str] = {
     "h2h_goal_diff": "H2H",
     "h2h_matches_count": "H2H",
     "diff_rest_days": "Fatigue",
+    "odds_implied_home": "Market",
+    "odds_implied_draw": "Market",
+    "odds_implied_away": "Market",
+    "odds_overround": "Market",
+    "odds_move_home": "Market",
+    "odds_missing": "Market",
 }
 
 FEATURE_DESCRIPTIONS: Dict[str, str] = {
@@ -85,6 +91,12 @@ FEATURE_DESCRIPTIONS: Dict[str, str] = {
     "h2h_goal_diff": "Head-to-head average goal difference",
     "h2h_matches_count": "Head-to-head sample size (prior meetings)",
     "diff_rest_days": "Rest-day differential (home minus away)",
+    "odds_implied_home": "Market-implied home win probability (overround-stripped closing odds)",
+    "odds_implied_draw": "Market-implied draw probability (overround-stripped closing odds)",
+    "odds_implied_away": "Market-implied away win probability (overround-stripped closing odds)",
+    "odds_overround": "Bookmaker margin embedded in the closing odds",
+    "odds_move_home": "Same-book closing-minus-opening move in home probability (steam)",
+    "odds_missing": "No pre-kickoff market available for this fixture",
 }
 
 
@@ -139,9 +151,7 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
     best = pipeline.best_model_name
 
     models_payload: List[Dict[str, Any]] = []
-    for name in ("Random Forest", "XGBoost"):
-        if name not in metrics:
-            continue
+    for name in metrics:
         m = metrics[name]
         models_payload.append(
             {

@@ -1,7 +1,9 @@
 """Machine learning models module for Premier League outcome and scoreline forecasting.
 
-Implements Random Forest and XGBoost classifiers (Win / Draw / Loss)
-and goal regressors (Home Goals / Away Goals) with side-by-side benchmarking.
+Implements Random Forest, XGBoost, and multinomial logistic-regression
+classifiers (Win / Draw / Loss), goal regressors (Home Goals / Away
+Goals), a pure-statistical Elo-Poisson member, and a stacked ensemble
+with a meta-learner, with side-by-side benchmarking.
 """
 
 from __future__ import annotations
@@ -14,7 +16,40 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier, XGBRegressor
+
+
+def apply_temperature_scaling(probas: np.ndarray, t: float) -> np.ndarray:
+    """Applies temperature scaling: softmax(log(p)/T) row-wise."""
+    t = max(0.05, float(t))
+    logp = np.log(np.clip(np.asarray(probas, dtype=float), 1e-15, 1.0))
+    scaled = logp / t
+    scaled -= scaled.max(axis=1, keepdims=True)
+    exp = np.exp(scaled)
+    return exp / exp.sum(axis=1, keepdims=True)
+
+
+def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
+    """Aligns predict_proba output to the full [Away, Draw, Home] columns.
+
+    Estimators fit on degenerate slices may have seen only a subset of
+    classes and return fewer columns; without alignment every downstream
+    consumer (blend, RPS, draw rule) breaks. Missing classes get zero
+    mass and rows renormalize.
+    """
+    probas = np.asarray(probas, dtype=float)
+    class_list = [int(c) for c in np.asarray(classes).ravel().tolist()]
+    if probas.shape[1] == n_classes and class_list == list(range(n_classes)):
+        return probas
+    aligned = np.zeros((probas.shape[0], n_classes))
+    for col, cls in enumerate(class_list):
+        if 0 <= cls < n_classes and col < probas.shape[1]:
+            aligned[:, cls] = probas[:, col]
+    sums = aligned.sum(axis=1, keepdims=True)
+    return aligned / np.maximum(sums, 1e-12)
 
 # Outcome decision thresholds. Pure argmax on sharp 3-way probabilities almost
 # never selects draws (0/380 in practice), which is indefensible for the EPL
@@ -22,17 +57,16 @@ from xgboost import XGBClassifier, XGBRegressor
 # probability is therefore called a draw. This rule is the SINGLE source of
 # truth: predict_scoreline, pipeline forecasts, and validation metrics all
 # use favor_outcome_from_proba so scorelines always agree with outcomes.
-# Retuned 2026-09-14 per market regime on the disjoint eval slice
-# (grid margin 0.02-0.16, min 0.24-0.34; objective eval accuracy subject
-# to draw share 18-27%). Market-present: 0.16/0.28 (44.8% acc, 23.8%
-# draws, n=404). No-market: 0.12/0.28 (48.5% acc; 16.2% draws on the
-# 68 masked eval rows and ~21% on the 350-row no-market forecast slate
-# — inside the EPL band on both, unlike 0.12/0.24 which hits 37% on
-# the slate). Revisit in Phase 7 (RPS-based).
+# Retuned 2026-09-14 per market regime for the TUNED production forest
+# (full margin x min grid on the disjoint eval slice + 350-row forecast
+# slate; objective eval accuracy subject to 18-27% draws on BOTH).
+# Market-present: 0.16/0.28 (45.8% acc, 21.3% draws, n=404).
+# No-market: 0.12/0.26 (51.5% acc, 20.6% draws on 68 masked eval rows;
+# ~22% on the no-market forecast slate). Revisit in Phase 7 (RPS-based).
 DRAW_MARGIN = 0.16
 DRAW_MIN_PROB = 0.28
 DRAW_MARGIN_NO_MARKET = 0.12
-DRAW_MIN_PROB_NO_MARKET = 0.28
+DRAW_MIN_PROB_NO_MARKET = 0.26
 
 
 def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
@@ -82,6 +116,39 @@ class MatchPredictorModel:
                 n_estimators=250,
                 max_depth=6,
                 min_samples_leaf=4,
+                random_state=42,
+                n_jobs=-1,
+            )
+        elif self.model_type == "logreg":
+            # Linear member for the stack: standardized multinomial logistic
+            # regression (C fixed; the meta-learner, not this member, is what
+            # gets tuned). Poisson regressors shared with the xgb branch.
+            self.classifier = Pipeline([
+                ("scaler", StandardScaler()),
+                ("clf", LogisticRegression(
+                    solver="lbfgs",
+                    C=1.0,
+                    max_iter=2000,
+                    random_state=42,
+                )),
+            ])
+            self.home_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="count:poisson",
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.away_regressor = XGBRegressor(
+                n_estimators=200,
+                max_depth=3,
+                learning_rate=0.03,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                objective="count:poisson",
                 random_state=42,
                 n_jobs=-1,
             )
@@ -171,8 +238,9 @@ class MatchPredictorModel:
     def calibrate_temperature(self, X_val: pd.DataFrame, y_val: pd.Series) -> float:
         """Fits temperature scaling on validation blended probabilities.
 
-        Grid-searches T in [0.5, 3.0] to minimize multi-class log-loss.
-        Returns the fitted temperature and stores it for inference.
+        Grid-searches T over the configured calibration grid to minimize
+        multi-class log-loss. Returns the fitted temperature and stores
+        it for inference.
         """
         probas = self.predict_outcome_proba(X_val, apply_temperature=False)
         y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
@@ -197,14 +265,10 @@ class MatchPredictorModel:
     @staticmethod
     def _apply_temperature(probas: np.ndarray, t: float) -> np.ndarray:
         """Applies temperature scaling: softmax(log(p)/T) row-wise."""
-        t = max(0.05, float(t))
-        logp = np.log(np.clip(probas, 1e-15, 1.0))
-        scaled = logp / t
-        scaled -= scaled.max(axis=1, keepdims=True)
-        exp = np.exp(scaled)
-        return exp / exp.sum(axis=1, keepdims=True)
+        return apply_temperature_scaling(probas, t)
 
-    def compute_poisson_grid(self, h_exp: float, a_exp: float, max_goals: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def compute_poisson_grid(h_exp: float, a_exp: float, max_goals: int = 10) -> Tuple[np.ndarray, np.ndarray]:
         """Calculates normalized bivariate Poisson probability grid and outcome probabilities.
 
         Applies Dixon-Coles adjustment for low scores (0-0, 1-0, 0-1, 1-1).
@@ -247,7 +311,9 @@ class MatchPredictorModel:
         Blends multi-class tree probabilities with count Poisson probabilities,
         then applies fitted temperature scaling (if calibrated).
         """
-        clf_probas = self.classifier.predict_proba(X)
+        clf_probas = align_probas(
+            self.classifier.classes_, self.classifier.predict_proba(X)
+        )
         exp_hg, exp_ag = self.predict_expected_goals(X)
 
         from src.config import get_config
@@ -341,10 +407,12 @@ class MatchPredictorModel:
 
     @classmethod
     def load(cls, filepath: str) -> MatchPredictorModel:
-        """Loads a serialized MatchPredictorModel checkpoint from disk."""
+        """Loads a serialized checkpoint from disk (dispatches stacked)."""
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Model checkpoint not found at: {filepath}")
         payload = joblib.load(filepath)
+        if payload.get("model_type") == "stacked":
+            return StackedEnsembleModel.load_stacked(filepath)
         instance = cls(payload["model_type"])
         instance.classifier = payload["classifier"]
         instance.home_regressor = payload["home_regressor"]
@@ -374,12 +442,116 @@ def split_calibration_evaluation(
     return slice(0, 0), slice(0, None)
 
 
+def _score_benchmark_model(
+    model,
+    X_val: pd.DataFrame,
+    y_val_outcome: pd.Series,
+    y_val_hg: pd.Series,
+    y_val_ag: pd.Series,
+) -> Dict[str, Any]:
+    """Calibrates one model and scores it on the disjoint evaluation slice.
+
+    Shared by every benchmarked model (trees and stacked alike) so the
+    numbers stay comparable. Returns the metrics entry, including RPS.
+    """
+    from src.evaluate import ranked_probability_score
+
+    calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
+    if calibration_slice.stop:
+        try:
+            model.calibrate_temperature(
+                X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice]
+            )
+        except Exception:
+            model.calibration_temperature = 1.0
+
+    # Predictions on validation (calibrated)
+    eval_X = X_val.iloc[evaluation_slice]
+    eval_y_outcome = y_val_outcome.iloc[evaluation_slice]
+    eval_y_hg = y_val_hg.iloc[evaluation_slice]
+    eval_y_ag = y_val_ag.iloc[evaluation_slice]
+    val_proba = model.predict_outcome_proba(eval_X)
+    # Operational decision rule (draw-aware, regime-aware), so reported
+    # accuracy/F1 reflect what the pipeline actually publishes.
+    _missing = eval_X["odds_missing"].values if "odds_missing" in eval_X.columns else np.zeros(len(eval_X))
+    val_preds = np.array([favor_outcome_from_proba(p, odds_missing=m)
+                          for p, m in zip(val_proba, _missing)])
+    exp_hg, exp_ag = model.predict_expected_goals(eval_X)
+    pred_scores = model.predict_scoreline(eval_X)
+    all_pred_scores = model.predict_scoreline(X_val)
+    pred_hg = np.array([s[0] for s in pred_scores])
+    pred_ag = np.array([s[1] for s in pred_scores])
+
+    # Classification metrics
+    acc = float(np.mean(val_preds == eval_y_outcome.values))
+
+    # Multi-class log loss
+    eps = 1e-15
+    clipped_proba = np.clip(val_proba, eps, 1 - eps)
+    # One-hot true outcomes
+    y_val_onehot = np.zeros_like(val_proba)
+    for row_idx, true_cls in enumerate(eval_y_outcome.values):
+        y_val_onehot[row_idx, int(true_cls)] = 1.0
+    log_loss = float(-np.mean(np.sum(y_val_onehot * np.log(clipped_proba), axis=1)))
+
+    # Macro F1
+    f1_scores = []
+    for c in [0, 1, 2]:
+        tp = np.sum((val_preds == c) & (eval_y_outcome.values == c))
+        fp = np.sum((val_preds == c) & (eval_y_outcome.values != c))
+        fn = np.sum((val_preds != c) & (eval_y_outcome.values == c))
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
+        f1_scores.append(f1)
+    macro_f1 = float(np.mean(f1_scores))
+
+    # Goal prediction metrics: MAE on continuous expected goals
+    # (regressor quality). Integer scorelines are evaluated separately via
+    # exact-score / within-1-goal accuracy below.
+    mae_hg = float(np.mean(np.abs(exp_hg - eval_y_hg.values)))
+    mae_ag = float(np.mean(np.abs(exp_ag - eval_y_ag.values)))
+    avg_mae = (mae_hg + mae_ag) / 2.0
+
+    exact_score_acc = float(np.mean((pred_hg == eval_y_hg.values) & (pred_ag == eval_y_ag.values)))
+    within_1_goal = float(
+        np.mean((np.abs(pred_hg - eval_y_hg.values) <= 1) & (np.abs(pred_ag - eval_y_ag.values) <= 1))
+    )
+    rps = float(ranked_probability_score(eval_y_outcome, val_proba))
+
+    return {
+        "accuracy": acc,
+        "log_loss": log_loss,
+        "macro_f1": macro_f1,
+        "rps": rps,
+        "mae_home_goals": mae_hg,
+        "mae_away_goals": mae_ag,
+        "avg_goal_mae": avg_mae,
+        "exact_score_acc": exact_score_acc,
+        "within_1_goal_acc": within_1_goal,
+        "val_preds": val_preds,
+        "val_proba": val_proba,
+        # Keep the historical public shape for callers that use this as a
+        # validation-length diagnostic; metrics themselves use the
+        # calibration-independent evaluation tail below.
+        "pred_scores": all_pred_scores,
+        "eval_pred_scores": pred_scores,
+        "feature_importances": model.get_feature_importances(),
+        "calibration_temperature": model.calibration_temperature,
+        "home_goal_correction": model.home_goal_correction,
+        "away_goal_correction": model.away_goal_correction,
+        "eval_y_outcome": eval_y_outcome.values,
+        "eval_y_home_goals": eval_y_hg.values,
+        "eval_y_away_goals": eval_y_ag.values,
+    }
+
+
 def train_and_benchmark_models(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
     feature_cols: List[str],
 ) -> Tuple[Dict[str, MatchPredictorModel], Dict[str, Dict[str, Any]]]:
-    """Trains both Random Forest and XGBoost models on train_df and benchmarks on val_df."""
+    """Trains Random Forest, XGBoost, and the stacked ensemble on train_df and benchmarks on val_df."""
     X_train = train_df[feature_cols]
     y_train_outcome = train_df["target_outcome"]
     y_train_hg = train_df["target_home_goals"]
@@ -405,89 +577,356 @@ def train_and_benchmark_models(
 
     for name, model in models.items():
         model.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
-        calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
-        if calibration_slice.stop:
-            try:
-                model.calibrate_temperature(X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice])
-            except Exception:
-                model.calibration_temperature = 1.0
-
-        # Predictions on validation (calibrated)
-        eval_X = X_val.iloc[evaluation_slice]
-        eval_y_outcome = y_val_outcome.iloc[evaluation_slice]
-        eval_y_hg = y_val_hg.iloc[evaluation_slice]
-        eval_y_ag = y_val_ag.iloc[evaluation_slice]
-        val_proba = model.predict_outcome_proba(eval_X)
-        # Operational decision rule (draw-aware, regime-aware), so reported
-        # accuracy/F1 reflect what the pipeline actually publishes.
-        _missing = eval_X["odds_missing"].values if "odds_missing" in eval_X.columns else np.zeros(len(eval_X))
-        val_preds = np.array([favor_outcome_from_proba(p, odds_missing=m)
-                              for p, m in zip(val_proba, _missing)])
-        exp_hg, exp_ag = model.predict_expected_goals(eval_X)
-        pred_scores = model.predict_scoreline(eval_X)
-        all_pred_scores = model.predict_scoreline(X_val)
-        pred_hg = np.array([s[0] for s in pred_scores])
-        pred_ag = np.array([s[1] for s in pred_scores])
-
-        # Classification metrics
-        acc = float(np.mean(val_preds == eval_y_outcome.values))
-
-        # Multi-class log loss
-        eps = 1e-15
-        clipped_proba = np.clip(val_proba, eps, 1 - eps)
-        # One-hot true outcomes
-        y_val_onehot = np.zeros_like(val_proba)
-        for row_idx, true_cls in enumerate(eval_y_outcome.values):
-            y_val_onehot[row_idx, int(true_cls)] = 1.0
-        log_loss = float(-np.mean(np.sum(y_val_onehot * np.log(clipped_proba), axis=1)))
-
-        # Macro F1
-        f1_scores = []
-        for c in [0, 1, 2]:
-            tp = np.sum((val_preds == c) & (eval_y_outcome.values == c))
-            fp = np.sum((val_preds == c) & (eval_y_outcome.values != c))
-            fn = np.sum((val_preds != c) & (eval_y_outcome.values == c))
-            prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
-            f1_scores.append(f1)
-        macro_f1 = float(np.mean(f1_scores))
-
-        # Goal prediction metrics: MAE on continuous expected goals
-        # (regressor quality). Integer scorelines are evaluated separately via
-        # exact-score / within-1-goal accuracy below.
-        mae_hg = float(np.mean(np.abs(exp_hg - eval_y_hg.values)))
-        mae_ag = float(np.mean(np.abs(exp_ag - eval_y_ag.values)))
-        avg_mae = (mae_hg + mae_ag) / 2.0
-
-        exact_score_acc = float(np.mean((pred_hg == eval_y_hg.values) & (pred_ag == eval_y_ag.values)))
-        within_1_goal = float(
-            np.mean((np.abs(pred_hg - eval_y_hg.values) <= 1) & (np.abs(pred_ag - eval_y_ag.values) <= 1))
+        metrics[name] = _score_benchmark_model(
+            model, X_val, y_val_outcome, y_val_hg, y_val_ag
         )
 
-        metrics[name] = {
-            "accuracy": acc,
-            "log_loss": log_loss,
-            "macro_f1": macro_f1,
-            "mae_home_goals": mae_hg,
-            "mae_away_goals": mae_ag,
-            "avg_goal_mae": avg_mae,
-            "exact_score_acc": exact_score_acc,
-            "within_1_goal_acc": within_1_goal,
-            "val_preds": val_preds,
-            "val_proba": val_proba,
-            # Keep the historical public shape for callers that use this as a
-            # validation-length diagnostic; metrics themselves use the
-            # calibration-independent evaluation tail below.
-            "pred_scores": all_pred_scores,
-            "eval_pred_scores": pred_scores,
-            "feature_importances": model.get_feature_importances(),
-            "calibration_temperature": model.calibration_temperature,
-            "home_goal_correction": model.home_goal_correction,
-            "away_goal_correction": model.away_goal_correction,
-            "eval_y_outcome": eval_y_outcome.values,
-            "eval_y_home_goals": eval_y_hg.values,
-            "eval_y_away_goals": eval_y_ag.values,
-        }
+    # Stacked ensemble: level-0 members fit on train rows, meta-learner
+    # fit on the calibration slice only; scored on the same eval slice.
+    stacked = train_stacked_ensemble(train_df, val_df, feature_cols)
+    models["Stacked"] = stacked
+    metrics["Stacked"] = _score_benchmark_model(
+        stacked, X_val, y_val_outcome, y_val_hg, y_val_ag
+    )
 
     return models, metrics
+
+
+# Level-0 member order everywhere (meta dims, determinism, docs).
+STACK_MEMBER_ORDER: List[str] = ["rf", "xgb", "logreg", "elopoisson"]
+
+
+class EloPoissonModel:
+    """Pure-statistical member: Elo strength gap -> Poisson goal means.
+
+    Reads only ``home_elo``/``away_elo`` at inference (plus
+    ``odds_missing`` for the shared decision regime, never as a goal
+    predictor). League means and the Elo slope are fit on TRAINING rows
+    only; never validation means, priors, or substitutes.
+    """
+
+    def __init__(self):
+        self.mu_h: float = 1.4
+        self.mu_a: float = 1.1
+        self.beta: float = 1.0
+        self.calibration_temperature: float = 1.0
+        self.home_goal_correction: float = 1.0
+        self.away_goal_correction: float = 1.0
+        self.feature_names: List[str] = []
+        self.is_fitted: bool = False
+
+    def fit(
+        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series
+    ) -> EloPoissonModel:
+        """Fits league means (train only) and the Elo slope via Poisson NLL."""
+        self.feature_names = list(X.columns)
+        true_h = np.asarray(y_hg, dtype=float)
+        true_a = np.asarray(y_ag, dtype=float)
+        self.mu_h = float(np.mean(true_h))
+        self.mu_a = float(np.mean(true_a))
+        gap = (X["home_elo"].to_numpy(dtype=float) - X["away_elo"].to_numpy(dtype=float)) / 400.0
+        best_beta, best_nll = 1.0, float("inf")
+        for beta in np.arange(0.0, 2.0 + 1e-9, 0.05):
+            lam_h = np.maximum(0.05, self.mu_h * np.exp(beta * gap))
+            lam_a = np.maximum(0.05, self.mu_a * np.exp(-beta * gap))
+            nll = float(
+                np.sum(lam_h - true_h * np.log(lam_h))
+                + np.sum(lam_a - true_a * np.log(lam_a))
+            )
+            if nll < best_nll:
+                best_nll, best_beta = nll, float(beta)
+        self.beta = best_beta
+        self.is_fitted = True
+        return self
+
+    def _lambdas(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        """Expected (home, away) goals from the Elo gap (no home-advantage double count)."""
+        gap = (X["home_elo"].to_numpy(dtype=float) - X["away_elo"].to_numpy(dtype=float)) / 400.0
+        lam_h = np.maximum(0.05, self.mu_h * np.exp(self.beta * gap))
+        lam_a = np.maximum(0.05, self.mu_a * np.exp(-self.beta * gap))
+        return lam_h, lam_a
+
+    def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns expected float goals (expected_hg, expected_ag)."""
+        return self._lambdas(X)
+
+    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
+        """Dixon-Coles outcome probabilities from Elo-implied goal means."""
+        rows = []
+        for lam_h, lam_a in zip(*self._lambdas(X)):
+            _, p_poiss = MatchPredictorModel.compute_poisson_grid(
+                float(lam_h), float(lam_a), max_goals=10
+            )
+            rows.append(p_poiss)
+        blended = np.array(rows)
+        if apply_temperature and self.calibration_temperature != 1.0:
+            blended = apply_temperature_scaling(blended, self.calibration_temperature)
+        return blended
+
+    def calibrate_temperature(self, X_val: pd.DataFrame, y_val: pd.Series) -> float:
+        """Fits temperature scaling on validation probabilities (mirror of trees)."""
+        probas = self.predict_outcome_proba(X_val, apply_temperature=False)
+        y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
+        eps = 1e-15
+        from src.config import get_config
+
+        grid_cfg = get_config()["model"]
+        gmin = float(grid_cfg.get("calibration_grid_min", 1.0))
+        gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
+        gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
+        best_t, best_ll = 1.0, float("inf")
+        for t in [round(float(x), 2) for x in np.arange(gmin, gmax + gstep / 2, gstep)]:
+            scaled = apply_temperature_scaling(probas, t)
+            clipped = np.clip(scaled, eps, 1 - eps)
+            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
+            if ll < best_ll:
+                best_ll, best_t = ll, t
+        self.calibration_temperature = float(best_t)
+        return self.calibration_temperature
+
+    def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
+        """Constrained-argmax scorelines consistent with the shared rule."""
+        lam_h, lam_a = self.predict_expected_goals(X)
+        probas = self.predict_outcome_proba(X)
+        missing = X["odds_missing"].values if "odds_missing" in X.columns else np.zeros(len(X))
+        scorelines: List[Tuple[int, int]] = []
+        for i in range(len(X)):
+            grid, _ = MatchPredictorModel.compute_poisson_grid(
+                float(lam_h[i]), float(lam_a[i]), max_goals=10
+            )
+            fav_outcome = favor_outcome_from_proba(probas[i], odds_missing=float(missing[i]))
+            best_s, best_p = (1, 1), -1.0
+            for h in range(11):
+                for a in range(11):
+                    cond = (h > a) if fav_outcome == 2 else ((h == a) if fav_outcome == 1 else (h < a))
+                    if cond and grid[h, a] > best_p:
+                        best_p, best_s = grid[h, a], (h, a)
+            scorelines.append(best_s)
+        return scorelines
+
+    def get_feature_importances(self) -> pd.Series:
+        """No learned feature weights; returns zeros (tree chart uses forests)."""
+        return pd.Series(np.zeros(len(self.feature_names)), index=self.feature_names)
+
+
+class StackedEnsembleModel(MatchPredictorModel):
+    """Stacked ensemble: meta-learner over level-0 member probabilities.
+
+    Members (rf, xgb, logreg, elopoisson) fit on train rows; the
+    multinomial logistic meta-learner fits on the calibration slice only.
+    Expected goals are the mean of member means. ``fit()`` refits members
+    on new data while keeping meta weights frozen (no held-out slice
+    exists at refit time); temperature stays benchmark-fitted like the
+    tree models.
+    """
+
+    def __init__(
+        self,
+        members: Dict[str, Any],
+        meta: Any,
+        member_specs: Optional[Dict[str, Dict[str, Any]]] = None,
+    ):
+        self.model_type = "stacked"
+        self.members = dict(members)
+        self.meta = meta
+        self.member_specs = dict(member_specs or {})
+        self.classifier = None
+        self.home_regressor = None
+        self.away_regressor = None
+        self.feature_names: List[str] = []
+        self.is_fitted: bool = False
+        self.calibration_temperature: float = 1.0
+        self.home_goal_correction: float = 1.0
+        self.away_goal_correction: float = 1.0
+
+    def _stack_probas(self, X: pd.DataFrame) -> np.ndarray:
+        """Concatenates calibrated member probas in STACK_MEMBER_ORDER."""
+        parts = [np.asarray(self.members[key].predict_outcome_proba(X)) for key in STACK_MEMBER_ORDER]
+        return np.concatenate(parts, axis=1)
+
+    def apply_params(self, params: Dict[str, Any]) -> StackedEnsembleModel:
+        """No-op: tuned params live on the members (applied at build)."""
+        return self
+
+    def fit(
+        self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series
+    ) -> StackedEnsembleModel:
+        """Refits members on new data; meta weights stay frozen."""
+        self.feature_names = list(X.columns)
+        for key in STACK_MEMBER_ORDER:
+            member = self.members[key]
+            spec = self.member_specs.get(key, {})
+            if hasattr(member, "apply_params"):
+                member.apply_params(spec)
+            member.fit(X, y_outcome, y_hg, y_ag)
+        self.is_fitted = True
+        return self
+
+    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
+        """Meta-learner probabilities over member probabilities."""
+        stacked = self._stack_probas(X)
+        blended = align_probas(self.meta.classes_, self.meta.predict_proba(stacked))
+        if apply_temperature and self.calibration_temperature != 1.0:
+            blended = self._apply_temperature(blended, self.calibration_temperature)
+        return blended
+
+    def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        """Mean of member expected-goal means."""
+        homes, aways = [], []
+        for key in STACK_MEMBER_ORDER:
+            exp_hg, exp_ag = self.members[key].predict_expected_goals(X)
+            homes.append(np.asarray(exp_hg, dtype=float))
+            aways.append(np.asarray(exp_ag, dtype=float))
+        return np.mean(homes, axis=0), np.mean(aways, axis=0)
+
+    def get_feature_importances(self) -> pd.Series:
+        """Mean importance over members that report any (the forests)."""
+        series = [
+            self.members[key].get_feature_importances()
+            for key in STACK_MEMBER_ORDER
+            if float(np.sum(np.abs(self.members[key].get_feature_importances().values))) > 0
+        ]
+        if not series:
+            return pd.Series(np.zeros(len(self.feature_names)), index=self.feature_names)
+        return pd.concat(series, axis=1).mean(axis=1).sort_values(ascending=False)
+
+    def save(self, filepath: str) -> str:
+        """Serializes members, meta-learner, and metadata via joblib."""
+        if not self.is_fitted:
+            raise ValueError("Cannot save an unfitted StackedEnsembleModel.")
+        os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+        payload = {
+            "model_type": "stacked",
+            "members": self.members,
+            "meta": self.meta,
+            "member_specs": self.member_specs,
+            "feature_names": self.feature_names,
+            "is_fitted": self.is_fitted,
+            "calibration_temperature": self.calibration_temperature,
+            "home_goal_correction": self.home_goal_correction,
+            "away_goal_correction": self.away_goal_correction,
+        }
+        joblib.dump(payload, filepath, compress=3)
+        return filepath
+
+    @classmethod
+    def load_stacked(cls, filepath: str) -> StackedEnsembleModel:
+        """Loads a serialized stacked checkpoint from disk."""
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Model checkpoint not found at: {filepath}")
+        payload = joblib.load(filepath)
+        if payload.get("model_type") != "stacked":
+            raise ValueError(f"Not a stacked checkpoint: {filepath}")
+        instance = cls(payload["members"], payload["meta"], payload.get("member_specs"))
+        instance.feature_names = payload["feature_names"]
+        instance.is_fitted = payload["is_fitted"]
+        instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
+        instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
+        return instance
+
+
+def _build_level_zero_members() -> Dict[str, Any]:
+    """Constructs fresh level-0 members (tuned params where available)."""
+    from src.tuning import get_tuned_params
+
+    return {
+        "rf": MatchPredictorModel("rf").apply_params(get_tuned_params("rf")),
+        "xgb": MatchPredictorModel("xgboost").apply_params(get_tuned_params("xgboost")),
+        "logreg": MatchPredictorModel("logreg"),
+        "elopoisson": EloPoissonModel(),
+    }
+
+
+def _fit_and_calibrate_member(
+    member: Any,
+    X_train: pd.DataFrame,
+    y_train_outcome: pd.Series,
+    y_train_hg: pd.Series,
+    y_train_ag: pd.Series,
+    X_cal: pd.DataFrame,
+    y_cal: pd.Series,
+) -> Any:
+    """Fits one member on train rows and calibrates it on the cal slice."""
+    member.fit(X_train, y_train_outcome, y_train_hg, y_train_ag)
+    if len(X_cal) > 0:
+        try:
+            member.calibrate_temperature(X_cal, y_cal)
+        except Exception:
+            member.calibration_temperature = 1.0
+    return member
+
+
+def train_stacked_ensemble(
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    feature_cols: List[str],
+    n_oof_splits: int = 5,
+) -> StackedEnsembleModel:
+    """Builds the stacked ensemble with honest out-of-fold meta training.
+
+    Level-0 members are fit under TimeSeriesSplit over TRAIN rows only;
+    their out-of-fold probabilities train the meta-learner, so the meta
+    never sees in-sample member outputs. Members are then refit on all
+    train rows (calibrated on the fixed cal slice) for serving. The final
+    evaluation slice is touched only at scoring time.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import TimeSeriesSplit
+
+    X_train = train_df[feature_cols].reset_index(drop=True)
+    y_train_outcome = train_df["target_outcome"].reset_index(drop=True)
+    y_train_hg = train_df["target_home_goals"].reset_index(drop=True)
+    y_train_ag = train_df["target_away_goals"].reset_index(drop=True)
+
+    calibration_slice, _ = split_calibration_evaluation(len(val_df))
+    X_cal = val_df[feature_cols].iloc[calibration_slice] if calibration_slice.stop else val_df[feature_cols].iloc[0:0]
+    y_cal = val_df["target_outcome"].iloc[calibration_slice] if calibration_slice.stop else val_df["target_outcome"].iloc[0:0]
+
+    n_members = len(STACK_MEMBER_ORDER)
+    # Production members fit first: they serve degenerate OOF folds below
+    # (micro-frames with < 3 classes, synthetic-only) and are refit-free.
+    members = _build_level_zero_members()
+    for key in STACK_MEMBER_ORDER:
+        _fit_and_calibrate_member(
+            members[key], X_train, y_train_outcome, y_train_hg, y_train_ag, X_cal, y_cal
+        )
+
+    oof_probas = np.zeros((len(X_train), 3 * n_members))
+    splitter = TimeSeriesSplit(n_splits=max(2, n_oof_splits))
+    for train_idx, held_idx in splitter.split(X_train):
+        if len(np.unique(y_train_outcome.iloc[train_idx].values)) < 3:
+            # Degenerate fold: reuse full-train members for these rows.
+            oof_probas[held_idx] = np.concatenate(
+                [np.asarray(members[key].predict_outcome_proba(X_train.iloc[held_idx]))
+                 for key in STACK_MEMBER_ORDER],
+                axis=1,
+            )
+            continue
+        fold_members = _build_level_zero_members()
+        for key in STACK_MEMBER_ORDER:
+            _fit_and_calibrate_member(
+                fold_members[key],
+                X_train.iloc[train_idx], y_train_outcome.iloc[train_idx],
+                y_train_hg.iloc[train_idx], y_train_ag.iloc[train_idx],
+                X_cal, y_cal,
+            )
+        oof_probas[held_idx] = np.concatenate(
+            [np.asarray(fold_members[key].predict_outcome_proba(X_train.iloc[held_idx]))
+             for key in STACK_MEMBER_ORDER],
+            axis=1,
+        )
+
+    from src.tuning import get_tuned_params
+
+    meta = LogisticRegression(solver="lbfgs", C=1.0, max_iter=2000, random_state=42)
+    meta.fit(oof_probas, np.asarray(y_train_outcome.values, dtype=int))
+
+    stacked = StackedEnsembleModel(
+        members, meta,
+        member_specs={"rf": get_tuned_params("rf"), "xgb": get_tuned_params("xgboost"),
+                      "logreg": {}, "elopoisson": {}},
+    )
+    stacked.feature_names = list(feature_cols)
+    stacked.is_fitted = True
+    return stacked

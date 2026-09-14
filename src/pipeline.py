@@ -136,20 +136,23 @@ class PremierLeaguePredictionPipeline:
 
         self.models, self.metrics = train_and_benchmark_models(train_df, val_df, self.feature_cols)
 
-        # Best model: primary key is calibrated multi-class log-loss (lower),
-        # tie-broken by accuracy (higher) then goal MAE (lower). This matches
-        # the classifier objective instead of an arbitrary acc-MAE blend.
+        # Best model: primary key is Ranked Probability Score (lower),
+        # tie-broken by log-loss (lower), accuracy (higher), goal MAE
+        # (lower). RPS is the proper scoring rule for ordered Home/Draw/
+        # Away outcomes: near-misses outrank far misses.
         def _rank(m: Dict[str, Any]) -> tuple:
-            return (m["log_loss"], -m["accuracy"], m["avg_goal_mae"])
+            return (m["rps"], m["log_loss"], -m["accuracy"], m["avg_goal_mae"])
 
-        rf_rank = _rank(self.metrics["Random Forest"])
-        xgb_rank = _rank(self.metrics["XGBoost"])
-        self.best_model_name = "XGBoost" if xgb_rank <= rf_rank else "Random Forest"
+        self.best_model_name = min(self.metrics, key=lambda name: _rank(self.metrics[name]))
         self.best_model = self.models[self.best_model_name]
 
-        logger.info(f"      - Random Forest Accuracy: {self.metrics['Random Forest']['accuracy']:.3f} | LogLoss: {self.metrics['Random Forest']['log_loss']:.3f} | Goal MAE: {self.metrics['Random Forest']['avg_goal_mae']:.3f}")
-        logger.info(f"      - XGBoost Accuracy:       {self.metrics['XGBoost']['accuracy']:.3f} | LogLoss: {self.metrics['XGBoost']['log_loss']:.3f} | Goal MAE: {self.metrics['XGBoost']['avg_goal_mae']:.3f}")
-        logger.info(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest log-loss)")
+        for _name, _m in self.metrics.items():
+            logger.info(
+                f"      - {_name:13s} Accuracy: {_m['accuracy']:.3f} | "
+                f"RPS: {_m['rps']:.4f} | LogLoss: {_m['log_loss']:.3f} | "
+                f"Goal MAE: {_m['avg_goal_mae']:.3f}"
+            )
+        logger.info(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest RPS)")
 
         # Generate Matplotlib visualizations
         logger.info("[4/5] Generating Matplotlib diagnostic visualization suite...")
@@ -162,11 +165,13 @@ class PremierLeaguePredictionPipeline:
         plot_feature_importance(
             self.metrics["Random Forest"]["feature_importances"],
             self.metrics["XGBoost"]["feature_importances"],
+            stacked_importances=self.metrics["Stacked"]["feature_importances"],
         )
         plot_confusion_matrices(
             y_val_outcome,
             self.metrics["Random Forest"]["val_preds"],
             self.metrics["XGBoost"]["val_preds"],
+            stacked_preds=self.metrics["Stacked"]["val_preds"],
         )
         plot_metrics_comparison(self.metrics)
         plot_goal_error_distribution(
@@ -211,7 +216,8 @@ class PremierLeaguePredictionPipeline:
                     name: {
                         k: (round(float(v), 4) if isinstance(v, (int, float)) else v)
                         for k, v in vals.items()
-                        if k in ("accuracy", "log_loss", "macro_f1", "mae_home_goals",
+                        if k in ("accuracy", "log_loss", "macro_f1", "rps",
+                                 "mae_home_goals",
                                  "mae_away_goals", "avg_goal_mae", "exact_score_acc",
                                  "within_1_goal_acc", "calibration_temperature",
                                  "home_goal_correction", "away_goal_correction")
@@ -231,7 +237,10 @@ class PremierLeaguePredictionPipeline:
         """Loads a production model checkpoint from disk."""
         path = filepath or DEFAULT_MODEL_PATH
         self.best_model = MatchPredictorModel.load(path)
-        self.best_model_name = "Random Forest" if self.best_model.model_type == "rf" else "XGBoost"
+        model_type = getattr(self.best_model, "model_type", "xgboost")
+        self.best_model_name = {"rf": "Random Forest", "xgboost": "XGBoost"}.get(
+            model_type, "Stacked"
+        )
         from src.validation import assert_model_compatible
         assert_model_compatible(self.best_model, strict=True)
         self.feature_cols = self.best_model.feature_names

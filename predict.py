@@ -63,7 +63,7 @@ def _resolve_engine_label() -> str:
 
             payload = _joblib.load(model_path)
             mt = payload.get("model_type", "xgboost") if isinstance(payload, dict) else "xgboost"
-            return "Random Forest" if str(mt).lower() == "rf" else "XGBoost"
+            return {"rf": "Random Forest", "xgboost": "XGBoost"}.get(str(mt).lower(), "Stacked")
         except Exception:
             pass
     return "XGBoost"
@@ -177,12 +177,12 @@ def run_custom_matchup(home_team: str, away_team: str, force_retrain: bool = Fal
 
 
 def run_benchmark(force_retrain: bool = False, offline: bool | None = None):
-    """Prints side-by-side benchmark table comparing Random Forest and XGBoost."""
+    """Prints the side-by-side benchmark table (Random Forest vs XGBoost vs Stacked)."""
     pipeline = get_pipeline(force_retrain=force_retrain, offline=offline)
     metrics = pipeline.metrics
 
     print("\n" + "=" * 80)
-    print("         MODEL BENCHMARK: RANDOM FOREST vs XGBOOST")
+    print("         MODEL BENCHMARK: RANDOM FOREST vs XGBOOST vs STACKED")
     print("=" * 80)
 
     rows = []

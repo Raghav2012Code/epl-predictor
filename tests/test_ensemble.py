@@ -1,0 +1,166 @@
+"""Unit tests for the Elo-Poisson member and the stacked ensemble."""
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from src.feature_engineering import get_feature_column_names
+from src.models import (
+    EloPoissonModel,
+    MatchPredictorModel,
+    StackedEnsembleModel,
+    favor_outcome_from_proba,
+    train_stacked_ensemble,
+)
+
+
+def _frames(n_train=120, n_val=40, seed=5):
+    rng = np.random.RandomState(seed)
+    cols = get_feature_column_names()
+    n_feat = len(cols)
+    elos = rng.uniform(1600, 1900, size=(n_train + n_val, 2))
+
+    def _mk(n, start):
+        X = pd.DataFrame(rng.randn(n, n_feat), columns=cols)
+        X["home_elo"] = elos[start:start + n, 0]
+        X["away_elo"] = elos[start:start + n, 1]
+        X["elo_diff"] = (X["home_elo"] + 65.0) - X["away_elo"]
+        X["odds_missing"] = 0.0
+        hg = rng.poisson(1.4, size=n)
+        ag = rng.poisson(1.1, size=n)
+        res = np.where(hg > ag, 2, np.where(hg < ag, 0, 1))
+        df = X.copy()
+        df["target_outcome"] = res
+        df["target_home_goals"] = hg
+        df["target_away_goals"] = ag
+        return df
+
+    return _mk(n_train, 0), _mk(n_val, n_train), cols
+
+
+def test_elo_member_uses_train_means_only():
+    train, val, cols = _frames()
+    model = EloPoissonModel().fit(
+        train[cols], train["target_outcome"],
+        train["target_home_goals"], train["target_away_goals"],
+    )
+    assert model.mu_h == pytest.approx(float(train["target_home_goals"].mean()))
+    assert model.mu_a == pytest.approx(float(train["target_away_goals"].mean()))
+    assert 0.0 <= model.beta <= 2.0
+    # A big home Elo edge must raise home expectancy above the mean.
+    strong = train[cols].iloc[:5].copy()
+    strong["home_elo"] = 1950.0
+    strong["away_elo"] = 1600.0
+    hg, ag = model.predict_expected_goals(strong)
+    assert bool((hg > model.mu_h).all())
+    assert bool((ag < model.mu_a).all())
+
+
+def test_elo_member_probas_and_scoreline_contract():
+    train, val, cols = _frames()
+    model = EloPoissonModel().fit(
+        train[cols], train["target_outcome"],
+        train["target_home_goals"], train["target_away_goals"],
+    )
+    probas = model.predict_outcome_proba(val[cols])
+    assert probas.shape == (len(val), 3)
+    assert np.allclose(probas.sum(axis=1), 1.0)
+    assert model.calibrate_temperature(val[cols], val["target_outcome"]) >= 1.0
+    for i, (h, a) in enumerate(model.predict_scoreline(val[cols])):
+        fav = favor_outcome_from_proba(probas[i])
+        assert (h > a) if fav == 2 else ((h == a) if fav == 1 else (h < a))
+
+
+def test_stacked_meta_shapes_and_determinism():
+    train, val, cols = _frames()
+    first = train_stacked_ensemble(train, val, cols)
+    second = train_stacked_ensemble(train, val, cols)
+    p1 = first.predict_outcome_proba(val[cols])
+    p2 = second.predict_outcome_proba(val[cols])
+    assert p1.shape == (len(val), 3)
+    assert np.allclose(p1.sum(axis=1), 1.0)
+    assert np.allclose(p1, p2)  # fixed seeds everywhere
+    assert first.meta.coef_.shape[1] == 12  # 4 members x 3 classes
+    hg, ag = first.predict_expected_goals(val[cols])
+    assert hg.shape == ag.shape == (len(val),)
+    assert len(first.predict_scoreline(val[cols])) == len(val)
+
+
+def test_stacked_save_load_dispatch_and_refit(tmp_path):
+    train, val, cols = _frames()
+    stacked = train_stacked_ensemble(train, val, cols)
+    path = str(tmp_path / "stacked.joblib")
+    stacked.save(path)
+    loaded = MatchPredictorModel.load(path)
+    assert isinstance(loaded, StackedEnsembleModel)
+    assert loaded.model_type == "stacked"
+    assert np.allclose(
+        loaded.predict_outcome_proba(val[cols]),
+        stacked.predict_outcome_proba(val[cols]),
+    )
+    # Refit keeps meta weights frozen while members re-learn.
+    before = loaded.meta.coef_.copy()
+    refit = loaded.fit(val[cols], val["target_outcome"],
+                       val["target_home_goals"], val["target_away_goals"])
+    assert np.array_equal(refit.meta.coef_, before)
+    assert refit.is_fitted
+
+
+def test_probas_stay_three_columns_on_degenerate_slices():
+    # Members train on realistic 3-class data, but the calibration slice
+    # carries only two classes: the meta-learner then emits 2 columns and
+    # every consumer still requires (N, 3) in [Away, Draw, Home] order.
+    rng = np.random.RandomState(0)
+    cols = get_feature_column_names()
+    n_feat = len(cols)
+
+    def _mk(n, labels):
+        X = pd.DataFrame(rng.randn(n, n_feat), columns=cols)
+        X["home_elo"] = 1800.0
+        X["away_elo"] = 1700.0
+        X["elo_diff"] = 165.0
+        X["odds_missing"] = 0.0
+        df = X.copy()
+        df["target_outcome"] = np.array(labels)
+        df["target_home_goals"] = rng.poisson(1.4, size=n)
+        df["target_away_goals"] = rng.poisson(1.1, size=n)
+        return df
+
+    train = _mk(30, [0, 1, 2] * 10)
+    val = _mk(12, [0, 2] * 6)
+    stacked = train_stacked_ensemble(train, val, cols)
+    probas = stacked.predict_outcome_proba(val[cols])
+    assert probas.shape == (12, 3)
+    assert np.allclose(probas.sum(axis=1), 1.0)
+    assert len(stacked.predict_scoreline(val[cols])) == 12
+    single = MatchPredictorModel("rf").apply_params({"n_estimators": 10})
+    single.fit(train[cols], train["target_outcome"],
+               train["target_home_goals"], train["target_away_goals"])
+    solo = single.predict_outcome_proba(val[cols])
+    assert solo.shape == (12, 3)
+
+
+def test_export_benchmark_includes_stacked():
+    from types import SimpleNamespace
+
+    from export_web_data import build_benchmark
+
+    def _entry(**kw):
+        base = {
+            "accuracy": 0.45, "macro_f1": 0.4, "log_loss": 1.03,
+            "mae_home_goals": 0.95, "mae_away_goals": 0.86,
+            "avg_goal_mae": 0.9, "within_1_goal_acc": 0.58,
+            "exact_score_acc": 0.09,
+            "feature_importances": pd.Series([0.5, 0.5], index=["a", "b"]),
+        }
+        base.update(kw)
+        return base
+
+    fake = SimpleNamespace(
+        metrics={"Random Forest": _entry(), "XGBoost": _entry(), "Stacked": _entry()},
+        best_model_name="Stacked",
+    )
+    payload = build_benchmark(fake)
+    assert payload["productionModel"] == "Stacked"
+    assert [m["name"] for m in payload["models"]] == ["Random Forest", "XGBoost", "Stacked"]
+    assert [m["isProduction"] for m in payload["models"]] == [False, False, True]

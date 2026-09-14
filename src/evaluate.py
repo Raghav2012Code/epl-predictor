@@ -52,19 +52,22 @@ def plot_feature_importance(
     xgb_importances: pd.Series,
     top_n: int = 15,
     output_path: Optional[str] = None,
+    stacked_importances: Optional[pd.Series] = None,
 ) -> str:
-    """Generates a horizontal side-by-side bar chart of top predictive features in monochrome black."""
+    """Generates horizontal side-by-side bars of top predictive features in monochrome black."""
     os.makedirs(VISUALS_DIR, exist_ok=True)
     if output_path is None:
         output_path = os.path.join(VISUALS_DIR, "feature_importance.png")
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharey=False)
+    panels = [("Random Forest", rf_importances, "#FFFFFF"), ("XGBoost", xgb_importances, "#A1A1AA")]
+    if stacked_importances is not None:
+        panels.append(("Stacked", stacked_importances, "#52525B"))
+    fig, axes = plt.subplots(1, len(panels), figsize=(8 * len(panels), 8), sharey=False)
     fig.patch.set_facecolor("#000000")
+    if len(panels) == 1:
+        axes = [axes]
 
-    for ax, (name, s, color) in zip(
-        axes,
-        [("Random Forest", rf_importances, "#FFFFFF"), ("XGBoost", xgb_importances, "#A1A1AA")],
-    ):
+    for ax, (name, s, color) in zip(axes, panels):
         top_s = s.head(top_n).iloc[::-1]
         bars = ax.barh(top_s.index, top_s.values, color=color, alpha=0.9, edgecolor="#1F1F23", linewidth=0.5)
         ax.set_facecolor("#0A0A0C")
@@ -107,6 +110,7 @@ def plot_confusion_matrices(
     rf_preds: np.ndarray,
     xgb_preds: np.ndarray,
     output_path: Optional[str] = None,
+    stacked_preds: Optional[np.ndarray] = None,
 ) -> str:
     """Generates normalized confusion matrix heatmaps in sleek monochrome black."""
     os.makedirs(VISUALS_DIR, exist_ok=True)
@@ -114,10 +118,15 @@ def plot_confusion_matrices(
         output_path = os.path.join(VISUALS_DIR, "confusion_matrix.png")
 
     labels = ["Away Win", "Draw", "Home Win"]
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    panels = [("Random Forest", rf_preds), ("XGBoost", xgb_preds)]
+    if stacked_preds is not None:
+        panels.append(("Stacked", stacked_preds))
+    fig, axes = plt.subplots(1, len(panels), figsize=(7 * len(panels), 6))
     fig.patch.set_facecolor("#000000")
+    if len(panels) == 1:
+        axes = [axes]
 
-    for ax, (title, preds) in zip(axes, [("Random Forest", rf_preds), ("XGBoost", xgb_preds)]):
+    for ax, (title, preds) in zip(axes, panels):
         # Calculate confusion matrix
         cm = np.zeros((3, 3), dtype=int)
         for t, p in zip(y_true, preds):
