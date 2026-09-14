@@ -9,6 +9,8 @@ export interface Fixture {
   awayTeam: string;
   homeShort: string;
   awayShort: string;
+  homeBadge: string;
+  awayBadge: string;
   homeColor: string;
   awayColor: string;
   stadium: string;
@@ -28,6 +30,7 @@ export interface StandingsRow {
   team: string;
   short: string;
   color: string;
+  badge: string;
   played: number;
   won: number;
   drawn: number;
@@ -70,6 +73,7 @@ export interface TeamProfile {
   name: string;
   short: string;
   color: string;
+  badge: string;
   stadium: string;
   rank: number;
   points: number;
