@@ -124,13 +124,13 @@ def test_fixture_feature_extraction():
 
     assert feat_row.shape[0] == 1
     assert feat_row.shape[1] == len(get_feature_column_names())
-    # Thin-history Bayesian shrinkage pulls observed 2.0 goals toward club
-    # baselines (Arsenal GF 2.18, Chelsea GA 1.22), so values sit between
-    # observed and baseline rather than exactly 2.0.
+    # Train/serve consistency: serving uses raw observed means (same as the
+    # training rolling features), so with 10 identical 2-1 games the rolling
+    # averages equal the observed values exactly (no Bayesian shrinkage).
     home_gf3 = float(feat_row["home_roll_goals_for_3"].values[0])
     away_ga3 = float(feat_row["away_roll_goals_against_3"].values[0])
-    assert 2.0 < home_gf3 <= 2.18
-    assert 1.22 < away_ga3 < 2.0
+    assert home_gf3 == 2.0
+    assert away_ga3 == 2.0
     assert "home_elo" in feat_row.columns
     assert "away_elo" in feat_row.columns
     assert "elo_diff" in feat_row.columns

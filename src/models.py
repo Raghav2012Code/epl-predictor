@@ -16,6 +16,24 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from xgboost import XGBClassifier, XGBRegressor
 
+# Outcome decision thresholds. Pure argmax on sharp 3-way probabilities almost
+# never selects draws (0/380 in practice), which is indefensible for the EPL
+# (~22% historical draw rate). A close home/away race with a robust draw
+# probability is therefore called a draw. This rule is the SINGLE source of
+# truth: predict_scoreline, pipeline forecasts, and validation metrics all
+# use favor_outcome_from_proba so scorelines always agree with outcomes.
+DRAW_MARGIN = 0.10
+DRAW_MIN_PROB = 0.24
+
+
+def favor_outcome_from_proba(probas) -> int:
+    """Maps a [p_away, p_draw, p_home] vector to 0 (Away), 1 (Draw), 2 (Home)."""
+    p_a, p_d, p_h = float(probas[0]), float(probas[1]), float(probas[2])
+    if abs(p_h - p_a) <= DRAW_MARGIN and p_d >= DRAW_MIN_PROB:
+        return 1
+    return int(np.argmax(probas))
+
+
 # Outcome label mapping: 0 -> Away Win (A), 1 -> Draw (D), 2 -> Home Win (H)
 OUTCOME_NAMES = {0: "Away Win", 1: "Draw", 2: "Home Win"}
 OUTCOME_CODES = {0: "A", 1: "D", 2: "H"}
@@ -238,10 +256,10 @@ class MatchPredictorModel:
 
         for i in range(len(X)):
             grid, _ = self.compute_poisson_grid(exp_hg[i], exp_ag[i], max_goals=max_goals)
-            # Favored outcome is always the blended probability argmax:
-            # 0: Away, 1: Draw, 2: Home. No separate draw-boost rule here so
-            # pipeline `predicted_outcome` (derived from probas) stays in sync.
-            fav_outcome = int(np.argmax(probas[i]))
+            # Favored outcome uses the shared draw-aware rule (see
+            # favor_outcome_from_proba) so the scoreline always agrees with
+            # the pipeline's predicted_outcome: 0: Away, 1: Draw, 2: Home.
+            fav_outcome = favor_outcome_from_proba(probas[i])
 
             # Select best scoreline matching favored outcome
             best_s = (1, 1)
@@ -351,7 +369,9 @@ def train_and_benchmark_models(
         eval_y_hg = y_val_hg.iloc[evaluation_slice]
         eval_y_ag = y_val_ag.iloc[evaluation_slice]
         val_proba = model.predict_outcome_proba(eval_X)
-        val_preds = np.argmax(val_proba, axis=1)
+        # Operational decision rule (draw-aware), so reported accuracy/F1
+        # reflect what the pipeline actually publishes.
+        val_preds = np.array([favor_outcome_from_proba(p) for p in val_proba])
         exp_hg, exp_ag = model.predict_expected_goals(eval_X)
         pred_scores = model.predict_scoreline(eval_X)
         all_pred_scores = model.predict_scoreline(X_val)

@@ -33,6 +33,7 @@ from src.models import (
     OUTCOME_CODES,
     OUTCOME_NAMES,
     MatchPredictorModel,
+    favor_outcome_from_proba,
     train_and_benchmark_models,
 )
 from src.logging_config import get_logger
@@ -265,10 +266,10 @@ class PremierLeaguePredictionPipeline:
             pred_scores = self.best_model.predict_scoreline(X_match)[0]
             pred_hg, pred_ag = pred_scores
 
-            # Favorite outcome is the blended probability argmax so it always
+            # Favorite outcome uses the shared draw-aware rule so it always
             # agrees with home/draw/away probs (scoreline is already
             # constrained to that outcome in predict_scoreline).
-            fav_idx = int(np.argmax(probas))
+            fav_idx = favor_outcome_from_proba(probas)
             fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
             rounded_probs = _round_probabilities([p_home, p_draw, p_away])
@@ -409,7 +410,7 @@ class PremierLeaguePredictionPipeline:
         exp_hg, exp_ag = self.best_model.predict_expected_goals(X_match)
 
         p_away, p_draw, p_home = probas[0], probas[1], probas[2]
-        fav_idx = int(np.argmax(probas))
+        fav_idx = favor_outcome_from_proba(probas)
         fav_outcome = "Away Win" if fav_idx == 0 else ("Draw" if fav_idx == 1 else "Home Win")
 
         rounded_probs = _round_probabilities([float(p_home), float(p_draw), float(p_away)])

@@ -282,9 +282,8 @@ def main():
 
         print("\nWelcome to the Premier League Match Outcome & Scoreline Predictor!")
         print(f"Showing current upcoming Gameweek {default_gw} predictions as default...\n")
-        return run_gameweek_prediction(default_gw)
         print(f"Tip: Use --help to see all options (e.g. --match 'Arsenal' 'Chelsea', --gameweek {default_gw}, --benchmark).")
-        return 0
+        return run_gameweek_prediction(default_gw, force_retrain=args.retrain, offline=args.offline)
 
 
 if __name__ == "__main__":

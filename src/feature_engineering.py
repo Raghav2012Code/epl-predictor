@@ -541,6 +541,12 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
     feature_columns = get_feature_column_names()
     for col in feature_columns:
         if col in merged.columns and merged[col].isna().any():
+            # Differential and momentum features are centered on zero: with no
+            # history there is no home-away advantage, so fill 0.0 (never a
+            # league level, which would fake a signal).
+            if col.startswith("diff_") or "momentum" in col:
+                merged[col] = merged[col].fillna(0.0)
+                continue
             fallback = 0.0
             for key, val in LEAGUE_DEFAULTS.items():
                 if col.endswith(key) or key in col:
@@ -713,50 +719,30 @@ def build_fixture_features(
         rest = (match_date - last_date).total_seconds() / (24 * 3600)
         stats["rest_days"] = float(np.clip(rest, 1.0, 30.0))
 
-        # Bayesian shrinkage for small samples. Promoted/thin-history sides
-        # (e.g. Coventry/Hull, k < 15) keep at least 50% prior weight so a few
-        # early EPL games cannot swing their ratings wildly.
-        k = len(sub)
-        prior_w = max(0.0, (8.0 - k) / 8.0)
-        if k < 15:
-            prior_w = max(prior_w, 0.5 * (15.0 - k) / 15.0 + 0.25)
-            prior_w = min(1.0, prior_w)
-        obs_w = 1.0 - prior_w
-
+        # NOTE (train/serve consistency): training rolling features in
+        # compute_team_rolling_features use raw observed means, so serving
+        # must use raw observed means too. No Bayesian shrinkage here: a
+        # shrunk serving feature the model never saw during training is a
+        # train/serve skew. Cold starts (no history) still use priors above.
         # Rolling overall
         for w in WINDOWS:
             recent_w = sub.tail(w)
-            obs_gf = float(recent_w["goals_for"].mean())
-            obs_ga = float(recent_w["goals_against"].mean())
-            obs_pts = float(recent_w["points"].mean())
-            obs_shots = float(recent_w["shots_for"].mean())
-            obs_tgt = float(recent_w["shots_target_for"].mean())
-            obs_poss = float(recent_w["possession"].mean())
+            stats[f"roll_goals_for_{w}"] = float(recent_w["goals_for"].mean())
+            stats[f"roll_goals_against_{w}"] = float(recent_w["goals_against"].mean())
+            stats[f"roll_goal_diff_{w}"] = float(recent_w["goals_for"].mean() - recent_w["goals_against"].mean())
+            stats[f"roll_shots_for_{w}"] = float(recent_w["shots_for"].mean())
+            stats[f"roll_shots_target_for_{w}"] = float(recent_w["shots_target_for"].mean())
+            stats[f"roll_possession_{w}"] = float(recent_w["possession"].mean())
+            stats[f"roll_points_{w}"] = float(recent_w["points"].mean())
 
-            gf_shrunk = prior_w * p_info["gf_baseline"] + obs_w * obs_gf
-            ga_shrunk = prior_w * p_info["ga_baseline"] + obs_w * obs_ga
-            pts_shrunk = prior_w * p_info["points_baseline"] + obs_w * obs_pts
-            shots_shrunk = prior_w * p_info["shots_baseline"] + obs_w * obs_shots
-            tgt_shrunk = prior_w * p_info["target_baseline"] + obs_w * obs_tgt
-            poss_shrunk = prior_w * p_info["poss_baseline"] + obs_w * obs_poss
-
-            stats[f"roll_goals_for_{w}"] = gf_shrunk
-            stats[f"roll_goals_against_{w}"] = ga_shrunk
-            stats[f"roll_goal_diff_{w}"] = gf_shrunk - ga_shrunk
-            stats[f"roll_shots_for_{w}"] = shots_shrunk
-            stats[f"roll_shots_target_for_{w}"] = tgt_shrunk
-            stats[f"roll_possession_{w}"] = poss_shrunk
-            stats[f"roll_points_{w}"] = pts_shrunk
-
-        # Venue specific
+        # Venue specific: raw venue means; fall back to overall rolling when
+        # the side has no history at this venue (matches training, where a
+        # missing venue average falls back to the overall rolling average).
         venue_sub = sub[sub["is_home"] == is_home].tail(5)
         if not venue_sub.empty:
-            v_k = len(venue_sub)
-            v_prior_w = max(0.0, (5.0 - v_k) / 5.0)
-            v_obs_w = 1.0 - v_prior_w
-            stats["venue_roll_goals_for_5"] = float(v_prior_w * p_info["gf_baseline"] + v_obs_w * venue_sub["goals_for"].mean())
-            stats["venue_roll_goals_against_5"] = float(v_prior_w * p_info["ga_baseline"] + v_obs_w * venue_sub["goals_against"].mean())
-            stats["venue_roll_points_5"] = float(v_prior_w * p_info["points_baseline"] + v_obs_w * venue_sub["points"].mean())
+            stats["venue_roll_goals_for_5"] = float(venue_sub["goals_for"].mean())
+            stats["venue_roll_goals_against_5"] = float(venue_sub["goals_against"].mean())
+            stats["venue_roll_points_5"] = float(venue_sub["points"].mean())
         else:
             stats["venue_roll_goals_for_5"] = stats["roll_goals_for_5"]
             stats["venue_roll_goals_against_5"] = stats["roll_goals_against_5"]
