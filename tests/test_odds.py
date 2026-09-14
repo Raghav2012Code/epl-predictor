@@ -212,6 +212,18 @@ def test_odds_coverage_fails_loudly_below_minimum():
         assert_odds_coverage(matches, thin_odds, min_coverage=0.95)
 
 
+def test_odds_archive_covers_historical_window():
+    from src.data_loader import load_historical_stats
+    from src.odds_loader import ODDS_SEASONS, load_odds_frame
+    from src.validation import assert_odds_coverage
+
+    raw = load_historical_stats(offline=True)
+    odds = load_odds_frame(offline=True)
+    assert {"1819", "1920"} <= set(odds["season"].astype(str))
+    assert {"1819", "1920"} <= set(ODDS_SEASONS)
+    assert assert_odds_coverage(raw, odds) >= 0.95
+
+
 def _mini_history():
     dates = pd.date_range("2024-01-01", periods=6, freq="7D")
     return pd.DataFrame([{
@@ -268,13 +280,13 @@ def test_engineered_dataset_without_odds_is_neutral():
 def test_shared_outcome_rule_is_regime_aware():
     from src.models import favor_outcome_from_proba
 
-    # Close race, decent draw prob: draw under both regimes.
+    # Close race, strong draw prob: draw under both regimes.
     probas = [0.30, 0.30, 0.40]
     assert favor_outcome_from_proba(probas, odds_missing=0.0) == 1
     assert favor_outcome_from_proba(probas, odds_missing=1.0) == 1
-    # |h-a| = 0.13: draw with market present (margin 0.16), home win
-    # without market (tighter 0.12 regime).
-    probas = [0.28, 0.30, 0.41]
+    # |h-a| = 0.11, draw prob 0.24: draw with market present
+    # (margin 0.12, min 0.24), home win without market (min 0.25).
+    probas = [0.31, 0.24, 0.42]
     assert favor_outcome_from_proba(probas, odds_missing=0.0) == 1
     assert favor_outcome_from_proba(probas, odds_missing=1.0) == 2
     # Clear favorite: argmax everywhere.

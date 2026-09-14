@@ -6,7 +6,7 @@
 #   LOG_LEVEL          DEBUG | INFO | WARNING | ERROR
 
 data:
-  seasons: ["2021", "2122", "2223", "2324", "2425", "2526"]
+  seasons: ["1819", "1920", "2021", "2122", "2223", "2324", "2425", "2526"]
   historical_url_template: "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-{}.csv"
   fixture_url: "https://raw.githubusercontent.com/openfootball/england/master/2026-27/1-premierleague.txt"
   fixture_season: "2026-27"
@@ -27,6 +27,7 @@ model:
   # rows without live odds behave sanely. Seeded; deterministic.
   # Exponential training-sample decay by age (days halving time). Recent
   # seasons teach current strength; ancient ones stabilize estimates.
-  # Falsy disables (uniform weights).
-  recency_half_life_days: 730
+  # Ablated 2026-09-14 on 8-season data (RF RPS: off 0.2082, 730d
+  # 0.2084, 365d 0.2068): 365d wins. Falsy disables (uniform weights).
+  recency_half_life_days: 365
   odds_mask_rate: 0.15

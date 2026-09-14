@@ -21,7 +21,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 
 _DEFAULTS: Dict[str, Any] = {
     "data": {
-        "seasons": ["2021", "2122", "2223", "2324", "2425", "2526"],
+        "seasons": ["1819", "1920", "2021", "2122", "2223", "2324", "2425", "2526"],
         "historical_url_template": (
             "https://raw.githubusercontent.com/datasets/football-datasets"
             "/master/datasets/premier-league/season-{}.csv"
@@ -42,7 +42,7 @@ _DEFAULTS: Dict[str, Any] = {
         "calibration_grid_max": 3.0,
         "calibration_grid_step": 0.05,
         "odds_mask_rate": 0.15,
-        "recency_half_life_days": 730,
+        "recency_half_life_days": 365,
     },
 }
 

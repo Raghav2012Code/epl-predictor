@@ -40,5 +40,29 @@
     "sha256": "763928b1d12abeae4dfdb9d092ff93c53a3153c646ae630bce503b6fd0413b2c",
     "bytes": 15154,
     "downloaded_at": "2026-09-14T07:26:19Z"
+  },
+  "season_1819.csv": {
+    "url": "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-1819.csv",
+    "sha256": "3b3505f2b99e70ea064834a327349a9fb555bfa269414f1c943805653af806ce",
+    "bytes": 29776,
+    "downloaded_at": "2026-09-14T12:35:47Z"
+  },
+  "season_1920.csv": {
+    "url": "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-1920.csv",
+    "sha256": "385cfe508f2977dd57cead1cd53b6ca6e9c4fcdbfc2673926d018624682216fa",
+    "bytes": 30162,
+    "downloaded_at": "2026-09-14T12:35:47Z"
+  },
+  "E0_1819.csv": {
+    "url": "https://www.football-data.co.uk/mmz4281/1819/E0.csv",
+    "sha256": "7c096b3c2ecd54c6993d22eeea73450c2bde11e3457238b226b8f43c62dfc35e",
+    "bytes": 96144,
+    "downloaded_at": "2026-09-14T12:35:48Z"
+  },
+  "E0_1920.csv": {
+    "url": "https://www.football-data.co.uk/mmz4281/1920/E0.csv",
+    "sha256": "100037618b94f94057400bb02bf6bac4ef74ddaa58cde4b38370839c39caee61",
+    "bytes": 175475,
+    "downloaded_at": "2026-09-14T12:35:50Z"
   }
 }

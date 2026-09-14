@@ -57,16 +57,16 @@ def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
 # probability is therefore called a draw. This rule is the SINGLE source of
 # truth: predict_scoreline, pipeline forecasts, and validation metrics all
 # use favor_outcome_from_proba so scorelines always agree with outcomes.
-# Retuned 2026-09-14 per market regime for the TUNED production forest
-# (full margin x min grid on the disjoint eval slice + 350-row forecast
-# slate; objective eval accuracy subject to 18-27% draws on BOTH).
-# Market-present: 0.16/0.28 (45.8% acc, 21.3% draws, n=404).
-# No-market: 0.12/0.26 (51.5% acc, 20.6% draws on 68 masked eval rows;
-# ~22% on the no-market forecast slate). Revisit in Phase 7 (RPS-based).
-DRAW_MARGIN = 0.16
-DRAW_MIN_PROB = 0.28
+# Retuned 2026-09-14 per market regime for the 8-season + 365d-decay
+# production forest (full margin x min grid on the disjoint eval slice
+# + 350-row forecast-slate grid; objective eval accuracy subject to
+# 18-27% draws on BOTH). Market-present: 0.12/0.24 (47.3% acc, 19.7%
+# draws, n=402). No-market: 0.12/0.25 (eval ~52% acc, ~21% draws;
+# ~22-23% on the no-market slate). Revisit in Phase 7 (RPS-based).
+DRAW_MARGIN = 0.12
+DRAW_MIN_PROB = 0.24
 DRAW_MARGIN_NO_MARKET = 0.12
-DRAW_MIN_PROB_NO_MARKET = 0.26
+DRAW_MIN_PROB_NO_MARKET = 0.25
 
 
 def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:

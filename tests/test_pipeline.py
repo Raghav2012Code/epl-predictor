@@ -27,6 +27,19 @@ def test_standardize_team_name():
     assert standardize_team_name("man city") == "Manchester City"
     assert standardize_team_name("nott'm forest") == "Nottingham Forest"
     assert standardize_team_name("Tottenham Hotspur FC") == "Tottenham"
+    assert standardize_team_name("Cardiff City") == "Cardiff"
+    assert standardize_team_name("Huddersfield Town AFC") == "Huddersfield"
+
+
+def test_historical_window_covers_configured_seasons():
+    from src.config import get_config
+    from src.data_loader import load_historical_stats
+
+    seasons = get_config()["data"]["seasons"]
+    assert seasons[:2] == ["1819", "1920"]
+    raw = load_historical_stats(offline=True)
+    assert len(raw) == len(seasons) * 380
+    assert {"Cardiff", "Huddersfield"} <= set(raw["home_team"]) | set(raw["away_team"])
 
 
 def test_openfootball_fixture_parsing(tmp_path):

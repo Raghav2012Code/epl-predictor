@@ -133,6 +133,15 @@ TEAM_ALIASES: Dict[str, str] = {
     "west brom": "West Brom",
     "west bromwich albion": "West Brom",
     "west bromwich albion fc": "West Brom",
+    # Cardiff City (2018/19)
+    "cardiff": "Cardiff",
+    "cardiff city": "Cardiff",
+    "cardiff city fc": "Cardiff",
+    # Huddersfield Town (2018/19)
+    "huddersfield": "Huddersfield",
+    "huddersfield town": "Huddersfield",
+    "huddersfield town fc": "Huddersfield",
+    "huddersfield town afc": "Huddersfield",
 }
 
 

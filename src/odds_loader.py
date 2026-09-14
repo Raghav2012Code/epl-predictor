@@ -29,8 +29,8 @@ logger = get_logger(__name__)
 FOOTBALL_DATA_URL = "https://www.football-data.co.uk/mmz4281/{season}/E0.csv"
 
 # football-data.co.uk season folder codes covering the training window
-# (2020/21) through the current season file (2026/27, updated twice weekly).
-ODDS_SEASONS: List[str] = ["2021", "2122", "2223", "2324", "2425", "2526", "2627"]
+# (2018/19) through the current season file (2026/27, updated twice weekly).
+ODDS_SEASONS: List[str] = ["1819", "1920", "2021", "2122", "2223", "2324", "2425", "2526", "2627"]
 
 ODDS_CACHE_DIR = os.path.join(RAW_DATA_DIR, "odds")
 COMBINED_CACHE = os.path.join(ODDS_CACHE_DIR, "e0_combined.csv")
