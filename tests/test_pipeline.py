@@ -275,7 +275,9 @@ def test_precomputed_context_rejects_future_history():
     pd.testing.assert_frame_equal(feat_past_only, feat_with_full_cache)
 
 
-def test_scoreline_agrees_with_proba_argmax():
+def test_scoreline_agrees_with_shared_outcome_rule():
+    from src.models import favor_outcome_from_proba
+
     n_samples = 20
     feature_cols = get_feature_column_names()
     np.random.seed(7)
@@ -288,7 +290,9 @@ def test_scoreline_agrees_with_proba_argmax():
     probas = model.predict_outcome_proba(X)
     scores = model.predict_scoreline(X)
     for i, (h, a) in enumerate(scores):
-        fav = int(np.argmax(probas[i]))
+        # Scorelines must agree with the shared draw-aware decision rule
+        # (favor_outcome_from_proba), not raw argmax.
+        fav = favor_outcome_from_proba(probas[i])
         if fav == 2:
             assert h > a
         elif fav == 0:

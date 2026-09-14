@@ -7,6 +7,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from src.feature_engineering import (
+    ODDS_FEATURE_COLUMNS,
+    build_engineered_dataset,
+    build_fixture_features,
+    get_feature_column_names,
+)
 from src.odds_loader import (
     closing_movement,
     implied_probabilities,
@@ -204,3 +210,75 @@ def test_odds_coverage_fails_loudly_below_minimum():
     thin_odds = _clean_odds_frame().iloc[:1]  # only 1 of 20 rows covered
     with pytest.raises(ValueError, match="below minimum"):
         assert_odds_coverage(matches, thin_odds, min_coverage=0.95)
+
+
+def _mini_history():
+    dates = pd.date_range("2024-01-01", periods=6, freq="7D")
+    return pd.DataFrame([{
+        "season": "2023-24", "date": d,
+        "home_team": "Arsenal", "away_team": "Chelsea",
+        "home_goals": 2, "away_goals": 1, "result": "H",
+        "home_shots": 15.0, "away_shots": 8.0,
+        "home_shots_target": 6.0, "away_shots_target": 2.0,
+        "home_corners": 7.0, "away_corners": 3.0,
+        "home_possession": 58.0, "away_possession": 42.0,
+    } for d in dates])
+
+
+def _mini_odds_frame(dates):
+    return pd.DataFrame({
+        "date": pd.to_datetime(list(dates)),
+        "home_team": ["Arsenal"] * len(dates),
+        "away_team": ["Chelsea"] * len(dates),
+        "odds_implied_home": [0.60] * len(dates),
+        "odds_implied_draw": [0.25] * len(dates),
+        "odds_implied_away": [0.15] * len(dates),
+        "odds_overround": [0.05] * len(dates),
+        "odds_move_home": [0.03] * len(dates),
+        "odds_source": ["avg_close"] * len(dates),
+        "season": ["2324"] * len(dates),
+    })
+
+
+def test_feature_columns_include_market_signals():
+    cols = get_feature_column_names()
+    assert cols[-6:] == ODDS_FEATURE_COLUMNS
+    assert len(cols) == 84
+
+
+def test_engineered_dataset_joins_odds():
+    raw = _mini_history()
+    odds = _mini_odds_frame(raw["date"].dt.normalize().unique())
+    eng = build_engineered_dataset(raw, odds_df=odds)
+    assert np.allclose(eng["odds_implied_home"].values, 0.60)
+    assert (eng["odds_missing"] == 0.0).all()
+    for col in ODDS_FEATURE_COLUMNS:
+        assert col in eng.columns
+        assert not eng[col].isna().any()
+
+
+def test_engineered_dataset_without_odds_is_neutral():
+    eng = build_engineered_dataset(_mini_history())
+    assert np.allclose(eng["odds_implied_home"].values, 1 / 3)
+    assert (eng["odds_missing"] == 1.0).all()
+    assert (eng["odds_move_home"] == 0.0).all()
+
+
+def test_fixture_features_prefer_live_override_then_history():
+    raw = _mini_history()
+    future = datetime(2024, 3, 1)
+    live_row = {
+        "odds_implied_home": 0.50, "odds_implied_draw": 0.30,
+        "odds_implied_away": 0.20, "odds_overround": 0.04,
+        "odds_move_home": -0.02,
+    }
+    odds = _mini_odds_frame([future.date()])
+    feat = build_fixture_features("Arsenal", "Chelsea", future, raw,
+                                  odds_row=live_row, odds_df=odds)
+    assert float(feat["odds_implied_home"].iloc[0]) == pytest.approx(0.50)
+    assert float(feat["odds_missing"].iloc[0]) == 0.0
+    feat_hist = build_fixture_features("Arsenal", "Chelsea", future, raw, odds_df=odds)
+    assert float(feat_hist["odds_implied_home"].iloc[0]) == pytest.approx(0.60)
+    feat_none = build_fixture_features("Arsenal", "Chelsea", future, raw)
+    assert float(feat_none["odds_implied_home"].iloc[0]) == pytest.approx(1 / 3)
+    assert float(feat_none["odds_missing"].iloc[0]) == 1.0

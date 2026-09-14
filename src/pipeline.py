@@ -67,6 +67,8 @@ class PremierLeaguePredictionPipeline:
         self.raw_historical: Optional[pd.DataFrame] = None
         self.engineered_df: Optional[pd.DataFrame] = None
         self.fixtures_2026_2027: Optional[pd.DataFrame] = None
+        self.odds_df: Optional[pd.DataFrame] = None
+        self.live_odds_df: Optional[pd.DataFrame] = None
         self.feature_cols: List[str] = get_feature_column_names()
         self.models: Dict[str, MatchPredictorModel] = {}
         self.metrics: Dict[str, Dict[str, Any]] = {}
@@ -96,7 +98,15 @@ class PremierLeaguePredictionPipeline:
         logger.info(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
 
         logger.info("[2/5] Engineering rolling form, venue splits, and head-to-head metrics...")
-        self.engineered_df = build_engineered_dataset(self.raw_historical)
+        from src.odds_loader import load_odds_frame
+        from src.validation import assert_odds_coverage, assert_odds_frame_clean
+
+        logger.info("      - Loading pre-kickoff bookmaker odds...")
+        self.odds_df = load_odds_frame(force_download=force_download, offline=offline)
+        assert_odds_frame_clean(self.odds_df)
+        coverage = assert_odds_coverage(self.raw_historical, self.odds_df)
+        logger.info(f"      - Odds coverage on historical rows: {coverage:.3f}.")
+        self.engineered_df = build_engineered_dataset(self.raw_historical, odds_df=self.odds_df)
         logger.info(f"      - Engineered dataset shape: {self.engineered_df.shape} ({len(self.feature_cols)} features).")
         return self
 
@@ -222,6 +232,50 @@ class PremierLeaguePredictionPipeline:
         self.feature_cols = self.best_model.feature_names
         return self.best_model
 
+    def refresh_live_odds(self) -> Optional[pd.DataFrame]:
+        """Fetches the live board once per session (quota-friendly).
+
+        Returns the parsed live frame, or None when unavailable (no key,
+        offline, quota spent). Forecasts degrade to historical priors.
+        """
+        from src.live_odds import fetch_live_odds, parse_live_odds
+
+        events = fetch_live_odds()
+        self.live_odds_df = parse_live_odds(events) if events else None
+        return self.live_odds_df
+
+    def resolve_serving_odds(
+        self, home_team: str, away_team: str, match_date: datetime
+    ) -> Optional[Dict[str, float]]:
+        """Resolves market features for one upcoming fixture.
+
+        Precedence: live board -> historical pre-kickoff row -> None
+        (neutral-filled downstream and flagged via odds_missing).
+        Rows with non-finite legs are skipped as if missing.
+        """
+        from src.live_odds import lookup_live_odds
+        from src.odds_loader import lookup_odds
+
+        def _finite(row: Optional[Dict[str, float]]) -> Optional[Dict[str, float]]:
+            if not row:
+                return None
+            legs = (row.get("odds_implied_home"), row.get("odds_implied_draw"),
+                    row.get("odds_implied_away"))
+            try:
+                if all(float(v) == float(v) for v in legs):
+                    return row
+            except (TypeError, ValueError):
+                pass
+            return None
+
+        if self.live_odds_df is not None:
+            live = _finite(lookup_live_odds(self.live_odds_df, home_team, away_team, match_date))
+            if live is not None:
+                return live
+        if self.odds_df is not None:
+            return _finite(lookup_odds(self.odds_df, home_team, away_team, match_date))
+        return None
+
     def forecast_2026_2027_season(self) -> pd.DataFrame:
         """Forecasts all 380 fixtures for the 2026/2027 season and exports results."""
         if self.best_model is None:
@@ -244,6 +298,15 @@ class PremierLeaguePredictionPipeline:
         }
         feature_context = build_feature_context(rolling_history)
         context_history_len = len(rolling_history)
+        if self.odds_df is None:
+            try:
+                from src.odds_loader import load_odds_frame
+
+                self.odds_df = load_odds_frame(offline=True)
+            except FileNotFoundError:
+                logger.warning("Historical odds cache missing; serving rows will be odds-neutral.")
+                self.odds_df = None
+        self.refresh_live_odds()
 
         predictions: List[Dict[str, Any]] = []
 
@@ -256,7 +319,12 @@ class PremierLeaguePredictionPipeline:
             m_time = raw_time.strip() if isinstance(raw_time, str) and raw_time.strip() else "TBC"
 
             # Feature vector using precomputed context for sub-millisecond extraction
-            X_match = build_fixture_features(ht, at, m_date, rolling_history, precomputed_context=feature_context)
+            X_match = build_fixture_features(
+                ht, at, m_date, rolling_history,
+                precomputed_context=feature_context,
+                odds_row=self.resolve_serving_odds(ht, at, m_date),
+                odds_df=self.odds_df,
+            )
 
             probas = self.best_model.predict_outcome_proba(X_match)[0]  # [p_away, p_draw, p_home]
             p_away = float(probas[0])
@@ -394,6 +462,15 @@ class PremierLeaguePredictionPipeline:
         if self.raw_historical is None or self.raw_historical.empty:
             # Fast-load path (load_model only) may skip history; load it now.
             self.load_data()
+        if self.odds_df is None:
+            try:
+                from src.odds_loader import load_odds_frame
+
+                self.odds_df = load_odds_frame(offline=True)
+            except FileNotFoundError:
+                self.odds_df = None
+        if self.live_odds_df is None:
+            self.refresh_live_odds()
 
         from src.validation import assert_model_compatible, canonical_team
 
@@ -404,7 +481,11 @@ class PremierLeaguePredictionPipeline:
             raise ValueError("Home and away clubs must differ.")
         m_date = match_date or datetime.now()
 
-        X_match = build_fixture_features(ht_std, at_std, m_date, self.raw_historical)
+        market = self.resolve_serving_odds(ht_std, at_std, m_date)
+        X_match = build_fixture_features(
+            ht_std, at_std, m_date, self.raw_historical,
+            odds_row=market, odds_df=self.odds_df,
+        )
         probas = self.best_model.predict_outcome_proba(X_match)[0]
         pred_scores = self.best_model.predict_scoreline(X_match)[0]
         exp_hg, exp_ag = self.best_model.predict_expected_goals(X_match)
@@ -428,4 +509,8 @@ class PremierLeaguePredictionPipeline:
             "away_win_prob": rounded_probs[2],
             "predicted_outcome": fav_outcome,
             "model_used": self.best_model_name,
+            "market_home_prob": round(100 * market["odds_implied_home"], 1) if market else None,
+            "market_draw_prob": round(100 * market["odds_implied_draw"], 1) if market else None,
+            "market_away_prob": round(100 * market["odds_implied_away"], 1) if market else None,
+            "market_missing": market is None,
         }

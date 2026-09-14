@@ -1,8 +1,8 @@
 """Feature engineering pipeline for match outcome and scoreline forecasting.
 
 Computes rolling statistics (goals, shots, possession, points momentum),
-venue-specific form, head-to-head metrics, and rest days with strict
-zero-leakage guarantees.
+venue-specific form, head-to-head metrics, rest days, and pre-kickoff
+bookmaker odds signals with strict zero-leakage guarantees.
 """
 
 from __future__ import annotations
@@ -479,8 +479,75 @@ def compute_head_to_head_features(matches_df: pd.DataFrame) -> pd.DataFrame:
     return matches_df
 
 
-def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
-    """End-to-end dataset builder merging rolling stats and H2H features for modeling."""
+# Pre-kickoff bookmaker market features. Odds are legal features only when
+# struck before kickoff (closing aggregates qualify); results never enter.
+ODDS_FEATURE_COLUMNS: List[str] = [
+    "odds_implied_home",
+    "odds_implied_draw",
+    "odds_implied_away",
+    "odds_overround",
+    "odds_move_home",
+    "odds_missing",
+]
+
+# Neutral market row: maximum-entropy distribution, used whenever a fixture
+# has no pre-kickoff odds (and flagged via odds_missing).
+ODDS_NEUTRAL: Dict[str, float] = {
+    "odds_implied_home": 1.0 / 3.0,
+    "odds_implied_draw": 1.0 / 3.0,
+    "odds_implied_away": 1.0 / 3.0,
+    "odds_overround": 0.0,
+    "odds_move_home": 0.0,
+    "odds_missing": 1.0,
+}
+
+
+def resolve_odds_features(
+    home_team: str,
+    away_team: str,
+    match_date: datetime,
+    odds_row: Optional[Dict[str, float]] = None,
+    odds_df: Optional[pd.DataFrame] = None,
+) -> Dict[str, float]:
+    """Resolves the six market features for one fixture.
+
+    Precedence: explicit ``odds_row`` (live override) -> lookup in
+    ``odds_df`` (historical frame) -> neutral row with ``odds_missing=1``.
+    An explicit or looked-up row reports ``odds_missing=0``; NaN legs
+    inside a found row degrade to neutral rather than crashing.
+    """
+    from src.odds_loader import lookup_odds
+
+    candidate = odds_row
+    if candidate is None and odds_df is not None:
+        candidate = lookup_odds(odds_df, home_team, away_team, match_date)
+    if not candidate:
+        return dict(ODDS_NEUTRAL)
+    resolved: Dict[str, float] = {}
+    for col in ODDS_FEATURE_COLUMNS:
+        if col == "odds_missing":
+            resolved[col] = 0.0
+            continue
+        try:
+            value = float(candidate[col])
+        except (KeyError, TypeError, ValueError):
+            return dict(ODDS_NEUTRAL)
+        if value != value:  # NaN
+            return dict(ODDS_NEUTRAL)
+        resolved[col] = value
+    return resolved
+
+
+def build_engineered_dataset(
+    raw_matches: pd.DataFrame,
+    odds_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """End-to-end dataset builder merging rolling stats and H2H features for modeling.
+
+    ``odds_df`` (historical pre-kickoff odds frame) is left-joined on
+    (date, home, away); unmatched rows are neutral-filled and flagged via
+    ``odds_missing``. When None, every row is neutral (tests/offline).
+    """
     raw_matches = raw_matches.copy()
     raw_matches["_source_order"] = np.arange(len(raw_matches), dtype=int)
     raw_matches = _chronological(raw_matches, "match_id")
@@ -527,6 +594,34 @@ def build_engineered_dataset(raw_matches: pd.DataFrame) -> pd.DataFrame:
         merged[f"diff_roll_possession_{w}"] = merged[f"home_roll_possession_{w}"] - merged[f"away_roll_possession_{w}"]
 
     merged["diff_rest_days"] = merged["home_rest_days"] - merged["away_rest_days"]
+
+    # 5. Pre-kickoff market signals, joined on (date, home, away).
+    # Unmatched rows stay NaN here and are neutral-filled + flagged below.
+    merged["_odds_date"] = pd.to_datetime(merged["date"]).dt.normalize()
+    if odds_df is not None and not odds_df.empty:
+        odds_part = odds_df[
+            ["date", "home_team", "away_team",
+             "odds_implied_home", "odds_implied_draw", "odds_implied_away",
+             "odds_overround", "odds_move_home"]
+        ].copy()
+        odds_part["_odds_date"] = pd.to_datetime(odds_part["date"]).dt.normalize()
+        odds_part = odds_part.drop(columns=["date"]).drop_duplicates(
+            subset=["_odds_date", "home_team", "away_team"]
+        )
+        merged = merged.merge(
+            odds_part, on=["_odds_date", "home_team", "away_team"], how="left"
+        )
+    else:
+        for _col in ("odds_implied_home", "odds_implied_draw", "odds_implied_away",
+                     "odds_overround", "odds_move_home"):
+            merged[_col] = np.nan
+    merged = merged.drop(columns=["_odds_date"])
+    merged["odds_missing"] = merged["odds_implied_home"].isna().astype(float)
+    merged["odds_implied_home"] = merged["odds_implied_home"].fillna(1.0 / 3.0)
+    merged["odds_implied_draw"] = merged["odds_implied_draw"].fillna(1.0 / 3.0)
+    merged["odds_implied_away"] = merged["odds_implied_away"].fillna(1.0 / 3.0)
+    merged["odds_overround"] = merged["odds_overround"].fillna(0.0)
+    merged["odds_move_home"] = merged["odds_move_home"].fillna(0.0)
 
     # Target encodings:
     # result: H -> 2, D -> 1, A -> 0
@@ -605,6 +700,9 @@ def get_feature_column_names() -> List[str]:
 
     # H2H features
     cols.extend(["h2h_home_win_rate", "h2h_goal_diff", "h2h_matches_count"])
+
+    # Pre-kickoff bookmaker market signals (neutral-filled when unavailable)
+    cols.extend(ODDS_FEATURE_COLUMNS)
     return cols
 
 
@@ -635,11 +733,15 @@ def build_fixture_features(
     match_date: datetime,
     history_matches_df: pd.DataFrame,
     precomputed_context: Optional[Dict[str, Any]] = None,
+    odds_row: Optional[Dict[str, float]] = None,
+    odds_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """Builds a single-row feature DataFrame for an upcoming match using past history.
 
     Used for real-time inference and upcoming 2026/2027 fixtures.
     Supports optional precomputed_context for sub-millisecond batch forecasting.
+    Market features resolve from an explicit ``odds_row`` (live override)
+    first, then ``odds_df`` (historical frame), else neutral (flagged).
     """
     feature_cols = get_feature_column_names()
 
@@ -811,5 +913,8 @@ def build_fixture_features(
         feature_dict["h2h_home_win_rate"] = 0.33
         feature_dict["h2h_goal_diff"] = 0.0
         feature_dict["h2h_matches_count"] = 0
+
+    # Pre-kickoff market signals (live override -> historical frame -> neutral)
+    feature_dict.update(resolve_odds_features(home_team, away_team, match_date, odds_row, odds_df))
 
     return pd.DataFrame([feature_dict])[feature_cols]
