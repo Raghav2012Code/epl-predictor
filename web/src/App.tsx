@@ -13,7 +13,6 @@ import { useEPLData } from "./hooks/useEPLData";
 import {
   MotionItem,
   MotionList,
-  MotionPresence,
   MotionSection,
 } from "./components/Motion";
 
@@ -1297,7 +1296,7 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
           </div>
         </header>
         <main>
-          <MotionPresence>
+          <MotionSection key={activeTab} className="page-transition-shell">
           {activeTab === "fixtures" && (
             <FixturesPage
               key="fixtures"
@@ -1327,7 +1326,7 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
             />
           )}
           {activeTab === "analytics" && <AnalyticsPage key="analytics" dataset={dataset} />}
-          </MotionPresence>
+          </MotionSection>
         </main>
         <footer className="site-footer">
           <span>Forecasts are probabilities, not guarantees.</span>
