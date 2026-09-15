@@ -1357,9 +1357,13 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
           onClick={goHome}
           aria-label="Back to fixtures home"
         >
-          <span className="brand-mark">E</span>
-          <div>
-            <strong>EPL Predictor</strong>
+          <img
+            className="brand-logo"
+            src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
+            alt="EPL Predictor"
+            draggable={false}
+          />
+          <div className="brand-copy">
             <small>Match analysis · {dataset.season}</small>
           </div>
         </button>

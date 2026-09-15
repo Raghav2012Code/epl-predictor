@@ -24,10 +24,9 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .site-rail { width: 248px; flex: 0 0 248px; height: 100vh; position: sticky; top: 0; overflow: hidden; display: flex; flex-direction: column; padding: 22px 18px 18px; background: #173c32; color: #f7f5ef; }
 .brand { display: flex; gap: 11px; align-items: center; padding: 0 10px 20px; border-bottom: 1px solid rgba(255,255,255,.18); }
 .brand-home { width: 100%; border-left: 0; border-right: 0; border-top: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.brand-home:hover .brand-mark { border-color: #fff; color: #fff; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #d7a35a; color: #d7a35a; font-family: Georgia, serif; font-size: 22px; font-weight: 700; }
-.brand strong, .brand small, .rail-footer span, .rail-footer strong, .rail-footer small { display: block; }
-.brand strong { font-family: Georgia, serif; font-size: 17px; font-weight: 500; letter-spacing: -.02em; }
+.brand-logo { display: block; width: min(190px, 100%); height: auto; max-height: 68px; object-fit: contain; object-position: left center; }
+.brand-copy { margin-top: 2px; }
+.brand small, .rail-footer span, .rail-footer strong, .rail-footer small { display: block; }
 .brand small { margin-top: 3px; color: #a9c0b7; font-size: 11px; }
 .site-rail nav { display: grid; gap: 4px; padding-top: 20px; }
 .site-rail nav button { border: 0; border-left: 2px solid transparent; padding: 10px 12px 9px; text-align: left; color: #b7cac2; background: transparent; }
