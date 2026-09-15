@@ -1,5 +1,14 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
+
+export const MotionPreferenceContext = createContext(false);
+export const MotionPreferenceProvider: React.FC<{ disabled: boolean; children: ReactNode }> = ({ disabled, children }) => (
+  <MotionPreferenceContext.Provider value={disabled}>
+    <div className="motion-preference-root" data-motion-disabled={disabled ? "true" : "false"}>{children}</div>
+  </MotionPreferenceContext.Provider>
+);
+const useMotionDisabled = () => useReducedMotion() || useContext(MotionPreferenceContext);
 
 export const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -20,7 +29,7 @@ export const itemVariants = {
 export const MotionSection: React.FC<
   React.ComponentProps<typeof motion.section>
 > = ({ children, ...props }) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionDisabled();
   return (
     <motion.section
       {...props}
@@ -38,7 +47,7 @@ export const MotionList: React.FC<React.ComponentProps<typeof motion.div>> = ({
   children,
   ...props
 }) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionDisabled();
   return (
     <motion.div
       {...props}
@@ -55,7 +64,7 @@ export const MotionItem: React.FC<React.ComponentProps<typeof motion.div>> = ({
   children,
   ...props
 }) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionDisabled();
   return (
     <motion.div
       {...props}

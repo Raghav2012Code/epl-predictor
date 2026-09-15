@@ -13,6 +13,7 @@ import { useEPLData } from "./hooks/useEPLData";
 import {
   MotionItem,
   MotionList,
+  MotionPreferenceProvider,
   MotionSection,
 } from "./components/Motion";
 
@@ -233,9 +234,10 @@ const FixtureRow: React.FC<{
 };
 
 const FixtureDetail: React.FC<{
+  dataset: EPLDataset;
   fixture: Fixture | null;
   onSimulate: (home: string, away: string) => void;
-}> = ({ fixture, onSimulate }) => {
+}> = ({ dataset, fixture, onSimulate }) => {
   if (!fixture)
     return (
       <div className="detail-panel empty-state">
@@ -243,6 +245,8 @@ const FixtureDetail: React.FC<{
       </div>
     );
   const isPlayed = fixture.status === "Played";
+  const homeProfile = dataset.teams[fixture.homeTeam];
+  const awayProfile = dataset.teams[fixture.awayTeam];
   return (
     <article className="detail-panel">
       <div className="detail-top">
@@ -298,6 +302,10 @@ const FixtureDetail: React.FC<{
           <span>Evidence state</span>
           <strong>{isPlayed ? "Measured" : "Projected"}</strong>
         </div>
+      </div>
+      <div className="form-strip" aria-label="Team context">
+        <div><span>{fixture.homeTeam} form</span><strong>{homeProfile?.last5Form?.join(" ") ?? "Unavailable"}</strong><small>{homeProfile?.restDaysAvg ?? "—"}d average rest</small></div>
+        <div><span>{fixture.awayTeam} form</span><strong>{awayProfile?.last5Form?.join(" ") ?? "Unavailable"}</strong><small>{awayProfile?.restDaysAvg ?? "—"}d average rest</small></div>
       </div>
       <div className="detail-copy">
         <p>
@@ -516,7 +524,7 @@ const FixturesPage: React.FC<{
             </div>
           )}
         </div>
-        <FixtureDetail fixture={selected} onSimulate={onSimulate} />
+        <FixtureDetail dataset={dataset} fixture={selected} onSimulate={onSimulate} />
       </div>
     </MotionSection>
   );
@@ -1281,6 +1289,7 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState("Arsenal");
+  const [motionDisabled, setMotionDisabled] = useState(false);
   const [simulatorSelection, setSimulatorSelection] = useState({
     home: "Arsenal",
     away: "Chelsea",
@@ -1339,7 +1348,8 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
     : [];
   const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return (
-    <div className="app-shell">
+    <MotionPreferenceProvider disabled={motionDisabled}>
+      <div className="app-shell">
       <aside className="site-rail">
         <button
           type="button"
@@ -1461,6 +1471,9 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
         </main>
         <footer className="site-footer">
           <span>Forecasts are probabilities, not guarantees.</span>
+          <button className="text-button motion-toggle" onClick={() => setMotionDisabled((value) => !value)} aria-pressed={motionDisabled}>
+            {motionDisabled ? "Motion reduced" : "Motion on"}
+          </button>
           <a
             href="https://github.com/Raghav2012Code/epl-predictor"
             target="_blank"
@@ -1470,7 +1483,8 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
           </a>
         </footer>
       </div>
-    </div>
+      </div>
+    </MotionPreferenceProvider>
   );
 };
 

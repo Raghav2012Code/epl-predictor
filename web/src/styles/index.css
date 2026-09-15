@@ -168,4 +168,17 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 @media (max-width: 720px) { .fixture-actions { width: 100%; margin-left: 0; justify-content: space-between; padding-top: 2px; }.fixture-actions .text-button { flex: 1; padding: 9px; border: 1px solid #cfcdc5; }.table-wrap { margin-inline: -18px; padding-inline: 18px; } }
 @media (prefers-reduced-motion: reduce) { .fixture-motion-item, .table-wrap tbody tr { animation: none; transition: none; }.table-wrap tbody tr:hover { transform: none; } }
 @media print { .site-rail, .site-header, .site-footer, .fixture-controls, .stepper, .primary-button { display: none !important; }.app-shell { display: block; }.site-content { width: 100%; }main { padding: 0; }.fixture-layout { grid-template-columns: 1fr; }.detail-panel { break-inside: avoid; } }
+.form-strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 0 0 22px; }
+.form-strip > div { padding: 12px; border: 1px solid #e2dfd7; background: #f3f1ec; }
+.form-strip span, .form-strip strong, .form-strip small { display: block; }
+.form-strip span { color: #68716c; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.form-strip strong { margin-top: 8px; color: #173c32; font-size: 13px; letter-spacing: .12em; }
+.form-strip small { margin-top: 6px; color: #68716c; font-size: 10px; }
+.scenario-panel { position: relative; overflow: hidden; background-color: #fbfaf7; background-image: linear-gradient(rgba(29,111,82,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(29,111,82,.035) 1px, transparent 1px); background-size: 30px 30px; }
+.scenario-panel > * { position: relative; }
+.motion-toggle { white-space: nowrap; }
+.motion-preference-root { display: contents; }
+[data-motion-disabled="true"] *, [data-motion-disabled="true"] *::before, [data-motion-disabled="true"] *::after { animation: none !important; transition: none !important; }
+[data-motion-disabled="true"] .fixture-row:hover, [data-motion-disabled="true"] .mini-fixture.interactive:hover, [data-motion-disabled="true"] .diagnostic-grid button:hover, [data-motion-disabled="true"] .primary-button:hover, [data-motion-disabled="true"] .table-wrap tbody tr:hover { transform: none; }
+@media (max-width: 720px) { .form-strip { grid-template-columns: 1fr; } .site-footer .motion-toggle { order: 2; } }
 @media (prefers-reduced-motion: reduce) { .outcome-bars i, .goal-grid div span { animation: none; } }
