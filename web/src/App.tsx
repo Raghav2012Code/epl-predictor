@@ -51,8 +51,10 @@ const downloadFixturesCsv = (fixtures: Fixture[]) => {
   const link = document.createElement("a");
   link.href = url;
   link.download = "epl-predictor-fixtures.csv";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 type ScenarioResult = {
   homeExpected: number;
