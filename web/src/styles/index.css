@@ -160,4 +160,12 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 @keyframes grow-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes grow-column { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @media (max-width: 720px) { .metric-explainer { align-items: start; flex-direction: column; gap: 10px; }.metric-explainer h3 { max-width: none; } }
+.fixture-actions { display: inline-flex; gap: 12px; margin-left: auto; }
+.table-wrap { overflow-x: auto; }
+.table-wrap tbody tr { transition: background-color .18s ease, transform .18s ease; }
+.table-wrap tbody tr:hover { background: #edf2ed; transform: translateX(3px); }
+.table-wrap tbody tr:focus-visible { outline: 3px solid rgba(180, 107, 42, .38); outline-offset: -3px; }
+@media (max-width: 720px) { .fixture-actions { width: 100%; margin-left: 0; justify-content: space-between; padding-top: 2px; }.fixture-actions .text-button { flex: 1; padding: 9px; border: 1px solid #cfcdc5; }.table-wrap { margin-inline: -18px; padding-inline: 18px; } }
+@media (prefers-reduced-motion: reduce) { .fixture-motion-item, .table-wrap tbody tr { animation: none; transition: none; }.table-wrap tbody tr:hover { transform: none; } }
+@media print { .site-rail, .site-header, .site-footer, .fixture-controls, .stepper, .primary-button { display: none !important; }.app-shell { display: block; }.site-content { width: 100%; }main { padding: 0; }.fixture-layout { grid-template-columns: 1fr; }.detail-panel { break-inside: avoid; } }
 @media (prefers-reduced-motion: reduce) { .outcome-bars i, .goal-grid div span { animation: none; } }

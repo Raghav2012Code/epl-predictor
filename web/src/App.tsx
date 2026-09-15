@@ -33,6 +33,27 @@ const confidenceFor = (fixture: Fixture) =>
   Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb);
 const deltaLabel = (value: number) =>
   `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+const downloadFixturesCsv = (fixtures: Fixture[]) => {
+  const rows = [
+    ["Date", "Gameweek", "Home", "Away", "Prediction", "Outcome", "Confidence"],
+    ...fixtures.map((fixture) => [
+      fixture.date,
+      String(fixture.gameweek),
+      fixture.homeTeam,
+      fixture.awayTeam,
+      fixture.predictedScore,
+      fixture.predictedOutcome,
+      pct(confidenceFor(fixture)),
+    ]),
+  ];
+  const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "epl-predictor-fixtures.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+};
 type ScenarioResult = {
   homeExpected: number;
   awayExpected: number;
@@ -355,8 +376,18 @@ const FixturesPage: React.FC<{
       .sort(
         (a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
       )[0];
-    setSelectedId((upcoming ?? filtered[0])?.id ?? null);
+    setSelectedId((upcoming ?? visibleFixtures[0])?.id ?? null);
   }, [gameweek, query, visibleFixtures]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+      if (event.key === "ArrowLeft") setGameweek((current) => Math.max(gameweeks[0] ?? 1, current - 1));
+      if (event.key === "ArrowRight") setGameweek((current) => Math.min(gameweeks[gameweeks.length - 1] ?? 38, current + 1));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [gameweeks]);
   const selected =
     visibleFixtures.find((fixture) => fixture.id === selectedId) ??
     visibleFixtures[0] ??
@@ -455,6 +486,10 @@ const FixturesPage: React.FC<{
           </select>
         </label>
         <span className="muted">{visibleFixtures.length} of {filtered.length} fixtures</span>
+        <div className="fixture-actions">
+          <button className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>Export CSV</button>
+          <button className="text-button" onClick={() => window.print()}>Print</button>
+        </div>
       </div>
       <div className="fixture-layout">
         <div
