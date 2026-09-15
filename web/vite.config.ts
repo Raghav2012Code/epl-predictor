@@ -7,6 +7,9 @@ const rootDir = import.meta.dirname;
 export default defineConfig({
   root: rootDir,
   base: './',
+  resolve: {
+    alias: { '@': `${rootDir}/src` },
+  },
   plugins: [react(), tailwindcss()],
   build: {
     outDir: `${rootDir}/dist`,
