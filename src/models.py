@@ -16,6 +16,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -30,6 +31,13 @@ def apply_temperature_scaling(probas: np.ndarray, t: float) -> np.ndarray:
     scaled -= scaled.max(axis=1, keepdims=True)
     exp = np.exp(scaled)
     return exp / exp.sum(axis=1, keepdims=True)
+
+
+def _rps_loss(probas: np.ndarray, y: np.ndarray) -> float:
+    """Computes multiclass Ranked Probability Score for [Away, Draw, Home]."""
+    cumulative = np.cumsum(np.asarray(probas, dtype=float), axis=1)[:, :2]
+    truth = np.eye(3, dtype=float)[np.asarray(y, dtype=int)][:, :2]
+    return float(np.mean(np.sum((cumulative - np.cumsum(truth, axis=1)) ** 2, axis=1) / 2.0))
 
 
 def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
@@ -62,11 +70,26 @@ def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
 # + 350-row forecast-slate grid; objective eval accuracy subject to
 # 18-27% draws on BOTH). Market-present: 0.12/0.24 (47.3% acc, 19.7%
 # draws, n=402). No-market: 0.12/0.25 (eval ~52% acc, ~21% draws;
-# ~22-23% on the no-market slate). Revisit in Phase 7 (RPS-based).
+# ~22-23% on the no-market slate). Phase 7 receipt (2026-09-15): values moved
+# to config.yaml and retained after the disjoint eval/forecast RPS grid with
+# 18-27% draw-share constraints.
 DRAW_MARGIN = 0.12
 DRAW_MIN_PROB = 0.24
 DRAW_MARGIN_NO_MARKET = 0.12
 DRAW_MIN_PROB_NO_MARKET = 0.25
+
+
+def get_draw_rule() -> Dict[str, float]:
+    """Returns config-driven draw thresholds with backward-compatible defaults."""
+    from src.config import get_config
+
+    configured = get_config().get("model", {}).get("draw_rule", {})
+    return {
+        "market_margin": float(configured.get("market_margin", DRAW_MARGIN)),
+        "market_min_prob": float(configured.get("market_min_prob", DRAW_MIN_PROB)),
+        "no_market_margin": float(configured.get("no_market_margin", DRAW_MARGIN_NO_MARKET)),
+        "no_market_min_prob": float(configured.get("no_market_min_prob", DRAW_MIN_PROB_NO_MARKET)),
+    }
 
 
 def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
@@ -76,14 +99,80 @@ def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
     draw; thresholds are regime-aware because market-present and
     no-market proba distributions differ sharply.
     """
+    rule = get_draw_rule()
     if float(odds_missing) >= 0.5:
-        margin, min_prob = DRAW_MARGIN_NO_MARKET, DRAW_MIN_PROB_NO_MARKET
+        margin, min_prob = rule["no_market_margin"], rule["no_market_min_prob"]
     else:
-        margin, min_prob = DRAW_MARGIN, DRAW_MIN_PROB
+        margin, min_prob = rule["market_margin"], rule["market_min_prob"]
     p_a, p_d, p_h = float(probas[0]), float(probas[1]), float(probas[2])
     if abs(p_h - p_a) <= margin and p_d >= min_prob:
         return 1
     return int(np.argmax(probas))
+
+
+def tune_draw_rule(
+    eval_probas: np.ndarray,
+    eval_y: np.ndarray,
+    eval_odds_missing: np.ndarray,
+    forecast_probas: np.ndarray | None = None,
+    forecast_missing: np.ndarray | None = None,
+    draw_band: Tuple[float, float] = (0.18, 0.27),
+) -> Dict[str, float]:
+    """Grid-searches regime thresholds under the draw-share constraint.
+
+    RPS is computed from hard decisions on the calibration-independent eval
+    slice; forecast shares are an additional plausibility constraint.
+    """
+    eval_probas = np.asarray(eval_probas, dtype=float)
+    eval_y = np.asarray(eval_y, dtype=int)
+    eval_missing = np.asarray(eval_odds_missing, dtype=float)
+    forecast_probas = eval_probas if forecast_probas is None else np.asarray(forecast_probas, dtype=float)
+    forecast_missing = eval_missing if forecast_missing is None else np.asarray(forecast_missing, dtype=float)
+    candidates = np.arange(0.08, 0.181, 0.01)
+    minimum, maximum = draw_band
+
+    def _decision_share(probas, missing, margin, minimum_prob):
+        decisions = np.asarray([
+            1 if abs(float(p[2]) - float(p[0])) <= margin and float(p[1]) >= minimum_prob
+            else int(np.argmax(p))
+            for p in probas
+        ])
+        return decisions, float(np.mean(decisions == 1))
+
+    def _rps(decisions, truth):
+        one_hot = np.eye(3, dtype=float)[decisions]
+        return float(np.mean(np.sum((np.cumsum(one_hot, axis=1)[:, :2] - np.cumsum(np.eye(3)[truth], axis=1)[:, :2]) ** 2, axis=1) / 2.0))
+
+    result: Dict[str, float] = {}
+    for prefix, is_missing in (("market", False), ("no_market", True)):
+        eval_mask = (eval_missing >= 0.5) if is_missing else (eval_missing < 0.5)
+        forecast_mask = (forecast_missing >= 0.5) if is_missing else (forecast_missing < 0.5)
+        best = None
+        for margin in candidates:
+            for minimum_prob in np.arange(0.20, 0.301, 0.01):
+                eval_decisions, eval_share = _decision_share(eval_probas[eval_mask], eval_missing[eval_mask], margin, minimum_prob)
+                forecast_decisions, forecast_share = _decision_share(forecast_probas[forecast_mask], forecast_missing[forecast_mask], margin, minimum_prob)
+                if minimum <= eval_share <= maximum and minimum <= forecast_share <= maximum:
+                    score = _rps(eval_decisions, eval_y[eval_mask]) if len(eval_decisions) else float("inf")
+                    candidate = (score, float(margin), float(minimum_prob), eval_share, forecast_share)
+                    if best is None or candidate < best:
+                        best = candidate
+        if best is None:
+            best = (float("inf"), DRAW_MARGIN_NO_MARKET if is_missing else DRAW_MARGIN, DRAW_MIN_PROB_NO_MARKET if is_missing else DRAW_MIN_PROB, 0.0, 0.0)
+        result[f"{prefix}_margin"] = best[1]
+        result[f"{prefix}_min_prob"] = best[2]
+        result[f"{prefix}_draw_share"] = best[3]
+        result[f"{prefix}_forecast_draw_share"] = best[4]
+    forecast_decisions = []
+    for p, missing in zip(forecast_probas, forecast_missing):
+        prefix = "no_market" if missing >= 0.5 else "market"
+        draw = (
+            abs(float(p[2]) - float(p[0])) <= result[f"{prefix}_margin"]
+            and float(p[1]) >= result[f"{prefix}_min_prob"]
+        )
+        forecast_decisions.append(1 if draw else int(np.argmax(p)))
+    result["forecast_draw_share"] = float(np.mean(np.asarray(forecast_decisions) == 1))
+    return result
 
 
 def blend_weights() -> Tuple[float, float, float]:
@@ -303,6 +392,9 @@ class MatchPredictorModel:
         # Temperature scaling for calibrated probabilities (fit on validation).
         # T > 1 softens overconfident peaks; T == 1.0 means uncalibrated.
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
+        self.calibrated_classifier = None
         # Multiplicative bias correction for expected goals (fit on training
         # means): counters systematic under/over-prediction of Poisson means.
         self.home_goal_correction: float = 1.0
@@ -329,6 +421,9 @@ class MatchPredictorModel:
     def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series, sample_weight=None) -> MatchPredictorModel:
         """Fits the outcome classifier and all four goal regressors."""
         self.feature_names = list(X.columns)
+        self.calibrated_classifier = None
+        self.calibration_method = "temperature"
+        self.calibration_scores = {}
         _fit_with_weights(self.classifier, X, y_outcome, sample_weight)
         self.home_regressor.fit(X, y_hg, sample_weight=sample_weight)
         self.away_regressor.fit(X, y_ag, sample_weight=sample_weight)
@@ -370,16 +465,65 @@ class MatchPredictorModel:
         gmin = float(grid_cfg.get("calibration_grid_min", 0.5))
         gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
         gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
-        best_t, best_ll = 1.0, float("inf")
+        best_t, best_rps = 1.0, float("inf")
         grid = np.arange(gmin, gmax + gstep / 2, gstep)
         for t in [round(float(x), 2) for x in grid]:
             scaled = self._apply_temperature(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
-            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
-            if ll < best_ll:
-                best_ll, best_t = ll, t
+            rps = _rps_loss(clipped, y)
+            if rps < best_rps:
+                best_rps, best_t = rps, t
         self.calibration_temperature = float(best_t)
+        self.calibration_method = "temperature"
+        self.calibrated_classifier = None
         return self.calibration_temperature
+
+    def calibrate_outcome(
+        self,
+        X_cal: pd.DataFrame,
+        y_cal: pd.Series,
+        X_eval: pd.DataFrame | None = None,
+        y_eval: pd.Series | None = None,
+    ) -> Dict[str, Any]:
+        """Compares temperature, sigmoid, and isotonic on disjoint slices."""
+        if self.classifier is None:
+            self.calibrate_temperature(X_cal, y_cal)
+            self.calibration_method = "temperature"
+            self.calibration_scores = {"temperature": 0.0, "sigmoid": float("inf"), "isotonic": float("inf")}
+            return {"winner": "temperature", "scores": self.calibration_scores}
+
+        # Keep candidate fitting and selection disjoint. The outer evaluation
+        # slice remains reserved for headline scoring by the caller.
+        fit_slice, score_slice = split_calibration_evaluation(len(X_cal))
+        fit_X = X_cal.iloc[fit_slice] if fit_slice.stop else X_cal
+        fit_y = y_cal.iloc[fit_slice] if fit_slice.stop else y_cal
+        score_X = X_cal.iloc[score_slice] if score_slice.start else X_cal
+        score_y = np.asarray(y_cal.iloc[score_slice] if score_slice.start else y_cal, dtype=int)
+        raw_sources = self._source_probas(score_X)
+        w_clf, w_poiss, w_sup = blend_weights()
+
+        def _blend(clf):
+            blended = w_clf * clf + w_poiss * raw_sources["poisson"] + w_sup * raw_sources["supremacy"]
+            return blended / blended.sum(axis=1, keepdims=True)
+
+        self.calibrate_temperature(fit_X, fit_y)
+        scores = {"temperature": _rps_loss(self._apply_temperature(_blend(raw_sources["clf"]), self.calibration_temperature), score_y)}
+        candidates = {}
+        for method in ("sigmoid", "isotonic"):
+            try:
+                candidate = CalibratedClassifierCV(self.classifier, method=method, cv="prefit")
+                candidate.fit(fit_X, fit_y)
+                calibrated = align_probas(candidate.classes_, candidate.predict_proba(score_X))
+                scores[method] = _rps_loss(_blend(calibrated), score_y)
+                candidates[method] = candidate
+            except (ValueError, TypeError, RuntimeError):
+                scores[method] = float("inf")
+
+        winner = min(("temperature", "sigmoid", "isotonic"), key=lambda name: scores[name])
+        self.calibration_method = winner
+        self.calibration_scores = {key: float(value) for key, value in scores.items()}
+        self.calibrated_classifier = candidates.get(winner)
+        return {"winner": winner, "scores": self.calibration_scores}
 
     @staticmethod
     def _apply_temperature(probas: np.ndarray, t: float) -> np.ndarray:
@@ -437,9 +581,8 @@ class MatchPredictorModel:
         grid from the supremacy/totals decomposition. Shared by blending
         and by blend-weight tuning.
         """
-        clf_probas = align_probas(
-            self.classifier.classes_, self.classifier.predict_proba(X)
-        )
+        classifier = self.calibrated_classifier if self.calibration_method in {"sigmoid", "isotonic"} and self.calibrated_classifier is not None else self.classifier
+        clf_probas = align_probas(classifier.classes_, classifier.predict_proba(X))
         exp_hg, exp_ag = self.predict_expected_goals(X)
         sup = np.asarray(self.supremacy_regressor.predict(X), dtype=float)
         tot = np.asarray(self.totals_regressor.predict(X), dtype=float)
@@ -468,7 +611,7 @@ class MatchPredictorModel:
         )
         blended /= blended.sum(axis=1, keepdims=True)
 
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = self._apply_temperature(blended, self.calibration_temperature)
         return blended
 
@@ -540,6 +683,9 @@ class MatchPredictorModel:
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
             "calibration_temperature": self.calibration_temperature,
+            "calibration_method": self.calibration_method,
+            "calibration_scores": self.calibration_scores,
+            "calibrated_classifier": self.calibrated_classifier,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
         }
@@ -569,6 +715,9 @@ class MatchPredictorModel:
         instance.is_fitted = payload["is_fitted"]
         # Backward-compatible: checkpoints saved before calibration default to 1.0.
         instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.calibration_method = payload.get("calibration_method", "temperature")
+        instance.calibration_scores = dict(payload.get("calibration_scores", {}))
+        instance.calibrated_classifier = payload.get("calibrated_classifier")
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
         return instance
@@ -607,7 +756,7 @@ def _score_benchmark_model(
     calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
     if calibration_slice.stop:
         try:
-            model.calibrate_temperature(
+            model.calibrate_outcome(
                 X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice]
             )
         except Exception:
@@ -686,6 +835,8 @@ def _score_benchmark_model(
         "eval_pred_scores": pred_scores,
         "feature_importances": model.get_feature_importances(),
         "calibration_temperature": model.calibration_temperature,
+        "calibration_method": getattr(model, "calibration_method", "temperature"),
+        "calibration_scores": getattr(model, "calibration_scores", {}),
         "home_goal_correction": model.home_goal_correction,
         "away_goal_correction": model.away_goal_correction,
         "eval_y_outcome": eval_y_outcome.values,
@@ -770,6 +921,8 @@ class EloPoissonModel:
         self.mu_a: float = 1.1
         self.beta: float = 1.0
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
         self.feature_names: List[str] = []
@@ -825,12 +978,12 @@ class EloPoissonModel:
             )
             rows.append(p_poiss)
         blended = np.array(rows)
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
     def calibrate_temperature(self, X_val: pd.DataFrame, y_val: pd.Series) -> float:
-        """Fits temperature scaling on validation probabilities (mirror of trees)."""
+        """Fits RPS-optimized temperature scaling on validation probabilities."""
         probas = self.predict_outcome_proba(X_val, apply_temperature=False)
         y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
         eps = 1e-15
@@ -840,15 +993,23 @@ class EloPoissonModel:
         gmin = float(grid_cfg.get("calibration_grid_min", 1.0))
         gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
         gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
-        best_t, best_ll = 1.0, float("inf")
+        best_t, best_rps = 1.0, float("inf")
         for t in [round(float(x), 2) for x in np.arange(gmin, gmax + gstep / 2, gstep)]:
             scaled = apply_temperature_scaling(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
-            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
-            if ll < best_ll:
-                best_ll, best_t = ll, t
+            rps = _rps_loss(clipped, y)
+            if rps < best_rps:
+                best_rps, best_t = rps, t
         self.calibration_temperature = float(best_t)
+        self.calibration_method = "temperature"
         return self.calibration_temperature
+
+    def calibrate_outcome(self, X_cal, y_cal, X_eval=None, y_eval=None):
+        """Uses the temperature fallback for this classifier-free member."""
+        self.calibrate_temperature(X_cal, y_cal)
+        score = _rps_loss(self.predict_outcome_proba(X_cal), np.asarray(y_cal, dtype=int))
+        self.calibration_scores = {"temperature": float(score), "sigmoid": float("inf"), "isotonic": float("inf")}
+        return {"winner": "temperature", "scores": self.calibration_scores}
 
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
         """Constrained-argmax scorelines consistent with the shared rule."""
@@ -902,6 +1063,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         self.feature_names: List[str] = []
         self.is_fitted: bool = False
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
 
@@ -933,7 +1096,7 @@ class StackedEnsembleModel(MatchPredictorModel):
         """Meta-learner probabilities over member probabilities."""
         stacked = self._stack_probas(X)
         blended = align_probas(self.meta.classes_, self.meta.predict_proba(stacked))
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = self._apply_temperature(blended, self.calibration_temperature)
         return blended
 
@@ -970,6 +1133,8 @@ class StackedEnsembleModel(MatchPredictorModel):
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
             "calibration_temperature": self.calibration_temperature,
+            "calibration_method": self.calibration_method,
+            "calibration_scores": self.calibration_scores,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
         }
@@ -988,6 +1153,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         instance.feature_names = payload["feature_names"]
         instance.is_fitted = payload["is_fitted"]
         instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.calibration_method = payload.get("calibration_method", "temperature")
+        instance.calibration_scores = dict(payload.get("calibration_scores", {}))
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
         return instance
@@ -1020,7 +1187,10 @@ def _fit_and_calibrate_member(
                sample_weight=sample_weight)
     if len(X_cal) > 0:
         try:
-            member.calibrate_temperature(X_cal, y_cal)
+            if hasattr(member, "calibrate_outcome"):
+                member.calibrate_outcome(X_cal, y_cal)
+            else:
+                member.calibrate_temperature(X_cal, y_cal)
         except Exception:
             member.calibration_temperature = 1.0
     return member
@@ -1078,11 +1248,9 @@ def train_stacked_ensemble(
         fold_members = _build_level_zero_members()
         sw_fold = None if sw_full is None else sw_full[np.asarray(train_idx)]
         for key in STACK_MEMBER_ORDER:
-            _fit_and_calibrate_member(
-                fold_members[key],
+            fold_members[key].fit(
                 X_train.iloc[train_idx], y_train_outcome.iloc[train_idx],
                 y_train_hg.iloc[train_idx], y_train_ag.iloc[train_idx],
-                X_cal, y_cal,
                 sample_weight=sw_fold,
             )
         oof_probas[held_idx] = np.concatenate(

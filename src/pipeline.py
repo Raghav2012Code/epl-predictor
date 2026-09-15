@@ -22,6 +22,8 @@ from src.evaluate import (
     plot_feature_importance,
     plot_goal_error_distribution,
     plot_metrics_comparison,
+    plot_reliability_curves,
+    plot_rps_comparison,
 )
 from src.feature_engineering import (
     build_engineered_dataset,
@@ -34,6 +36,7 @@ from src.models import (
     OUTCOME_NAMES,
     MatchPredictorModel,
     favor_outcome_from_proba,
+    split_calibration_evaluation,
     train_and_benchmark_models,
 )
 from src.logging_config import get_logger
@@ -68,7 +71,6 @@ class PremierLeaguePredictionPipeline:
         self.engineered_df: Optional[pd.DataFrame] = None
         self.fixtures_2026_2027: Optional[pd.DataFrame] = None
         self.odds_df: Optional[pd.DataFrame] = None
-        self.live_odds_df: Optional[pd.DataFrame] = None
         self.feature_cols: List[str] = get_feature_column_names()
         self.models: Dict[str, MatchPredictorModel] = {}
         self.metrics: Dict[str, Dict[str, Any]] = {}
@@ -174,6 +176,11 @@ class PremierLeaguePredictionPipeline:
             stacked_preds=self.metrics["Stacked"]["val_preds"],
         )
         plot_metrics_comparison(self.metrics)
+        plot_reliability_curves(
+            y_val_outcome,
+            {name: vals["val_proba"] for name, vals in self.metrics.items()},
+        )
+        plot_rps_comparison(self.metrics)
         plot_goal_error_distribution(
             y_val_hg,
             y_val_ag,
@@ -197,6 +204,15 @@ class PremierLeaguePredictionPipeline:
             self.engineered_df["target_away_goals"],
             sample_weight=_refit_weights,
         )
+        # Refit invalidates any prefit sigmoid/isotonic mapping. Rebuild the
+        # selected calibration strategy against the refit classifier while
+        # keeping the evaluation tail untouched.
+        calibration_slice, _ = split_calibration_evaluation(len(val_df))
+        if calibration_slice.stop:
+            self.best_model.calibrate_outcome(
+                val_df[self.feature_cols].iloc[calibration_slice],
+                val_df["target_outcome"].iloc[calibration_slice],
+            )
         self.save_model(DEFAULT_MODEL_PATH)
 
         return self.metrics
@@ -217,6 +233,7 @@ class PremierLeaguePredictionPipeline:
             payload = {
                 "production_model": self.best_model_name,
                 "calibration_temperature": getattr(self.best_model, "calibration_temperature", 1.0),
+                "calibration_method": getattr(self.best_model, "calibration_method", "temperature"),
                 "home_goal_correction": getattr(self.best_model, "home_goal_correction", 1.0),
                 "away_goal_correction": getattr(self.best_model, "away_goal_correction", 1.0),
                 "feature_count": len(self.feature_cols),
@@ -228,6 +245,7 @@ class PremierLeaguePredictionPipeline:
                                  "mae_home_goals",
                                  "mae_away_goals", "avg_goal_mae", "exact_score_acc",
                                  "within_1_goal_acc", "calibration_temperature",
+                                 "calibration_method",
                                  "home_goal_correction", "away_goal_correction")
                     }
                     for name, vals in (self.metrics or {}).items()
@@ -254,28 +272,15 @@ class PremierLeaguePredictionPipeline:
         self.feature_cols = self.best_model.feature_names
         return self.best_model
 
-    def refresh_live_odds(self) -> Optional[pd.DataFrame]:
-        """Fetches the live board once per session (quota-friendly).
-
-        Returns the parsed live frame, or None when unavailable (no key,
-        offline, quota spent). Forecasts degrade to historical priors.
-        """
-        from src.live_odds import fetch_live_odds, parse_live_odds
-
-        events = fetch_live_odds()
-        self.live_odds_df = parse_live_odds(events) if events else None
-        return self.live_odds_df
-
     def resolve_serving_odds(
         self, home_team: str, away_team: str, match_date: datetime
     ) -> Optional[Dict[str, float]]:
         """Resolves market features for one upcoming fixture.
 
-        Precedence: live board -> historical pre-kickoff row -> None
-        (neutral-filled downstream and flagged via odds_missing).
+        Uses the cached historical pre-kickoff row when available, otherwise
+        returns None (neutral-filled downstream and flagged via odds_missing).
         Rows with non-finite legs are skipped as if missing.
         """
-        from src.live_odds import lookup_live_odds
         from src.odds_loader import lookup_odds
 
         def _finite(row: Optional[Dict[str, float]]) -> Optional[Dict[str, float]]:
@@ -290,10 +295,6 @@ class PremierLeaguePredictionPipeline:
                 pass
             return None
 
-        if self.live_odds_df is not None:
-            live = _finite(lookup_live_odds(self.live_odds_df, home_team, away_team, match_date))
-            if live is not None:
-                return live
         if self.odds_df is not None:
             return _finite(lookup_odds(self.odds_df, home_team, away_team, match_date))
         return None
@@ -328,8 +329,6 @@ class PremierLeaguePredictionPipeline:
             except FileNotFoundError:
                 logger.warning("Historical odds cache missing; serving rows will be odds-neutral.")
                 self.odds_df = None
-        self.refresh_live_odds()
-
         predictions: List[Dict[str, Any]] = []
 
         for _, fix in fixtures.iterrows():
@@ -493,9 +492,6 @@ class PremierLeaguePredictionPipeline:
                 self.odds_df = load_odds_frame(offline=True)
             except FileNotFoundError:
                 self.odds_df = None
-        if self.live_odds_df is None:
-            self.refresh_live_odds()
-
         from src.validation import assert_model_compatible, canonical_team
 
         assert_model_compatible(self.best_model, strict=True)

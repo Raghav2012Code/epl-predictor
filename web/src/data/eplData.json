@@ -9572,6 +9572,7 @@
       {
         "name": "Random Forest",
         "isProduction": true,
+        "rps": 0.207,
         "accuracy": 46.6,
         "macroF1": 0.432,
         "logLoss": 1.016,
@@ -9584,6 +9585,7 @@
       {
         "name": "XGBoost",
         "isProduction": false,
+        "rps": 0.208,
         "accuracy": 48.7,
         "macroF1": 0.403,
         "logLoss": 1.026,
@@ -9596,6 +9598,7 @@
       {
         "name": "Stacked",
         "isProduction": false,
+        "rps": 0.208,
         "accuracy": 47.2,
         "macroF1": 0.415,
         "logLoss": 1.016,
@@ -9680,6 +9683,12 @@
         "title": "Goal Error Residuals",
         "src": "visuals/goal_error_distribution.png",
         "caption": "Poisson goal residuals and actual vs predicted frequency."
+      },
+      {
+        "id": "rps_comparison",
+        "title": "RPS Selection",
+        "src": "visuals/rps_comparison.png",
+        "caption": "Ranked Probability Score across models; lower is better and drives production selection."
       }
     ]
   },

@@ -41,6 +41,12 @@ _DEFAULTS: Dict[str, Any] = {
         "calibration_grid_min": 1.0,
         "calibration_grid_max": 3.0,
         "calibration_grid_step": 0.05,
+        "draw_rule": {
+            "market_margin": 0.12,
+            "market_min_prob": 0.24,
+            "no_market_margin": 0.12,
+            "no_market_min_prob": 0.25,
+        },
         "odds_mask_rate": 0.15,
         "recency_half_life_days": 365,
     },

@@ -48,6 +48,7 @@ export interface ModelMetric {
   accuracy: number;
   macroF1: number;
   logLoss: number;
+  rps: number;
   homeGoalMae: number;
   awayGoalMae: number;
   avgGoalMae: number;

@@ -1,0 +1,13 @@
+{
+  "name": "EPL Predictor",
+  "short_name": "EPL Predictor",
+  "description": "Offline Premier League forecast dashboard.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f1ec",
+  "theme_color": "#173c32",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

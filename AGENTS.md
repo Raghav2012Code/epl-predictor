@@ -10,7 +10,7 @@ The system ingests historical English Premier League match data, pre-kickoff boo
 1. **Match Outcome Probabilities**: Calibrated 3-way distribution for `Home Win`, `Draw`, and `Away Win`.
 2. **Exact Scorelines**: Continuous expected goals (`Home xG` and `Away xG`) modeled via Poisson regression and reconciled into integer scorelines (e.g., `2 - 1`).
 
-Market data comes from football-data.co.uk's free archive (cached, never scraped) with an optional live board via The Odds API (`EPL_ODDS_API_KEY`; the pipeline runs fully offline without it). A stacked ensemble (tuned Random Forest, XGBoost, logistic regression, Elo-Poisson) is benchmarked under time ordered validation; production is selected by Ranked Probability Score (RPS).
+Market data comes only from football-data.co.uk's free archive (cached, never scraped); there is no external live-odds API integration. A stacked ensemble (tuned Random Forest, XGBoost, logistic regression, Elo-Poisson) is benchmarked under time ordered validation; production is selected by Ranked Probability Score (RPS).
 
 ---
 
@@ -42,7 +42,6 @@ elegant-franklin/
 │   ├── config.py              # config.yaml loader (env overrides, yaml-optional fallback)
 │   ├── data_loader.py         # Ingestion, openfootball text parser, alias normalization
 │   ├── odds_loader.py         # football-data.co.uk odds ingestion + implied probabilities
-│   ├── live_odds.py           # Optional The Odds API client (env key, offline-safe)
 │   ├── feature_engineering.py # Rolling form, venue splits, H2H, rest days, market signals (zero-leakage)
 │   ├── models.py              # MatchPredictorModel (RF/XGB/LogReg), EloPoissonModel, StackedEnsembleModel
 │   ├── tuning.py              # Deterministic Optuna search (mirrors benchmark protocol)
@@ -53,7 +52,6 @@ elegant-franklin/
 ├── tests/
 │   ├── test_pipeline.py       # Core unit and integration pytest suite
 │   ├── test_odds.py           # Odds parsing, leakage contract, feature-join tests
-│   ├── test_live_odds.py      # Live client tests (all network mocked)
 │   ├── test_tuning.py         # RPS, search determinism, tuning record tests
 │   ├── test_ensemble.py       # Elo member, stacking, checkpoint dispatch tests
 │   └── test_interfaces.py     # CLI/API contract tests
@@ -79,8 +77,8 @@ elegant-franklin/
 ### Ensemble & Selection Policy
 - Level-0 members are Random Forest, XGBoost, multinomial logistic regression, and Elo-Poisson (`EloPoissonModel` reads only `home_elo`/`away_elo`; league means and slope fit on training rows only). The meta-learner trains on honest out-of-fold train probabilities (`TimeSeriesSplit`), never in-sample outputs.
 - Production is selected by **RPS** (Ranked Probability Score, lower wins), tie-broken by log-loss, accuracy, goal MAE. Accuracy alone never selects.
-- Calibration uses temperature scaling with grid floor `T >= 1.0` (soften only), fit on the disjoint calibration half of validation (`split_calibration_evaluation()`); headline metrics use the other half.
-- The draw decision (`favor_outcome_from_proba()`) is the SINGLE source of truth for scorelines, forecasts, and validation decisions, with regime-aware thresholds for market-present vs no-market rows. Retune both whenever the production model changes (procedure: grid on the disjoint eval slice + forecast-slate plausibility band 18-27%).
+- Calibration compares temperature, prefit sigmoid, and prefit isotonic with RPS on the disjoint calibration/evaluation slices (`split_calibration_evaluation()`); the winning method is persisted and headline metrics use the untouched evaluation half.
+- The draw decision (`favor_outcome_from_proba()`) is the SINGLE source of truth for scorelines, forecasts, and validation decisions, with regime-aware thresholds loaded from `config.yaml` for market-present vs no-market rows. Retune both whenever the production model changes (procedure: RPS grid on the disjoint eval slice + forecast-slate plausibility band 18-27%).
 - `predict_outcome_proba()` outputs are always `(N, 3)` in `[Away, Draw, Home]` order (`align_probas()` guards degenerate slices).
 - Checkpoints are strict: `assert_model_compatible(..., strict=True)` in serving paths; `StackedEnsembleModel.fit()` refits members but keeps meta weights frozen.
 
@@ -128,9 +126,6 @@ All agents must verify changes by running the test suite before submitting:
 
 # Hyperparameter search (deterministic, writes models/tuning.json):
 .venv\Scripts\python -m src.tuning --trials 40 --offline
-
-# Optional live odds (free key; pipeline degrades gracefully without it):
-$env:EPL_ODDS_API_KEY = "<your-theoddsapi-key>"
 
 # CLI Gameweek inspection:
 .venv\Scripts\python predict.py --gameweek 7

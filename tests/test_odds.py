@@ -293,19 +293,47 @@ def test_shared_outcome_rule_is_regime_aware():
     assert favor_outcome_from_proba([0.15, 0.20, 0.65], odds_missing=1.0) == 2
 
 
-def test_fixture_features_prefer_live_override_then_history():
+def test_shared_outcome_rule_reads_thresholds_from_config(monkeypatch):
+    import src.config as config_mod
+
+    monkeypatch.setattr(
+        config_mod,
+        "get_config",
+        lambda: {"model": {"draw_rule": {
+            "market_margin": 0.01, "market_min_prob": 0.40,
+            "no_market_margin": 0.01, "no_market_min_prob": 0.40,
+        }}},
+    )
+    from src.models import favor_outcome_from_proba
+
+    assert favor_outcome_from_proba([0.30, 0.40, 0.30], odds_missing=0.0) == 1
+    assert favor_outcome_from_proba([0.30, 0.40, 0.30], odds_missing=1.0) == 1
+    assert favor_outcome_from_proba([0.20, 0.25, 0.30], odds_missing=0.0) == 2
+
+
+def test_draw_rule_tuning_enforces_regime_draw_band():
+    from src.models import tune_draw_rule
+
+    probas = np.vstack([
+        np.tile([[0.30, 0.40, 0.30]], (12, 1)),
+        np.tile([[0.60, 0.10, 0.30]], (48, 1)),
+        np.tile([[0.30, 0.40, 0.30]], (12, 1)),
+        np.tile([[0.60, 0.10, 0.30]], (48, 1)),
+    ])
+    missing = np.repeat([0.0, 1.0], 60)
+    y = np.tile([1, 0, 2, 1, 0, 2], 20)
+    tuned = tune_draw_rule(probas, y, missing, forecast_probas=probas, forecast_missing=missing)
+
+    assert {"market_margin", "market_min_prob", "no_market_margin", "no_market_min_prob"} <= set(tuned)
+    assert 0.18 <= tuned["market_draw_share"] <= 0.27
+    assert 0.18 <= tuned["no_market_draw_share"] <= 0.27
+    assert 0.18 <= tuned["forecast_draw_share"] <= 0.27
+
+
+def test_fixture_features_use_history_or_neutral_prior():
     raw = _mini_history()
     future = datetime(2024, 3, 1)
-    live_row = {
-        "odds_implied_home": 0.50, "odds_implied_draw": 0.30,
-        "odds_implied_away": 0.20, "odds_overround": 0.04,
-        "odds_move_home": -0.02,
-    }
     odds = _mini_odds_frame([future.date()])
-    feat = build_fixture_features("Arsenal", "Chelsea", future, raw,
-                                  odds_row=live_row, odds_df=odds)
-    assert float(feat["odds_implied_home"].iloc[0]) == pytest.approx(0.50)
-    assert float(feat["odds_missing"].iloc[0]) == 0.0
     feat_hist = build_fixture_features("Arsenal", "Chelsea", future, raw, odds_df=odds)
     assert float(feat_hist["odds_implied_home"].iloc[0]) == pytest.approx(0.60)
     feat_none = build_fixture_features("Arsenal", "Chelsea", future, raw)
