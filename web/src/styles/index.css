@@ -191,3 +191,37 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 [data-motion-disabled="true"] .fixture-row:hover, [data-motion-disabled="true"] .mini-fixture.interactive:hover, [data-motion-disabled="true"] .diagnostic-grid button:hover, [data-motion-disabled="true"] .primary-button:hover, [data-motion-disabled="true"] .table-wrap tbody tr:hover { transform: none; }
 @media (max-width: 720px) { .form-strip { grid-template-columns: 1fr; } .site-footer .motion-toggle { order: 2; } }
 @media (prefers-reduced-motion: reduce) { .outcome-bars i, .goal-grid div span { animation: none; } }
+
+@media (max-width: 720px) {
+  .brand { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .brand-logo { width: min(205px, 82vw); max-height: 74px; }
+  .brand-copy { margin-top: 0; }
+  .site-rail nav button { min-height: 44px; }
+  .site-header { padding-inline: 16px; }
+  main { padding-inline: 16px; }
+  .page-intro h1 { max-width: 14ch; font-size: clamp(33px, 10vw, 42px); }
+  .section-heading h2 { font-size: 22px; }
+  .stepper button { min-width: 44px; min-height: 44px; }
+  .stepper select { min-height: 44px; }
+  .fixture-row { min-height: 72px; }
+  .matchup { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 7px; }
+  .matchup strong { max-width: 12ch; overflow-wrap: anywhere; font-size: 13px; line-height: 1.2; }
+  .club-identity { min-width: 0; }
+  .club-identity h2 { overflow-wrap: anywhere; font-size: 26px; }
+  .filter-group button { min-height: 40px; }
+  .scenario-panel { padding: 20px 16px; }
+  .scenario-score { gap: 8px; }
+  .scenario-score > span { font-size: 29px; }
+  .image-dialog { padding: 16px; }
+  .dialog-backdrop { padding: 12px; }
+}
+
+@media (max-width: 380px) {
+  .brand-logo { width: min(185px, 78vw); }
+  .site-rail { padding-inline: 12px; }
+  .site-header, main { padding-inline: 12px; }
+  .fixture-row { padding-inline: 10px; }
+  .fixture-teams { font-size: 11px; }
+  .team-mark { flex-basis: 27px; width: 27px; height: 27px; }
+  .matchup strong { max-width: 10ch; }
+}
