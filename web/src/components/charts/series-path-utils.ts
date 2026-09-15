@@ -90,6 +90,8 @@ export function seriesPathTransitionSignature({
   innerWidth,
   xDomainMin,
   xDomainMax,
+  yDomainMin,
+  yDomainMax,
 }: {
   renderData: Record<string, unknown>[];
   xAccessor: (datum: Record<string, unknown>) => Date;
@@ -97,6 +99,8 @@ export function seriesPathTransitionSignature({
   innerWidth: number;
   xDomainMin: number;
   xDomainMax: number;
+  yDomainMin: number;
+  yDomainMax: number;
 }): string {
   const values = renderData.map((datum) => {
     const xValue = xAccessor(datum);
@@ -104,5 +108,5 @@ export function seriesPathTransitionSignature({
     return `${xValue.getTime()}:${typeof yValue === "number" ? yValue : ""}`;
   });
 
-  return `${innerWidth}|${xDomainMin}|${xDomainMax}|${values.join(",")}`;
+  return `${innerWidth}|${xDomainMin}|${xDomainMax}|${yDomainMin}|${yDomainMax}|${values.join(",")}`;
 }
