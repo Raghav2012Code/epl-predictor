@@ -64,13 +64,51 @@ def test_elo_member_probas_and_scoreline_contract():
         train[cols], train["target_outcome"],
         train["target_home_goals"], train["target_away_goals"],
     )
+    assert model.calibrate_temperature(val[cols], val["target_outcome"]) >= 1.0
     probas = model.predict_outcome_proba(val[cols])
     assert probas.shape == (len(val), 3)
     assert np.allclose(probas.sum(axis=1), 1.0)
-    assert model.calibrate_temperature(val[cols], val["target_outcome"]) >= 1.0
     for i, (h, a) in enumerate(model.predict_scoreline(val[cols])):
         fav = favor_outcome_from_proba(probas[i])
         assert (h > a) if fav == 2 else ((h == a) if fav == 1 else (h < a))
+
+
+def test_calibration_upgrade_compares_methods_and_persists_winner():
+    train, val, cols = _frames()
+    model = MatchPredictorModel("rf").fit(
+        train[cols], train["target_outcome"], train["target_home_goals"], train["target_away_goals"]
+    )
+
+    result = model.calibrate_outcome(val[cols], val["target_outcome"])
+
+    assert result["winner"] in {"temperature", "sigmoid", "isotonic"}
+    assert set(result["scores"]) == {"temperature", "sigmoid", "isotonic"}
+    assert model.calibration_method == result["winner"]
+    assert np.allclose(model.predict_outcome_proba(val[cols]).sum(axis=1), 1.0)
+
+
+def test_calibration_method_round_trips_in_checkpoint(tmp_path):
+    train, val, cols = _frames()
+    model = MatchPredictorModel("rf").fit(
+        train[cols], train["target_outcome"], train["target_home_goals"], train["target_away_goals"]
+    )
+    model.calibrate_outcome(val[cols], val["target_outcome"])
+    path = tmp_path / "model.joblib"
+    model.save(str(path))
+
+    loaded = MatchPredictorModel.load(str(path))
+    assert loaded.calibration_method == model.calibration_method
+
+
+def test_reliability_curves_render(tmp_path):
+    from src.evaluate import plot_reliability_curves
+
+    path = plot_reliability_curves(
+        np.array([0, 1, 2, 0, 1, 2]),
+        {"RF": np.full((6, 3), 1 / 3)},
+        output_path=str(tmp_path / "reliability.png"),
+    )
+    assert path.endswith("reliability.png")
 
 
 def test_stacked_meta_shapes_and_determinism():

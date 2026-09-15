@@ -641,7 +641,7 @@ def build_engineered_dataset(
     ``odds_missing``. When None, every row is neutral (tests/offline).
     ``odds_mask_rate`` randomly neutralizes that fraction of TRAINING rows
     (seeded) so the model also learns the no-market regime served for
-    fixtures without live odds; 0.0 disables (tests).
+    fixtures without cached market odds; 0.0 disables (tests).
     """
     raw_matches = raw_matches.copy()
     raw_matches["_source_order"] = np.arange(len(raw_matches), dtype=int)

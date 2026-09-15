@@ -16,6 +16,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -30,6 +31,13 @@ def apply_temperature_scaling(probas: np.ndarray, t: float) -> np.ndarray:
     scaled -= scaled.max(axis=1, keepdims=True)
     exp = np.exp(scaled)
     return exp / exp.sum(axis=1, keepdims=True)
+
+
+def _rps_loss(probas: np.ndarray, y: np.ndarray) -> float:
+    """Computes multiclass Ranked Probability Score for [Away, Draw, Home]."""
+    cumulative = np.cumsum(np.asarray(probas, dtype=float), axis=1)[:, :2]
+    truth = np.eye(3, dtype=float)[np.asarray(y, dtype=int)][:, :2]
+    return float(np.mean(np.sum((cumulative - np.cumsum(truth, axis=1)) ** 2, axis=1) / 2.0))
 
 
 def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
@@ -303,6 +311,9 @@ class MatchPredictorModel:
         # Temperature scaling for calibrated probabilities (fit on validation).
         # T > 1 softens overconfident peaks; T == 1.0 means uncalibrated.
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
+        self.calibrated_classifier = None
         # Multiplicative bias correction for expected goals (fit on training
         # means): counters systematic under/over-prediction of Poisson means.
         self.home_goal_correction: float = 1.0
@@ -329,6 +340,9 @@ class MatchPredictorModel:
     def fit(self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series, sample_weight=None) -> MatchPredictorModel:
         """Fits the outcome classifier and all four goal regressors."""
         self.feature_names = list(X.columns)
+        self.calibrated_classifier = None
+        self.calibration_method = "temperature"
+        self.calibration_scores = {}
         _fit_with_weights(self.classifier, X, y_outcome, sample_weight)
         self.home_regressor.fit(X, y_hg, sample_weight=sample_weight)
         self.away_regressor.fit(X, y_ag, sample_weight=sample_weight)
@@ -370,16 +384,65 @@ class MatchPredictorModel:
         gmin = float(grid_cfg.get("calibration_grid_min", 0.5))
         gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
         gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
-        best_t, best_ll = 1.0, float("inf")
+        best_t, best_rps = 1.0, float("inf")
         grid = np.arange(gmin, gmax + gstep / 2, gstep)
         for t in [round(float(x), 2) for x in grid]:
             scaled = self._apply_temperature(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
-            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
-            if ll < best_ll:
-                best_ll, best_t = ll, t
+            rps = _rps_loss(clipped, y)
+            if rps < best_rps:
+                best_rps, best_t = rps, t
         self.calibration_temperature = float(best_t)
+        self.calibration_method = "temperature"
+        self.calibrated_classifier = None
         return self.calibration_temperature
+
+    def calibrate_outcome(
+        self,
+        X_cal: pd.DataFrame,
+        y_cal: pd.Series,
+        X_eval: pd.DataFrame | None = None,
+        y_eval: pd.Series | None = None,
+    ) -> Dict[str, Any]:
+        """Compares temperature, sigmoid, and isotonic on disjoint slices."""
+        if self.classifier is None:
+            self.calibrate_temperature(X_cal, y_cal)
+            self.calibration_method = "temperature"
+            self.calibration_scores = {"temperature": 0.0, "sigmoid": float("inf"), "isotonic": float("inf")}
+            return {"winner": "temperature", "scores": self.calibration_scores}
+
+        # Keep candidate fitting and selection disjoint. The outer evaluation
+        # slice remains reserved for headline scoring by the caller.
+        fit_slice, score_slice = split_calibration_evaluation(len(X_cal))
+        fit_X = X_cal.iloc[fit_slice] if fit_slice.stop else X_cal
+        fit_y = y_cal.iloc[fit_slice] if fit_slice.stop else y_cal
+        score_X = X_cal.iloc[score_slice] if score_slice.start else X_cal
+        score_y = np.asarray(y_cal.iloc[score_slice] if score_slice.start else y_cal, dtype=int)
+        raw_sources = self._source_probas(score_X)
+        w_clf, w_poiss, w_sup = blend_weights()
+
+        def _blend(clf):
+            blended = w_clf * clf + w_poiss * raw_sources["poisson"] + w_sup * raw_sources["supremacy"]
+            return blended / blended.sum(axis=1, keepdims=True)
+
+        self.calibrate_temperature(fit_X, fit_y)
+        scores = {"temperature": _rps_loss(self._apply_temperature(_blend(raw_sources["clf"]), self.calibration_temperature), score_y)}
+        candidates = {}
+        for method in ("sigmoid", "isotonic"):
+            try:
+                candidate = CalibratedClassifierCV(self.classifier, method=method, cv="prefit")
+                candidate.fit(fit_X, fit_y)
+                calibrated = align_probas(candidate.classes_, candidate.predict_proba(score_X))
+                scores[method] = _rps_loss(_blend(calibrated), score_y)
+                candidates[method] = candidate
+            except (ValueError, TypeError, RuntimeError):
+                scores[method] = float("inf")
+
+        winner = min(("temperature", "sigmoid", "isotonic"), key=lambda name: scores[name])
+        self.calibration_method = winner
+        self.calibration_scores = {key: float(value) for key, value in scores.items()}
+        self.calibrated_classifier = candidates.get(winner)
+        return {"winner": winner, "scores": self.calibration_scores}
 
     @staticmethod
     def _apply_temperature(probas: np.ndarray, t: float) -> np.ndarray:
@@ -437,9 +500,8 @@ class MatchPredictorModel:
         grid from the supremacy/totals decomposition. Shared by blending
         and by blend-weight tuning.
         """
-        clf_probas = align_probas(
-            self.classifier.classes_, self.classifier.predict_proba(X)
-        )
+        classifier = self.calibrated_classifier if self.calibration_method in {"sigmoid", "isotonic"} and self.calibrated_classifier is not None else self.classifier
+        clf_probas = align_probas(classifier.classes_, classifier.predict_proba(X))
         exp_hg, exp_ag = self.predict_expected_goals(X)
         sup = np.asarray(self.supremacy_regressor.predict(X), dtype=float)
         tot = np.asarray(self.totals_regressor.predict(X), dtype=float)
@@ -468,7 +530,7 @@ class MatchPredictorModel:
         )
         blended /= blended.sum(axis=1, keepdims=True)
 
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = self._apply_temperature(blended, self.calibration_temperature)
         return blended
 
@@ -540,6 +602,9 @@ class MatchPredictorModel:
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
             "calibration_temperature": self.calibration_temperature,
+            "calibration_method": self.calibration_method,
+            "calibration_scores": self.calibration_scores,
+            "calibrated_classifier": self.calibrated_classifier,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
         }
@@ -569,6 +634,9 @@ class MatchPredictorModel:
         instance.is_fitted = payload["is_fitted"]
         # Backward-compatible: checkpoints saved before calibration default to 1.0.
         instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.calibration_method = payload.get("calibration_method", "temperature")
+        instance.calibration_scores = dict(payload.get("calibration_scores", {}))
+        instance.calibrated_classifier = payload.get("calibrated_classifier")
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
         return instance
@@ -607,7 +675,7 @@ def _score_benchmark_model(
     calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
     if calibration_slice.stop:
         try:
-            model.calibrate_temperature(
+            model.calibrate_outcome(
                 X_val.iloc[calibration_slice], y_val_outcome.iloc[calibration_slice]
             )
         except Exception:
@@ -686,6 +754,8 @@ def _score_benchmark_model(
         "eval_pred_scores": pred_scores,
         "feature_importances": model.get_feature_importances(),
         "calibration_temperature": model.calibration_temperature,
+        "calibration_method": getattr(model, "calibration_method", "temperature"),
+        "calibration_scores": getattr(model, "calibration_scores", {}),
         "home_goal_correction": model.home_goal_correction,
         "away_goal_correction": model.away_goal_correction,
         "eval_y_outcome": eval_y_outcome.values,
@@ -770,6 +840,8 @@ class EloPoissonModel:
         self.mu_a: float = 1.1
         self.beta: float = 1.0
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
         self.feature_names: List[str] = []
@@ -825,12 +897,12 @@ class EloPoissonModel:
             )
             rows.append(p_poiss)
         blended = np.array(rows)
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
     def calibrate_temperature(self, X_val: pd.DataFrame, y_val: pd.Series) -> float:
-        """Fits temperature scaling on validation probabilities (mirror of trees)."""
+        """Fits RPS-optimized temperature scaling on validation probabilities."""
         probas = self.predict_outcome_proba(X_val, apply_temperature=False)
         y = np.asarray(y_val.values if hasattr(y_val, "values") else y_val, dtype=int)
         eps = 1e-15
@@ -840,15 +912,23 @@ class EloPoissonModel:
         gmin = float(grid_cfg.get("calibration_grid_min", 1.0))
         gmax = float(grid_cfg.get("calibration_grid_max", 3.0))
         gstep = float(grid_cfg.get("calibration_grid_step", 0.05))
-        best_t, best_ll = 1.0, float("inf")
+        best_t, best_rps = 1.0, float("inf")
         for t in [round(float(x), 2) for x in np.arange(gmin, gmax + gstep / 2, gstep)]:
             scaled = apply_temperature_scaling(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
-            ll = float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
-            if ll < best_ll:
-                best_ll, best_t = ll, t
+            rps = _rps_loss(clipped, y)
+            if rps < best_rps:
+                best_rps, best_t = rps, t
         self.calibration_temperature = float(best_t)
+        self.calibration_method = "temperature"
         return self.calibration_temperature
+
+    def calibrate_outcome(self, X_cal, y_cal, X_eval=None, y_eval=None):
+        """Uses the temperature fallback for this classifier-free member."""
+        self.calibrate_temperature(X_cal, y_cal)
+        score = _rps_loss(self.predict_outcome_proba(X_cal), np.asarray(y_cal, dtype=int))
+        self.calibration_scores = {"temperature": float(score), "sigmoid": float("inf"), "isotonic": float("inf")}
+        return {"winner": "temperature", "scores": self.calibration_scores}
 
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
         """Constrained-argmax scorelines consistent with the shared rule."""
@@ -902,6 +982,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         self.feature_names: List[str] = []
         self.is_fitted: bool = False
         self.calibration_temperature: float = 1.0
+        self.calibration_method: str = "temperature"
+        self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
 
@@ -933,7 +1015,7 @@ class StackedEnsembleModel(MatchPredictorModel):
         """Meta-learner probabilities over member probabilities."""
         stacked = self._stack_probas(X)
         blended = align_probas(self.meta.classes_, self.meta.predict_proba(stacked))
-        if apply_temperature and self.calibration_temperature != 1.0:
+        if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
             blended = self._apply_temperature(blended, self.calibration_temperature)
         return blended
 
@@ -970,6 +1052,8 @@ class StackedEnsembleModel(MatchPredictorModel):
             "feature_names": self.feature_names,
             "is_fitted": self.is_fitted,
             "calibration_temperature": self.calibration_temperature,
+            "calibration_method": self.calibration_method,
+            "calibration_scores": self.calibration_scores,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
         }
@@ -988,6 +1072,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         instance.feature_names = payload["feature_names"]
         instance.is_fitted = payload["is_fitted"]
         instance.calibration_temperature = float(payload.get("calibration_temperature", 1.0))
+        instance.calibration_method = payload.get("calibration_method", "temperature")
+        instance.calibration_scores = dict(payload.get("calibration_scores", {}))
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
         return instance
@@ -1020,7 +1106,10 @@ def _fit_and_calibrate_member(
                sample_weight=sample_weight)
     if len(X_cal) > 0:
         try:
-            member.calibrate_temperature(X_cal, y_cal)
+            if hasattr(member, "calibrate_outcome"):
+                member.calibrate_outcome(X_cal, y_cal)
+            else:
+                member.calibrate_temperature(X_cal, y_cal)
         except Exception:
             member.calibration_temperature = 1.0
     return member
@@ -1078,11 +1167,9 @@ def train_stacked_ensemble(
         fold_members = _build_level_zero_members()
         sw_fold = None if sw_full is None else sw_full[np.asarray(train_idx)]
         for key in STACK_MEMBER_ORDER:
-            _fit_and_calibrate_member(
-                fold_members[key],
+            fold_members[key].fit(
                 X_train.iloc[train_idx], y_train_outcome.iloc[train_idx],
                 y_train_hg.iloc[train_idx], y_train_ag.iloc[train_idx],
-                X_cal, y_cal,
                 sample_weight=sw_fold,
             )
         oof_probas[held_idx] = np.concatenate(

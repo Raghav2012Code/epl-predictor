@@ -9,7 +9,8 @@ market-opening and closing sets since 2019/20. Files are cached under
 Leakage rule: only odds known *before kickoff* ever become features.
 Closing odds qualify (struck at/before kickoff, before the outcome); match
 results (FTHG/FTAG/FTR) are dropped at parse time and can never leak.
-Live/upcoming odds are served by ``src/live_odds.py``, not here.
+Upcoming fixtures use this cached historical odds frame when a matching row
+is available; otherwise serving falls back to neutral market features.
 """
 
 from __future__ import annotations

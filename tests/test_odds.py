@@ -293,19 +293,10 @@ def test_shared_outcome_rule_is_regime_aware():
     assert favor_outcome_from_proba([0.15, 0.20, 0.65], odds_missing=1.0) == 2
 
 
-def test_fixture_features_prefer_live_override_then_history():
+def test_fixture_features_use_history_or_neutral_prior():
     raw = _mini_history()
     future = datetime(2024, 3, 1)
-    live_row = {
-        "odds_implied_home": 0.50, "odds_implied_draw": 0.30,
-        "odds_implied_away": 0.20, "odds_overround": 0.04,
-        "odds_move_home": -0.02,
-    }
     odds = _mini_odds_frame([future.date()])
-    feat = build_fixture_features("Arsenal", "Chelsea", future, raw,
-                                  odds_row=live_row, odds_df=odds)
-    assert float(feat["odds_implied_home"].iloc[0]) == pytest.approx(0.50)
-    assert float(feat["odds_missing"].iloc[0]) == 0.0
     feat_hist = build_fixture_features("Arsenal", "Chelsea", future, raw, odds_df=odds)
     assert float(feat_hist["odds_implied_home"].iloc[0]) == pytest.approx(0.60)
     feat_none = build_fixture_features("Arsenal", "Chelsea", future, raw)
