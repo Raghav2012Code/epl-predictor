@@ -78,7 +78,7 @@ elegant-franklin/
 - Level-0 members are Random Forest, XGBoost, multinomial logistic regression, and Elo-Poisson (`EloPoissonModel` reads only `home_elo`/`away_elo`; league means and slope fit on training rows only). The meta-learner trains on honest out-of-fold train probabilities (`TimeSeriesSplit`), never in-sample outputs.
 - Production is selected by **RPS** (Ranked Probability Score, lower wins), tie-broken by log-loss, accuracy, goal MAE. Accuracy alone never selects.
 - Calibration compares temperature, prefit sigmoid, and prefit isotonic with RPS on the disjoint calibration/evaluation slices (`split_calibration_evaluation()`); the winning method is persisted and headline metrics use the untouched evaluation half.
-- The draw decision (`favor_outcome_from_proba()`) is the SINGLE source of truth for scorelines, forecasts, and validation decisions, with regime-aware thresholds for market-present vs no-market rows. Retune both whenever the production model changes (procedure: grid on the disjoint eval slice + forecast-slate plausibility band 18-27%).
+- The draw decision (`favor_outcome_from_proba()`) is the SINGLE source of truth for scorelines, forecasts, and validation decisions, with regime-aware thresholds loaded from `config.yaml` for market-present vs no-market rows. Retune both whenever the production model changes (procedure: RPS grid on the disjoint eval slice + forecast-slate plausibility band 18-27%).
 - `predict_outcome_proba()` outputs are always `(N, 3)` in `[Away, Draw, Home]` order (`align_probas()` guards degenerate slices).
 - Checkpoints are strict: `assert_model_compatible(..., strict=True)` in serving paths; `StackedEnsembleModel.fit()` refits members but keeps meta weights frozen.
 

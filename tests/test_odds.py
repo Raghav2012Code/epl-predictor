@@ -293,6 +293,43 @@ def test_shared_outcome_rule_is_regime_aware():
     assert favor_outcome_from_proba([0.15, 0.20, 0.65], odds_missing=1.0) == 2
 
 
+def test_shared_outcome_rule_reads_thresholds_from_config(monkeypatch):
+    import src.config as config_mod
+
+    monkeypatch.setattr(
+        config_mod,
+        "get_config",
+        lambda: {"model": {"draw_rule": {
+            "market_margin": 0.01, "market_min_prob": 0.40,
+            "no_market_margin": 0.01, "no_market_min_prob": 0.40,
+        }}},
+    )
+    from src.models import favor_outcome_from_proba
+
+    assert favor_outcome_from_proba([0.30, 0.40, 0.30], odds_missing=0.0) == 1
+    assert favor_outcome_from_proba([0.30, 0.40, 0.30], odds_missing=1.0) == 1
+    assert favor_outcome_from_proba([0.20, 0.25, 0.30], odds_missing=0.0) == 2
+
+
+def test_draw_rule_tuning_enforces_regime_draw_band():
+    from src.models import tune_draw_rule
+
+    probas = np.vstack([
+        np.tile([[0.30, 0.40, 0.30]], (12, 1)),
+        np.tile([[0.60, 0.10, 0.30]], (48, 1)),
+        np.tile([[0.30, 0.40, 0.30]], (12, 1)),
+        np.tile([[0.60, 0.10, 0.30]], (48, 1)),
+    ])
+    missing = np.repeat([0.0, 1.0], 60)
+    y = np.tile([1, 0, 2, 1, 0, 2], 20)
+    tuned = tune_draw_rule(probas, y, missing, forecast_probas=probas, forecast_missing=missing)
+
+    assert {"market_margin", "market_min_prob", "no_market_margin", "no_market_min_prob"} <= set(tuned)
+    assert 0.18 <= tuned["market_draw_share"] <= 0.27
+    assert 0.18 <= tuned["no_market_draw_share"] <= 0.27
+    assert 0.18 <= tuned["forecast_draw_share"] <= 0.27
+
+
 def test_fixture_features_use_history_or_neutral_prior():
     raw = _mini_history()
     future = datetime(2024, 3, 1)

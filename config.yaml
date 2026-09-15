@@ -22,6 +22,12 @@ model:
   calibration_grid_min: 1.0
   calibration_grid_max: 3.0
   calibration_grid_step: 0.05
+  draw_rule:
+    # RPS-constrained receipt from the disjoint evaluation/forecast grids.
+    market_margin: 0.12
+    market_min_prob: 0.24
+    no_market_margin: 0.12
+    no_market_min_prob: 0.25
   # Fraction of training rows whose market features are masked to neutral
   # (odds_missing=1). Teaches the model the no-market regime so serving
   # rows without cached market odds behave sanely. Seeded; deterministic.

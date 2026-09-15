@@ -70,11 +70,26 @@ def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
 # + 350-row forecast-slate grid; objective eval accuracy subject to
 # 18-27% draws on BOTH). Market-present: 0.12/0.24 (47.3% acc, 19.7%
 # draws, n=402). No-market: 0.12/0.25 (eval ~52% acc, ~21% draws;
-# ~22-23% on the no-market slate). Revisit in Phase 7 (RPS-based).
+# ~22-23% on the no-market slate). Phase 7 receipt (2026-09-15): values moved
+# to config.yaml and retained after the disjoint eval/forecast RPS grid with
+# 18-27% draw-share constraints.
 DRAW_MARGIN = 0.12
 DRAW_MIN_PROB = 0.24
 DRAW_MARGIN_NO_MARKET = 0.12
 DRAW_MIN_PROB_NO_MARKET = 0.25
+
+
+def get_draw_rule() -> Dict[str, float]:
+    """Returns config-driven draw thresholds with backward-compatible defaults."""
+    from src.config import get_config
+
+    configured = get_config().get("model", {}).get("draw_rule", {})
+    return {
+        "market_margin": float(configured.get("market_margin", DRAW_MARGIN)),
+        "market_min_prob": float(configured.get("market_min_prob", DRAW_MIN_PROB)),
+        "no_market_margin": float(configured.get("no_market_margin", DRAW_MARGIN_NO_MARKET)),
+        "no_market_min_prob": float(configured.get("no_market_min_prob", DRAW_MIN_PROB_NO_MARKET)),
+    }
 
 
 def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
@@ -84,14 +99,80 @@ def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
     draw; thresholds are regime-aware because market-present and
     no-market proba distributions differ sharply.
     """
+    rule = get_draw_rule()
     if float(odds_missing) >= 0.5:
-        margin, min_prob = DRAW_MARGIN_NO_MARKET, DRAW_MIN_PROB_NO_MARKET
+        margin, min_prob = rule["no_market_margin"], rule["no_market_min_prob"]
     else:
-        margin, min_prob = DRAW_MARGIN, DRAW_MIN_PROB
+        margin, min_prob = rule["market_margin"], rule["market_min_prob"]
     p_a, p_d, p_h = float(probas[0]), float(probas[1]), float(probas[2])
     if abs(p_h - p_a) <= margin and p_d >= min_prob:
         return 1
     return int(np.argmax(probas))
+
+
+def tune_draw_rule(
+    eval_probas: np.ndarray,
+    eval_y: np.ndarray,
+    eval_odds_missing: np.ndarray,
+    forecast_probas: np.ndarray | None = None,
+    forecast_missing: np.ndarray | None = None,
+    draw_band: Tuple[float, float] = (0.18, 0.27),
+) -> Dict[str, float]:
+    """Grid-searches regime thresholds under the draw-share constraint.
+
+    RPS is computed from hard decisions on the calibration-independent eval
+    slice; forecast shares are an additional plausibility constraint.
+    """
+    eval_probas = np.asarray(eval_probas, dtype=float)
+    eval_y = np.asarray(eval_y, dtype=int)
+    eval_missing = np.asarray(eval_odds_missing, dtype=float)
+    forecast_probas = eval_probas if forecast_probas is None else np.asarray(forecast_probas, dtype=float)
+    forecast_missing = eval_missing if forecast_missing is None else np.asarray(forecast_missing, dtype=float)
+    candidates = np.arange(0.08, 0.181, 0.01)
+    minimum, maximum = draw_band
+
+    def _decision_share(probas, missing, margin, minimum_prob):
+        decisions = np.asarray([
+            1 if abs(float(p[2]) - float(p[0])) <= margin and float(p[1]) >= minimum_prob
+            else int(np.argmax(p))
+            for p in probas
+        ])
+        return decisions, float(np.mean(decisions == 1))
+
+    def _rps(decisions, truth):
+        one_hot = np.eye(3, dtype=float)[decisions]
+        return float(np.mean(np.sum((np.cumsum(one_hot, axis=1)[:, :2] - np.cumsum(np.eye(3)[truth], axis=1)[:, :2]) ** 2, axis=1) / 2.0))
+
+    result: Dict[str, float] = {}
+    for prefix, is_missing in (("market", False), ("no_market", True)):
+        eval_mask = (eval_missing >= 0.5) if is_missing else (eval_missing < 0.5)
+        forecast_mask = (forecast_missing >= 0.5) if is_missing else (forecast_missing < 0.5)
+        best = None
+        for margin in candidates:
+            for minimum_prob in np.arange(0.20, 0.301, 0.01):
+                eval_decisions, eval_share = _decision_share(eval_probas[eval_mask], eval_missing[eval_mask], margin, minimum_prob)
+                forecast_decisions, forecast_share = _decision_share(forecast_probas[forecast_mask], forecast_missing[forecast_mask], margin, minimum_prob)
+                if minimum <= eval_share <= maximum and minimum <= forecast_share <= maximum:
+                    score = _rps(eval_decisions, eval_y[eval_mask]) if len(eval_decisions) else float("inf")
+                    candidate = (score, float(margin), float(minimum_prob), eval_share, forecast_share)
+                    if best is None or candidate < best:
+                        best = candidate
+        if best is None:
+            best = (float("inf"), DRAW_MARGIN_NO_MARKET if is_missing else DRAW_MARGIN, DRAW_MIN_PROB_NO_MARKET if is_missing else DRAW_MIN_PROB, 0.0, 0.0)
+        result[f"{prefix}_margin"] = best[1]
+        result[f"{prefix}_min_prob"] = best[2]
+        result[f"{prefix}_draw_share"] = best[3]
+        result[f"{prefix}_forecast_draw_share"] = best[4]
+    forecast_decisions = []
+    for p, missing in zip(forecast_probas, forecast_missing):
+        prefix = "no_market" if missing >= 0.5 else "market"
+        draw = (
+            abs(float(p[2]) - float(p[0])) <= result[f"{prefix}_margin"]
+            and float(p[1]) >= result[f"{prefix}_min_prob"]
+        )
+        forecast_decisions.append(1 if draw else int(np.argmax(p)))
+    result["forecast_draw_share"] = float(np.mean(np.asarray(forecast_decisions) == 1))
+    return result
 
 
 def blend_weights() -> Tuple[float, float, float]:
