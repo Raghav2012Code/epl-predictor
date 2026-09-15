@@ -111,6 +111,16 @@ def test_reliability_curves_render(tmp_path):
     assert path.endswith("reliability.png")
 
 
+def test_rps_panel_renders(tmp_path):
+    from src.evaluate import plot_rps_comparison
+
+    path = plot_rps_comparison(
+        {"RF": 0.21, "Stacked": 0.22},
+        output_path=str(tmp_path / "rps.png"),
+    )
+    assert path.endswith("rps.png")
+
+
 def test_stacked_meta_shapes_and_determinism():
     train, val, cols = _frames()
     first = train_stacked_ensemble(train, val, cols)
@@ -188,6 +198,7 @@ def test_export_benchmark_includes_stacked():
     def _entry(**kw):
         base = {
             "accuracy": 0.45, "macro_f1": 0.4, "log_loss": 1.03,
+            "rps": 0.2068,
             "mae_home_goals": 0.95, "mae_away_goals": 0.86,
             "avg_goal_mae": 0.9, "within_1_goal_acc": 0.58,
             "exact_score_acc": 0.09,
@@ -204,3 +215,4 @@ def test_export_benchmark_includes_stacked():
     assert payload["productionModel"] == "Stacked"
     assert [m["name"] for m in payload["models"]] == ["Random Forest", "XGBoost", "Stacked"]
     assert [m["isProduction"] for m in payload["models"]] == [False, False, True]
+    assert all(m["rps"] == 0.207 for m in payload["models"])

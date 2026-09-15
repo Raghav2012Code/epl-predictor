@@ -1,7 +1,8 @@
 # Remaining Phases
 
-Status: Phases 0–7 complete (odds, tuning, stacking, supremacy head, richer
-features, eight-season history, calibration, draw-rule config). Production:
+Status: Phases 0–8 complete (odds, tuning, stacking, supremacy head, richer
+features, eight-season history, calibration, draw-rule config, RPS reporting).
+Production:
 tuned Random Forest, RPS 0.2068, season 214H/85D/81A (22.4% draws).
 
 Conventions for every phase below: disjoint calibration/eval slices stay
@@ -27,18 +28,15 @@ shared configuration with module-level backward-compatible defaults. Added an
 RPS grid tuner that constrains both market regimes and the forecast slate to
 18–27% draws, plus config-read and constraint tests in `tests/test_odds.py`.
 
-## Phase 8 — RPS everywhere
+## Phase 8 — RPS everywhere (complete)
 
 **Goal:** reporting catches up with selection (RPS already selects
 production; displays still lead with accuracy).
-- `src/evaluate.py`: RPS curves + per-model RPS panel in diagnostics.
-- `export_web_data.py` + `web/src/types/index.ts` + Model page: RPS
-  column in the benchmark table and API payload (additive fields only —
-  the web already renders N models generically).
-- README benchmark table leads with RPS; AGENTS.md selection policy
-  already documents it, no change needed there.
-- Acceptance: dashboard, API, and README all show RPS primary with
-  accuracy/log-loss retained for continuity.
+Implemented: `src/evaluate.py` now emits reliability and per-model RPS
+diagnostics; `export_web_data.py`, `web/src/types/index.ts`, and the Model page
+carry and display RPS as the primary benchmark metric; the README and AGENTS
+policy retain accuracy/log-loss for continuity. The generated dashboard data
+includes the RPS values and diagnostic entry.
 
 ## Deferred (explicitly not planned)
 

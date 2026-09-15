@@ -292,6 +292,38 @@ def plot_reliability_curves(
     return output_path
 
 
+def plot_rps_comparison(
+    metrics: Dict[str, Dict[str, Any]] | Dict[str, float],
+    output_path: Optional[str] = None,
+) -> str:
+    """Plots RPS per model, making the production selection criterion explicit."""
+    os.makedirs(VISUALS_DIR, exist_ok=True)
+    if output_path is None:
+        output_path = os.path.join(VISUALS_DIR, "rps_comparison.png")
+    values = {name: float(value.get("rps", 0.0)) if isinstance(value, dict) else float(value)
+              for name, value in metrics.items()}
+    names = list(values)
+    scores = [values[name] for name in names]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.patch.set_facecolor("#000000")
+    ax.set_facecolor("#0A0A0C")
+    bars = ax.bar(names, scores, color="#FFFFFF", edgecolor="#1F1F23", linewidth=0.6)
+    for bar, score in zip(bars, scores):
+        ax.annotate(f"{score:.4f}", (bar.get_x() + bar.get_width() / 2, score),
+                    xytext=(0, 5), textcoords="offset points", ha="center",
+                    color="#FFFFFF", fontweight="bold")
+    ax.set_ylabel("Ranked Probability Score (lower is better)", color="#A1A1AA")
+    ax.set_title("RPS Model Selection", color="#FFFFFF", fontweight="bold")
+    ax.tick_params(colors="#A1A1AA")
+    ax.grid(axis="y", alpha=0.2, color="#27272A")
+    for spine in ax.spines.values():
+        spine.set_color("#1F1F23")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close()
+    return output_path
+
+
 def plot_goal_error_distribution(
     y_hg: np.ndarray,
     y_ag: np.ndarray,

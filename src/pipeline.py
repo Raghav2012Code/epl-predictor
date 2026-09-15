@@ -23,6 +23,7 @@ from src.evaluate import (
     plot_goal_error_distribution,
     plot_metrics_comparison,
     plot_reliability_curves,
+    plot_rps_comparison,
 )
 from src.feature_engineering import (
     build_engineered_dataset,
@@ -179,6 +180,7 @@ class PremierLeaguePredictionPipeline:
             y_val_outcome,
             {name: vals["val_proba"] for name, vals in self.metrics.items()},
         )
+        plot_rps_comparison(self.metrics)
         plot_goal_error_distribution(
             y_val_hg,
             y_val_ag,
