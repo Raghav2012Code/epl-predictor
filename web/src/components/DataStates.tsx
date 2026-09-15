@@ -2,8 +2,22 @@ import React from 'react';
 
 export const AppSkeleton: React.FC = () => (
   <div className="loading-shell" aria-busy="true" aria-label="Loading dashboard">
-    <div className="loading-rail" />
-    <div className="loading-main"><span /><span /><span /><span /></div>
+    <div className="loading-brief" role="status">
+      <img
+        className="loading-logo"
+        src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
+        alt="EPL Predictor"
+        draggable={false}
+      />
+      <div className="loading-rule" aria-hidden="true"><span /></div>
+      <p className="loading-kicker">Matchday briefing</p>
+      <h1>Reading the season.</h1>
+      <p className="loading-copy">Preparing fixtures, form, and model signals.</p>
+      <div className="loading-progress" aria-hidden="true">
+        <span /><span /><span /><span /><span />
+      </div>
+      <p className="loading-note">Loading the offline season file</p>
+    </div>
   </div>
 );
 
