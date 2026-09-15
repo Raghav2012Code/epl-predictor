@@ -125,3 +125,11 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 @media (max-height: 560px) { .site-rail { overflow-y: auto; } }
 .model-row { grid-template-columns: 1.6fr repeat(4, 1fr); }
 @media (max-width: 720px) { .model-row { grid-template-columns: 1.5fr repeat(4, .7fr); } }
+.fixture-motion-list { display: block; }
+.fixture-motion-item { display: block; }
+.fixture-row, .site-rail nav button, .diagnostic-grid button, .mini-fixture.interactive, .primary-button { transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.fixture-row:hover, .mini-fixture.interactive:hover { transform: translateX(4px); }
+.diagnostic-grid button:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(23, 60, 50, .1); }
+.primary-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(29, 111, 82, .18); }
+.site-rail nav button:focus-visible, .fixture-row:focus-visible, .diagnostic-grid button:focus-visible, .primary-button:focus-visible { outline: 3px solid rgba(180, 107, 42, .38); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .fixture-row:hover, .mini-fixture.interactive:hover, .diagnostic-grid button:hover, .primary-button:hover { transform: none; } }
