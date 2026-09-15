@@ -19,6 +19,8 @@ import {
 type Tab = "fixtures" | "simulator" | "standings" | "clubs" | "analytics";
 type SortKey =
   "rank" | "team" | "played" | "won" | "drawn" | "lost" | "gd" | "points";
+type FixtureFilter = "all" | "upcoming" | "played";
+type FixtureSort = "date" | "confidence";
 const tabs: Array<{ id: Tab; label: string; note: string }> = [
   { id: "fixtures", label: "Fixtures", note: "Gameweeks and forecasts" },
   { id: "simulator", label: "Simulator", note: "Explore a matchup" },
@@ -27,6 +29,45 @@ const tabs: Array<{ id: Tab; label: string; note: string }> = [
   { id: "analytics", label: "Model", note: "Benchmark and diagnostics" },
 ];
 const pct = (value: number) => `${Number(value).toFixed(1)}%`;
+const confidenceFor = (fixture: Fixture) =>
+  Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb);
+const deltaLabel = (value: number) =>
+  `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+type ScenarioResult = {
+  homeExpected: number;
+  awayExpected: number;
+  homeProb: number;
+  drawProb: number;
+  awayProb: number;
+  homeScore: number;
+  awayScore: number;
+};
+const calculateScenario = (
+  home: TeamProfile | undefined,
+  away: TeamProfile | undefined,
+  homeBoost: number,
+  awayBoost: number,
+  neutral: boolean,
+): ScenarioResult | null => {
+  if (!home || !away) return null;
+  const homeAttack = Math.max(0.2, home.gfPerMatch * (1 + homeBoost / 100));
+  const awayAttack = Math.max(0.2, away.gfPerMatch * (1 + awayBoost / 100));
+  const homeExpected = Math.max(
+    0.2,
+    ((homeAttack + away.gaPerMatch) / 2) * (neutral ? 1 : 1.18),
+  );
+  const awayExpected = Math.max(
+    0.15,
+    ((awayAttack + home.gaPerMatch) / 2) * (neutral ? 1 : 0.9),
+  );
+  const denominator = Math.exp(homeExpected) + Math.exp(awayExpected) + 1.2;
+  const homeProb = Math.round((Math.exp(homeExpected) / denominator) * 1000) / 10;
+  const drawProb = Math.round(
+    (1 - (Math.exp(homeExpected) + Math.exp(awayExpected)) / denominator) * 1000,
+  ) / 10;
+  const awayProb = Math.round((100 - homeProb - drawProb) * 10) / 10;
+  return { homeExpected, awayExpected, homeProb, drawProb, awayProb, homeScore: Math.round(homeExpected), awayScore: Math.round(awayExpected) };
+};
 const displayDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -221,6 +262,20 @@ const FixtureDetail: React.FC<{
           <b>{pct(fixture.awayWinProb)}</b> Away
         </span>
       </div>
+      <div className="detail-metrics" aria-label="Forecast summary">
+        <div>
+          <span>Expected goals</span>
+          <strong>{fixture.predHomeGoals.toFixed(2)} — {fixture.predAwayGoals.toFixed(2)}</strong>
+        </div>
+        <div>
+          <span>Strongest signal</span>
+          <strong>{pct(confidenceFor(fixture))}</strong>
+        </div>
+        <div>
+          <span>Evidence state</span>
+          <strong>{isPlayed ? "Measured" : "Projected"}</strong>
+        </div>
+      </div>
       <div className="detail-copy">
         <p>
           <strong>{isPlayed ? "Model review" : "Model read"}</strong>{" "}
@@ -266,6 +321,8 @@ const FixturesPage: React.FC<{
     autoFixture?.gameweek ?? firstUpcoming,
   );
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<FixtureFilter>("all");
+  const [sort, setSort] = useState<FixtureSort>("date");
   const filtered = useMemo(
     () =>
       dataset.fixtures.filter(
@@ -278,8 +335,18 @@ const FixturesPage: React.FC<{
       ),
     [dataset.fixtures, gameweek, query],
   );
+  const visibleFixtures = useMemo(() => {
+    const matchesFilter = filtered.filter((fixture) =>
+      filter === "all" ? true : filter === "played" ? fixture.status === "Played" : fixture.status !== "Played",
+    );
+    return [...matchesFilter].sort((a, b) =>
+      sort === "confidence"
+        ? confidenceFor(b) - confidenceFor(a) || a.id - b.id
+        : fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
+    );
+  }, [filter, filtered, sort]);
   useEffect(() => {
-    const upcoming = filtered
+    const upcoming = visibleFixtures
       .filter(
         (fixture) =>
           fixture.status !== "Played" &&
@@ -289,10 +356,10 @@ const FixturesPage: React.FC<{
         (a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
       )[0];
     setSelectedId((upcoming ?? filtered[0])?.id ?? null);
-  }, [gameweek, query, filtered]);
+  }, [gameweek, query, visibleFixtures]);
   const selected =
-    filtered.find((fixture) => fixture.id === selectedId) ??
-    filtered[0] ??
+    visibleFixtures.find((fixture) => fixture.id === selectedId) ??
+    visibleFixtures[0] ??
     null;
   const played = dataset.fixtures.filter(
     (fixture) => fixture.status === "Played",
@@ -375,14 +442,28 @@ const FixturesPage: React.FC<{
           </button>
         </div>
       </div>
+      <div className="fixture-controls" aria-label="Fixture filters">
+        <div className="filter-group" role="group" aria-label="Fixture status">
+          {([['all', 'All'], ['upcoming', 'Upcoming'], ['played', 'Played']] as const).map(([value, label]) => (
+            <button key={value} className={filter === value ? "active" : ""} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
+          ))}
+        </div>
+        <label className="sort-control">Sort by
+          <select value={sort} onChange={(event) => setSort(event.target.value as FixtureSort)} aria-label="Sort fixtures">
+            <option value="date">Date</option>
+            <option value="confidence">Confidence</option>
+          </select>
+        </label>
+        <span className="muted">{visibleFixtures.length} of {filtered.length} fixtures</span>
+      </div>
       <div className="fixture-layout">
         <div
           className="fixture-list"
           aria-label={`Gameweek ${gameweek} fixtures`}
         >
-          {filtered.length ? (
+          {visibleFixtures.length ? (
             <MotionList className="fixture-motion-list">
-              {filtered.map((fixture) => (
+              {visibleFixtures.map((fixture) => (
                 <MotionItem key={fixture.id} className="fixture-motion-item">
                   <FixtureRow
                     fixture={fixture}
@@ -459,37 +540,21 @@ const SimulatorPage: React.FC<{
             : reverse.predictedOutcome,
     };
   }, [awayTeam, dataset.fixtures, homeTeam]);
-  const scenario = useMemo(() => {
-    if (!home || !away) return null;
-    const homeAttack = Math.max(0.2, home.gfPerMatch * (1 + homeBoost / 100));
-    const awayAttack = Math.max(0.2, away.gfPerMatch * (1 + awayBoost / 100));
-    const homeExpected = Math.max(
-      0.2,
-      ((homeAttack + away.gaPerMatch) / 2) * (neutral ? 1 : 1.18),
-    );
-    const awayExpected = Math.max(
-      0.15,
-      ((awayAttack + home.gaPerMatch) / 2) * (neutral ? 1 : 0.9),
-    );
-    const denominator = Math.exp(homeExpected) + Math.exp(awayExpected) + 1.2;
-    const homeProb =
-      Math.round((Math.exp(homeExpected) / denominator) * 1000) / 10;
-    const drawProb =
-      Math.round(
-        (1 - (Math.exp(homeExpected) + Math.exp(awayExpected)) / denominator) *
-          1000,
-      ) / 10;
-    const awayProb = Math.round((100 - homeProb - drawProb) * 10) / 10;
-    return {
-      homeExpected,
-      awayExpected,
-      homeProb,
-      drawProb,
-      awayProb,
-      homeScore: Math.round(homeExpected),
-      awayScore: Math.round(awayExpected),
-    };
-  }, [away, awayBoost, home, homeBoost, neutral]);
+  const scenario = useMemo(
+    () => calculateScenario(home, away, homeBoost, awayBoost, neutral),
+    [away, awayBoost, home, homeBoost, neutral],
+  );
+  const baseline = useMemo(
+    () => calculateScenario(home, away, 0, 0, false),
+    [away, home],
+  );
+  const resetScenario = () => {
+    setHomeTeam(initialHome);
+    setAwayTeam(initialAway);
+    setHomeBoost(0);
+    setAwayBoost(0);
+    setNeutral(false);
+  };
   if (!home || !away || !scenario)
     return <div className="empty-state">Club data is unavailable.</div>;
   const scenarioFixture = {
@@ -512,6 +577,13 @@ const SimulatorPage: React.FC<{
       </div>
       <div className="simulator-layout">
         <div className="control-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Adjust assumptions</p>
+              <h2>Scenario controls</h2>
+            </div>
+            <button className="text-button" onClick={resetScenario}>Reset</button>
+          </div>
           <label>
             Home club
             <select
@@ -601,6 +673,15 @@ const SimulatorPage: React.FC<{
               <b>{pct(scenario.awayProb)}</b> Away
             </span>
           </div>
+          {baseline && (
+            <div className="scenario-delta" aria-live="polite">
+              <div>
+                <span>Against baseline</span>
+                <strong>{scenario.homeProb >= baseline.homeProb ? "Home" : "Away"} moves {deltaLabel(Math.abs(scenario.homeProb - baseline.homeProb))}</strong>
+              </div>
+              <p>{homeBoost || awayBoost || neutral ? "Your assumptions shift the browser scenario; the scheduled forecast remains unchanged." : "Move a control to compare your scenario with the neutral baseline."}</p>
+            </div>
+          )}
           <div className="scenario-grid">
             <div>
               <span>Expected home goals</span>

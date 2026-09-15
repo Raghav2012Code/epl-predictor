@@ -133,3 +133,21 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 .primary-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(29, 111, 82, .18); }
 .site-rail nav button:focus-visible, .fixture-row:focus-visible, .diagnostic-grid button:focus-visible, .primary-button:focus-visible { outline: 3px solid rgba(180, 107, 42, .38); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .fixture-row:hover, .mini-fixture.interactive:hover, .diagnostic-grid button:hover, .primary-button:hover { transform: none; } }
+.fixture-controls { display: flex; align-items: center; gap: 14px; margin: -4px 0 14px; flex-wrap: wrap; }
+.filter-group { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #cfcdc5; background: #f3f1ec; }
+.filter-group button { padding: 7px 11px; border: 0; color: #68716c; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; }
+.filter-group button.active { color: #fbfaf7; background: #173c32; }
+.sort-control { display: inline-flex; align-items: center; gap: 8px; color: #68716c; font-size: 11px; }
+.sort-control select { min-width: 122px; padding: 8px 10px; border: 1px solid #cfcdc5; color: #29312d; background: #fbfaf7; font: inherit; }
+.detail-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; padding: 13px 0; border-top: 1px solid #e2dfd7; border-bottom: 1px solid #e2dfd7; }
+.detail-metrics span, .detail-metrics strong { display: block; }
+.detail-metrics span { color: #68716c; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.detail-metrics strong { margin-top: 6px; color: #173c32; font-family: Georgia, serif; font-size: 15px; font-weight: 500; }
+.panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.panel-heading h2 { margin: 3px 0 0; font-family: Georgia, serif; font-size: 21px; font-weight: 500; }
+.text-button { border: 0; border-bottom: 1px solid #1d6f52; padding: 2px 0; color: #1d6f52; background: transparent; font-size: 11px; font-weight: 750; cursor: pointer; }
+.scenario-delta { margin: 22px 0; padding: 14px; border-left: 3px solid #d7a35a; background: #f3f1ec; }
+.scenario-delta span { display: block; color: #68716c; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+.scenario-delta strong { display: block; margin-top: 5px; color: #173c32; font-family: Georgia, serif; font-size: 18px; font-weight: 500; }
+.scenario-delta p { margin: 8px 0 0; color: #68716c; font-size: 11px; line-height: 1.5; }
+@media (max-width: 720px) { .fixture-controls { align-items: stretch; flex-direction: column; }.filter-group { width: 100%; }.filter-group button { flex: 1; }.sort-control { justify-content: space-between; }.sort-control select { flex: 1; }.detail-metrics { grid-template-columns: 1fr; gap: 12px; }.detail-metrics strong { margin-top: 3px; } }
