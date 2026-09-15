@@ -151,3 +151,13 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 .scenario-delta strong { display: block; margin-top: 5px; color: #173c32; font-family: Georgia, serif; font-size: 18px; font-weight: 500; }
 .scenario-delta p { margin: 8px 0 0; color: #68716c; font-size: 11px; line-height: 1.5; }
 @media (max-width: 720px) { .fixture-controls { align-items: stretch; flex-direction: column; }.filter-group { width: 100%; }.filter-group button { flex: 1; }.sort-control { justify-content: space-between; }.sort-control select { flex: 1; }.detail-metrics { grid-template-columns: 1fr; gap: 12px; }.detail-metrics strong { margin-top: 3px; } }
+.metric-primary { background: #e4efe8; }
+.metric-explainer { display: flex; align-items: end; justify-content: space-between; gap: 28px; margin-top: 22px; padding: 18px 0 2px; border-top: 1px solid #e2dfd7; }
+.metric-explainer h3 { max-width: 340px; margin: 4px 0 0; color: #173c32; font-family: Georgia, serif; font-size: 21px; font-weight: 500; line-height: 1.15; }
+.metric-explainer p:last-child { max-width: 520px; margin: 0; color: #68716c; font-size: 12px; line-height: 1.6; }
+.outcome-bars i { transform-origin: left center; animation: grow-bar .7s cubic-bezier(.22,1,.36,1) both; }
+.goal-grid div span { transform-origin: bottom center; animation: grow-column .7s cubic-bezier(.22,1,.36,1) both; }
+@keyframes grow-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes grow-column { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (max-width: 720px) { .metric-explainer { align-items: start; flex-direction: column; gap: 10px; }.metric-explainer h3 { max-width: none; } }
+@media (prefers-reduced-motion: reduce) { .outcome-bars i, .goal-grid div span { animation: none; } }

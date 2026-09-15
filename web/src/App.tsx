@@ -1036,6 +1036,11 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
         </div>
       </div>
       <div className="metric-grid">
+        <div className="metric-primary">
+          <span>RPS</span>
+          <strong>{model?.rps ?? "—"}</strong>
+          <small>Primary selection metric · lower is better</small>
+        </div>
         <div>
           <span>Accuracy</span>
           <strong>{model?.accuracy ?? "—"}%</strong>
@@ -1090,6 +1095,13 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
               <span>{entry.avgGoalMae}</span>
             </div>
           ))}
+        </div>
+        <div className="metric-explainer">
+          <div>
+            <p className="eyebrow">Why RPS leads</p>
+            <h3>Probability quality matters more than a single winner.</h3>
+          </div>
+          <p>Ranked Probability Score rewards calibrated probability distributions, not just the most likely outcome. The production model is selected by the lowest evaluation RPS, with log loss, accuracy, and goal error retained as supporting evidence.</p>
         </div>
       </div>
       <div className="analytics-grid">
@@ -1320,6 +1332,7 @@ const Dashboard: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
         <div className="rail-footer">
           <span>Data snapshot</span>
           <strong>{dataset.totalMatches} fixtures</strong>
+          <small>Offline dataset · no live API</small>
           <small>Scores and schedules are versioned with the export.</small>
         </div>
       </aside>
