@@ -218,6 +218,12 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
                 "src": "visuals/goal_error_distribution.png",
                 "caption": "Poisson goal residuals and actual vs predicted frequency.",
             },
+            {
+                "id": "reliability",
+                "title": "Reliability Curves",
+                "src": "visuals/reliability_curves.png",
+                "caption": "Predicted confidence vs observed accuracy per model (disjoint eval slice).",
+            },
         ],
     }
 

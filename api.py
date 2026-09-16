@@ -222,6 +222,7 @@ def model_info() -> Dict[str, Any]:
         "model_type": model.model_type,
         "feature_count": len(model.feature_names),
         "calibration_temperature": getattr(model, "calibration_temperature", 1.0),
+        "calibration_method": getattr(model, "calibration_method", "temperature"),
         "home_goal_correction": getattr(model, "home_goal_correction", 1.0),
         "away_goal_correction": getattr(model, "away_goal_correction", 1.0),
         "checkpoint_sha": _checkpoint_sha(),
