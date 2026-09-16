@@ -160,6 +160,7 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
                 "accuracy": round(float(m["accuracy"]) * 100, 1),
                 "macroF1": round(float(m["macro_f1"]), 3),
                 "logLoss": round(float(m["log_loss"]), 3),
+                "rps": round(float(m["rps"]), 4),
                 "homeGoalMae": round(float(m["mae_home_goals"]), 2),
                 "awayGoalMae": round(float(m["mae_away_goals"]), 2),
                 "avgGoalMae": round(float(m["avg_goal_mae"]), 2),
@@ -204,6 +205,12 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
                 "title": "Model Comparison",
                 "src": "visuals/model_metrics_comparison.png",
                 "caption": "Multi-metric evaluation across accuracy, F1, log loss, and goal MAE.",
+            },
+            {
+                "id": "rps_comparison",
+                "title": "RPS Selection",
+                "src": "visuals/rps_comparison.png",
+                "caption": "Ranked Probability Score across models; lower is better and drives production selection.",
             },
             {
                 "id": "goal_error",

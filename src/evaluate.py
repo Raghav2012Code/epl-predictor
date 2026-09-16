@@ -1,8 +1,8 @@
 """Evaluation and diagnostic visualization suite for Premier League predictors.
 
 Generates Matplotlib charts for feature importance, confusion matrix,
-benchmark metric comparisons, and goal error distributions in a pure
-black (#000000) and monochrome workstation aesthetic.
+benchmark metric comparisons, and goal error distributions in the dashboard's
+light editorial visual system.
 """
 
 from __future__ import annotations
@@ -19,10 +19,10 @@ import pandas as pd
 
 VISUALS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "visuals")
 
-# Pure monochrome colormap from dark black-surface to crisp white
+# Light dashboard palette shared by every exported diagnostic image.
 MONO_CMAP = LinearSegmentedColormap.from_list(
     "analyst_mono",
-    ["#0A0A0C", "#1F1F23", "#3F3F46", "#71717A", "#A1A1AA", "#E4E4E7", "#FFFFFF"],
+    ["#edf2ed", "#d7ddd7", "#b8c8be", "#8da99a", "#5d866f", "#2f7257", "#173c32"],
 )
 
 
@@ -54,29 +54,29 @@ def plot_feature_importance(
     output_path: Optional[str] = None,
     stacked_importances: Optional[pd.Series] = None,
 ) -> str:
-    """Generates horizontal side-by-side bars of top predictive features in monochrome black."""
+    """Generate readable horizontal feature-importance comparisons."""
     os.makedirs(VISUALS_DIR, exist_ok=True)
     if output_path is None:
         output_path = os.path.join(VISUALS_DIR, "feature_importance.png")
 
-    panels = [("Random Forest", rf_importances, "#FFFFFF"), ("XGBoost", xgb_importances, "#A1A1AA")]
+    panels = [("Random Forest", rf_importances, "#1d6f52"), ("XGBoost", xgb_importances, "#9ab8aa")]
     if stacked_importances is not None:
-        panels.append(("Stacked", stacked_importances, "#52525B"))
+        panels.append(("Stacked", stacked_importances, "#d59a45"))
     fig, axes = plt.subplots(1, len(panels), figsize=(8 * len(panels), 8), sharey=False)
-    fig.patch.set_facecolor("#000000")
+    fig.patch.set_facecolor("#fbfaf7")
     if len(panels) == 1:
         axes = [axes]
 
     for ax, (name, s, color) in zip(axes, panels):
         top_s = s.head(top_n).iloc[::-1]
-        bars = ax.barh(top_s.index, top_s.values, color=color, alpha=0.9, edgecolor="#1F1F23", linewidth=0.5)
-        ax.set_facecolor("#0A0A0C")
-        ax.set_title(f"{name} Top {top_n} Features", color="#FFFFFF", fontsize=14, pad=12, fontweight="bold")
-        ax.set_xlabel("Relative Importance", color="#A1A1AA", fontsize=11)
-        ax.tick_params(colors="#A1A1AA", labelsize=10)
-        ax.grid(axis="x", linestyle="--", alpha=0.2, color="#27272A")
+        bars = ax.barh(top_s.index, top_s.values, color=color, alpha=0.9, edgecolor="#cfcdc5", linewidth=0.5)
+        ax.set_facecolor("#fbfaf7")
+        ax.set_title(f"{name} Top {top_n} Features", color="#173c32", fontsize=14, pad=12, fontweight="bold")
+        ax.set_xlabel("Relative Importance", color="#68716c", fontsize=11)
+        ax.tick_params(colors="#68716c", labelsize=10)
+        ax.grid(axis="x", linestyle="--", alpha=0.2, color="#d7ddd7")
         for spine in ax.spines.values():
-            spine.set_color("#1F1F23")
+            spine.set_color("#cfcdc5")
 
         # Value annotations
         for bar in bars:
@@ -88,13 +88,13 @@ def plot_feature_importance(
                 textcoords="offset points",
                 ha="left",
                 va="center",
-                color="#FFFFFF",
+                color="#173c32",
                 fontsize=9,
             )
 
     plt.suptitle(
         "Premier League Match Predictor - Feature Importance Comparison",
-        color="#FFFFFF",
+        color="#173c32",
         fontsize=16,
         fontweight="bold",
         y=0.98,
@@ -112,7 +112,7 @@ def plot_confusion_matrices(
     output_path: Optional[str] = None,
     stacked_preds: Optional[np.ndarray] = None,
 ) -> str:
-    """Generates normalized confusion matrix heatmaps in sleek monochrome black."""
+    """Generate normalized confusion matrix heatmaps for the light dashboard."""
     os.makedirs(VISUALS_DIR, exist_ok=True)
     if output_path is None:
         output_path = os.path.join(VISUALS_DIR, "confusion_matrix.png")
@@ -122,7 +122,7 @@ def plot_confusion_matrices(
     if stacked_preds is not None:
         panels.append(("Stacked", stacked_preds))
     fig, axes = plt.subplots(1, len(panels), figsize=(7 * len(panels), 6))
-    fig.patch.set_facecolor("#000000")
+    fig.patch.set_facecolor("#fbfaf7")
     if len(panels) == 1:
         axes = [axes]
 
@@ -136,21 +136,21 @@ def plot_confusion_matrices(
         cm_norm = cm.astype("float") / np.maximum(1, cm.sum(axis=1)[:, np.newaxis])
 
         cax = ax.imshow(cm_norm, cmap=MONO_CMAP, interpolation="nearest", vmin=0, vmax=1)
-        ax.set_facecolor("#0A0A0C")
-        ax.set_title(f"{title} Confusion Matrix", color="#FFFFFF", fontsize=14, pad=12, fontweight="bold")
+        ax.set_facecolor("#fbfaf7")
+        ax.set_title(f"{title} Confusion Matrix", color="#173c32", fontsize=14, pad=12, fontweight="bold")
         ax.set_xticks(np.arange(3))
         ax.set_yticks(np.arange(3))
-        ax.set_xticklabels(labels, color="#A1A1AA", fontsize=11)
-        ax.set_yticklabels(labels, color="#A1A1AA", fontsize=11)
-        ax.set_xlabel("Predicted Outcome", color="#A1A1AA", fontsize=12, labelpad=8)
-        ax.set_ylabel("Actual Outcome", color="#A1A1AA", fontsize=12, labelpad=8)
+        ax.set_xticklabels(labels, color="#68716c", fontsize=11)
+        ax.set_yticklabels(labels, color="#68716c", fontsize=11)
+        ax.set_xlabel("Predicted Outcome", color="#68716c", fontsize=12, labelpad=8)
+        ax.set_ylabel("Actual Outcome", color="#68716c", fontsize=12, labelpad=8)
 
         # Annotate percentages and counts
         for i in range(3):
             for j in range(3):
                 val_pct = cm_norm[i, j] * 100
                 count = cm[i, j]
-                txt_color = "#000000" if val_pct > 55 else "#FFFFFF"
+                txt_color = "#fbfaf7" if val_pct > 55 else "#173c32"
                 ax.text(
                     j,
                     i,
@@ -163,9 +163,9 @@ def plot_confusion_matrices(
                 )
 
         for spine in ax.spines.values():
-            spine.set_color("#1F1F23")
+            spine.set_color("#cfcdc5")
 
-    plt.suptitle("Win / Draw / Loss Confusion Matrix (Normalized)", color="#FFFFFF", fontsize=16, fontweight="bold", y=1.02)
+    plt.suptitle("Win / Draw / Loss Confusion Matrix (Normalized)", color="#173c32", fontsize=16, fontweight="bold", y=1.02)
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close()
@@ -198,15 +198,15 @@ def plot_metrics_comparison(
     width = 0.35
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    fig.patch.set_facecolor("#000000")
-    ax.set_facecolor("#0A0A0C")
+    fig.patch.set_facecolor("#fbfaf7")
+    ax.set_facecolor("#fbfaf7")
 
-    colors = ["#FFFFFF", "#71717A"]
+    colors = ["#1d6f52", "#9ab8aa"]
 
     for i, model_name in enumerate(models):
         vals = [metrics[model_name][k[1]] for k in higher_keys]
         offset = (i - 0.5) * width
-        rects = ax.bar(x + offset, vals, width, label=model_name, color=colors[i % len(colors)], alpha=0.9, edgecolor="#1F1F23", linewidth=0.5)
+        rects = ax.bar(x + offset, vals, width, label=model_name, color=colors[i % len(colors)], alpha=0.9, edgecolor="#cfcdc5", linewidth=0.5)
 
         for rect in rects:
             height = rect.get_height()
@@ -217,33 +217,107 @@ def plot_metrics_comparison(
                 textcoords="offset points",
                 ha="center",
                 va="bottom",
-                color="#FFFFFF",
+                color="#173c32",
                 fontweight="bold",
                 fontsize=10,
             )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([k[0] for k in higher_keys], color="#A1A1AA", fontsize=11)
-    ax.tick_params(colors="#A1A1AA")
+    ax.set_xticklabels([k[0] for k in higher_keys], color="#68716c", fontsize=11)
+    ax.tick_params(colors="#68716c")
     ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Accuracy / F1 (higher is better)", color="#A1A1AA", fontsize=11)
-    ax.set_title("Random Forest vs XGBoost Performance Benchmark", color="#FFFFFF", fontsize=15, fontweight="bold", pad=15)
-    ax.legend(facecolor="#000000", edgecolor="#1F1F23", labelcolor="#FFFFFF", fontsize=11, loc="upper left")
-    ax.grid(axis="y", linestyle="--", alpha=0.2, color="#27272A")
+    ax.set_ylabel("Accuracy / F1 (higher is better)", color="#68716c", fontsize=11)
+    ax.set_title("Random Forest vs XGBoost Performance Benchmark", color="#173c32", fontsize=15, fontweight="bold", pad=15)
+    ax.legend(facecolor="#fbfaf7", edgecolor="#cfcdc5", labelcolor="#173c32", fontsize=11, loc="upper left")
+    ax.grid(axis="y", linestyle="--", alpha=0.2, color="#d7ddd7")
     for spine in ax.spines.values():
-        spine.set_color("#1F1F23")
+        spine.set_color("#cfcdc5")
 
     # Secondary axis for Goal MAE so lower-is-better is not mixed into 0-1 bars.
     ax2 = ax.twinx()
     mae_vals = [metrics[m][mae_key[1]] for m in models]
-    ax2.plot(models, mae_vals, color="#E4E4E7", marker="o", linewidth=1.5, markersize=6, label=mae_key[0])
+    ax2.plot(models, mae_vals, color="#d59a45", marker="o", linewidth=1.5, markersize=6, label=mae_key[0])
     for m_name, v in zip(models, mae_vals):
         ax2.annotate(f"{v:.3f}", xy=(m_name, v), xytext=(0, 8),
                      textcoords="offset points", ha="center", va="bottom",
-                     color="#FFFFFF", fontweight="bold", fontsize=10)
-    ax2.set_ylabel(mae_key[0], color="#A1A1AA", fontsize=11)
-    ax2.tick_params(colors="#A1A1AA")
+                     color="#173c32", fontweight="bold", fontsize=10)
+    ax2.set_ylabel(mae_key[0], color="#68716c", fontsize=11)
+    ax2.tick_params(colors="#68716c")
 
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close()
+    return output_path
+
+
+def plot_reliability_curves(
+    y_true: np.ndarray,
+    probability_sets: Dict[str, np.ndarray],
+    output_path: Optional[str] = None,
+    bins: int = 8,
+) -> str:
+    """Plots per-class reliability curves for benchmark probability outputs."""
+    os.makedirs(VISUALS_DIR, exist_ok=True)
+    if output_path is None:
+        output_path = os.path.join(VISUALS_DIR, "reliability_curves.png")
+    y = np.asarray(y_true, dtype=int)
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True, sharey=True)
+    labels = ["Away Win", "Draw", "Home Win"]
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    for cls, ax in enumerate(axes):
+        for name, probas in probability_sets.items():
+            p = np.asarray(probas, dtype=float)[:, cls]
+            centers, observed = [], []
+            for lo, hi in zip(edges[:-1], edges[1:]):
+                mask = (p >= lo) & ((p < hi) if hi < 1 else (p <= hi))
+                if np.any(mask):
+                    centers.append(float(np.mean(p[mask])))
+                    observed.append(float(np.mean(y[mask] == cls)))
+            ax.plot(centers, observed, marker="o", linewidth=1.3, label=name)
+        ax.plot([0, 1], [0, 1], linestyle="--", color="#9ab8aa", linewidth=1)
+        ax.set_title(labels[cls], color="#173c32")
+        ax.set_xlabel("Mean predicted probability", color="#68716c")
+        ax.set_facecolor("#fbfaf7")
+        ax.tick_params(colors="#68716c")
+        ax.grid(alpha=0.2, color="#d7ddd7")
+        for spine in ax.spines.values():
+            spine.set_color("#cfcdc5")
+    axes[0].set_ylabel("Observed frequency", color="#68716c")
+    axes[-1].legend(facecolor="#fbfaf7", edgecolor="#cfcdc5", labelcolor="#173c32")
+    fig.patch.set_facecolor("#fbfaf7")
+    fig.suptitle("Outcome Probability Reliability Curves", color="#173c32", fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close()
+    return output_path
+
+
+def plot_rps_comparison(
+    metrics: Dict[str, Dict[str, Any]] | Dict[str, float],
+    output_path: Optional[str] = None,
+) -> str:
+    """Plots RPS per model, making the production selection criterion explicit."""
+    os.makedirs(VISUALS_DIR, exist_ok=True)
+    if output_path is None:
+        output_path = os.path.join(VISUALS_DIR, "rps_comparison.png")
+    values = {name: float(value.get("rps", 0.0)) if isinstance(value, dict) else float(value)
+              for name, value in metrics.items()}
+    names = list(values)
+    scores = [values[name] for name in names]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.patch.set_facecolor("#fbfaf7")
+    ax.set_facecolor("#fbfaf7")
+    bars = ax.bar(names, scores, color="#1d6f52", edgecolor="#cfcdc5", linewidth=0.6)
+    for bar, score in zip(bars, scores):
+        ax.annotate(f"{score:.4f}", (bar.get_x() + bar.get_width() / 2, score),
+                    xytext=(0, 5), textcoords="offset points", ha="center",
+                    color="#173c32", fontweight="bold")
+    ax.set_ylabel("Ranked Probability Score (lower is better)", color="#68716c")
+    ax.set_title("RPS Model Selection", color="#173c32", fontweight="bold")
+    ax.tick_params(colors="#68716c")
+    ax.grid(axis="y", alpha=0.2, color="#d7ddd7")
+    for spine in ax.spines.values():
+        spine.set_color("#cfcdc5")
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close()
@@ -256,7 +330,7 @@ def plot_goal_error_distribution(
     pred_scores: List[Tuple[int, int]],
     output_path: Optional[str] = None,
 ) -> str:
-    """Plots goal prediction error distribution in pure black & white."""
+    """Plot goal prediction error distributions for the light dashboard."""
     os.makedirs(VISUALS_DIR, exist_ok=True)
     if output_path is None:
         output_path = os.path.join(VISUALS_DIR, "goal_error_distribution.png")
@@ -268,34 +342,34 @@ def plot_goal_error_distribution(
     ag_errors = pred_ag - y_ag
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-    fig.patch.set_facecolor("#000000")
+    fig.patch.set_facecolor("#fbfaf7")
 
     bins = np.arange(-4.5, 5.5, 1)
 
     # Residuals plot
     ax1 = axes[0]
-    ax1.set_facecolor("#0A0A0C")
+    ax1.set_facecolor("#fbfaf7")
     ax1.hist(
         [hg_errors, ag_errors],
         bins=bins,
         label=["Home Goal Residuals", "Away Goal Residuals"],
-        color=["#FFFFFF", "#71717A"],
+        color=["#1d6f52", "#9ab8aa"],
         alpha=0.85,
-        edgecolor="#1F1F23",
+        edgecolor="#cfcdc5",
         linewidth=0.5,
     )
-    ax1.set_title("Goal Prediction Residuals (Pred - Actual)", color="#FFFFFF", fontsize=13, fontweight="bold", pad=10)
-    ax1.set_xlabel("Goal Residual", color="#A1A1AA", fontsize=11)
-    ax1.set_ylabel("Match Count", color="#A1A1AA", fontsize=11)
-    ax1.tick_params(colors="#A1A1AA")
-    ax1.legend(facecolor="#000000", edgecolor="#1F1F23", labelcolor="#FFFFFF")
-    ax1.grid(axis="y", linestyle="--", alpha=0.2, color="#27272A")
+    ax1.set_title("Goal Prediction Residuals (Pred - Actual)", color="#173c32", fontsize=13, fontweight="bold", pad=10)
+    ax1.set_xlabel("Goal Residual", color="#68716c", fontsize=11)
+    ax1.set_ylabel("Match Count", color="#68716c", fontsize=11)
+    ax1.tick_params(colors="#68716c")
+    ax1.legend(facecolor="#fbfaf7", edgecolor="#cfcdc5", labelcolor="#173c32")
+    ax1.grid(axis="y", linestyle="--", alpha=0.2, color="#d7ddd7")
     for spine in ax1.spines.values():
-        spine.set_color("#1F1F23")
+        spine.set_color("#cfcdc5")
 
     # Actual vs Predicted Goal distribution comparison
     ax2 = axes[1]
-    ax2.set_facecolor("#0A0A0C")
+    ax2.set_facecolor("#fbfaf7")
     all_actual = np.concatenate([y_hg, y_ag])
     all_pred = np.concatenate([pred_hg, pred_ag])
     g_bins = np.arange(-0.5, 6.5, 1)
@@ -304,21 +378,21 @@ def plot_goal_error_distribution(
         [all_actual, all_pred],
         bins=g_bins,
         label=["Actual Goals per Team", "Predicted Goals per Team"],
-        color=["#FFFFFF", "#71717A"],
+        color=["#1d6f52", "#9ab8aa"],
         alpha=0.85,
-        edgecolor="#1F1F23",
+        edgecolor="#cfcdc5",
         linewidth=0.5,
     )
-    ax2.set_title("Distribution: Actual vs Predicted Goals per Team", color="#FFFFFF", fontsize=13, fontweight="bold", pad=10)
-    ax2.set_xlabel("Goals Count", color="#A1A1AA", fontsize=11)
-    ax2.set_ylabel("Frequency", color="#A1A1AA", fontsize=11)
-    ax2.tick_params(colors="#A1A1AA")
-    ax2.legend(facecolor="#000000", edgecolor="#1F1F23", labelcolor="#FFFFFF")
-    ax2.grid(axis="y", linestyle="--", alpha=0.2, color="#27272A")
+    ax2.set_title("Distribution: Actual vs Predicted Goals per Team", color="#173c32", fontsize=13, fontweight="bold", pad=10)
+    ax2.set_xlabel("Goals Count", color="#68716c", fontsize=11)
+    ax2.set_ylabel("Frequency", color="#68716c", fontsize=11)
+    ax2.tick_params(colors="#68716c")
+    ax2.legend(facecolor="#fbfaf7", edgecolor="#cfcdc5", labelcolor="#173c32")
+    ax2.grid(axis="y", linestyle="--", alpha=0.2, color="#d7ddd7")
     for spine in ax2.spines.values():
-        spine.set_color("#1F1F23")
+        spine.set_color("#cfcdc5")
 
-    plt.suptitle("Goal Prediction Diagnostic & Error Distributions", color="#FFFFFF", fontsize=15, fontweight="bold", y=1.02)
+    plt.suptitle("Goal Prediction Diagnostic & Error Distributions", color="#173c32", fontsize=15, fontweight="bold", y=1.02)
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close()

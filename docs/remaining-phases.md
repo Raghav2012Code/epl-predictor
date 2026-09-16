@@ -1,64 +1,75 @@
-# Remaining Phases
+# Delivery status and deferred research
 
-Status: Phases 0–5 complete (odds, tuning, stacking, supremacy head, richer
-features, eight-season history). Production: tuned Random Forest, RPS 0.2068,
-season 214H/85D/81A (22.4% draws). Suite: 72 passing.
+This document is the current release-oriented status for the Premier League predictor. It replaces the earlier phase checklist, which contained historical season counts and no longer represented the dashboard or model contract.
 
-Conventions for every phase below: disjoint calibration/eval slices stay
-untouched by selection, draw band 18–27% is a hard constraint, one feature
-commit per phase, full suite + pipeline regen + export + README + web build
-before pushing.
+## Current status
 
-## Phase 6 — Calibration upgrade
+Phases 0 through 8 are implemented on the current `main` branch. The production classifier is selected by Ranked Probability Score (RPS), not raw accuracy. The current held-out benchmark is:
 
-**Goal:** replace single-temperature scaling with properly compared
-calibrators.
-- Compare `CalibratedClassifierCV(cv="prefit")` sigmoid vs isotonic against
-  temperature on the disjoint eval slice (objective: RPS).
-- Winner becomes the calibrator for all tree members; temperature path
-  stays as fallback. Elo-Poisson member included in the comparison.
-- Files: `src/models.py` (calibrate paths), `src/evaluate.py` (reliability
-  curves), `tests/test_ensemble.py` (+ calibration tests).
-- Acceptance: eval RPS improves over T-only; no draws-band regression.
+| Model | RPS | Accuracy | Goal MAE | Status |
+| :--- | ---: | ---: | ---: | :--- |
+| Random Forest | 0.2068 | 46.6% | 0.90 | Production |
+| XGBoost | 0.2085 | 48.7% | 0.89 | Benchmark |
+| Stacked | 0.2076 | 47.2% | 0.89 | Benchmark |
 
-## Phase 7 — Draw rule to config
+These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results.
 
-**Goal:** end hand-tuned constants (`DRAW_MARGIN*` in `src/models.py`,
-retuned 6 times and counting).
-- Move all four thresholds to `config.yaml` under `model.draw_rule`;
-  `favor_outcome_from_proba()` reads them (module defaults preserved).
-- Grid-search on the disjoint eval slice, objective RPS, draw share
-  constrained to 18–27% on both eval regimes and the forecast slate.
-- Commit the tuning receipt in the constants' comment (as done before).
-- Files: `src/models.py`, `src/config.py`, `config.yaml`,
-  `tests/test_odds.py` (regime test reads the same config).
-- Acceptance: slate 18–27%, 0 mismatches, no manual constant edits after.
+## Completed phases
 
-## Phase 8 — RPS everywhere
+### Phase 0 — Data foundation
 
-**Goal:** reporting catches up with selection (RPS already selects
-production; displays still lead with accuracy).
-- `src/evaluate.py`: RPS curves + per-model RPS panel in diagnostics.
-- `export_web_data.py` + `web/src/types/index.ts` + Model page: RPS
-  column in the benchmark table and API payload (additive fields only —
-  the web already renders N models generically).
-- README benchmark table leads with RPS; AGENTS.md selection policy
-  already documents it, no change needed there.
-- Acceptance: dashboard, API, and README all show RPS primary with
-  accuracy/log-loss retained for continuity.
+Historical results, the published fixture schedule, cached football-data.co.uk odds, team aliases, and kickoff-time fallbacks are represented in reproducible loaders. Missing kickoff times remain `TBC`; the pipeline does not invent a kickoff time.
 
-## Live odds activation (no build needed)
+### Phase 1 — Leakage-safe features
 
-- Set a free The Odds API key in `EPL_ODDS_API_KEY`; upcoming fixtures
-  gain real pre-kickoff markets instead of neutral priors. Verify with
-  `predict.py --match` (market-implied line appears) and one offline
-  fallback run with the key unset.
+Rolling form, venue splits, head-to-head history, rest and congestion measures, travel distance, Elo ratings, and market signals are built chronologically. Fixture features filter history to dates strictly earlier than the fixture date, and odds validation rejects result columns and insufficient joins.
 
-## Deferred (explicitly not planned)
+### Phase 2 — Model training
 
-- Player availability / line-up features: no timestamped free source
-  found; building on untimestamped data would leak. Revisit only with
-  a kickoff-stamped feed.
-- Deeper history than 2018/19: diminishing returns observed (older
-  football needed 365-day decay to avoid dilution); revisit after
-  Phase 6–8 land.
+Random Forest, XGBoost, multinomial logistic regression, and Elo-Poisson members are trained as separate classification and goal-regression components. Tree tuning is deterministic and recorded in `models/tuning.json`.
+
+### Phase 3 — Honest evaluation and selection
+
+Time-series validation separates training, calibration, and evaluation data. The stacked meta-learner uses out-of-fold probabilities, calibration is selected on a disjoint slice, and production selection uses RPS with documented tie-breakers.
+
+### Phase 4 — Forecast outputs
+
+The pipeline writes the forecast CSV and Markdown report, persists compatible model metadata, and uses the shared draw-decision rule for probabilities, forecasts, and scorelines.
+
+### Phase 5 — Serving and interfaces
+
+The FastAPI surface provides health, readiness, model metadata, dataset, prediction, and gameweek endpoints. CLI commands validate gameweeks and club names, return non-zero status for invalid input, and support cached checkpoints or explicit retraining.
+
+### Phase 6 — Dashboard
+
+The React dashboard provides Fixtures, Simulator, Table, Clubs, and Analytics views from the serialized dataset. Official/projected labels, loading and retry states, accessible tables, keyboard-dismissible diagnostic previews, and responsive mobile layouts are part of the UI contract.
+
+### Phase 7 — Diagnostics and publication
+
+Diagnostic charts are generated with the dashboard's light theme and copied to `web/public/visuals/`. The dashboard data export and generated forecast artifacts are kept synchronized through the pipeline/export workflow.
+
+### Phase 8 — Quality gates
+
+The Python test suite covers leakage, odds contracts, model compatibility, calibration, scoreline consistency, tuning, interfaces, and API behavior. The web gate runs TypeScript checking and a production Vite build. CI runs the supported Python matrix and frontend build.
+
+## Release checklist
+
+Before publishing a refreshed forecast or model:
+
+1. Run the offline pipeline when the cached source data is sufficient.
+2. Regenerate the web dataset with `.venv\Scripts\python.exe export_web_data.py`.
+3. Confirm generated CSV, Markdown, JSON, metrics, and PNG artifacts are synchronized.
+4. Run `.venv\Scripts\python.exe -m pytest tests/ -v` from the repository root.
+5. Run `npm run build` from `web/`.
+6. Inspect the dashboard at desktop and narrow phone widths, including Analytics diagnostics and tables.
+7. Review the staged file list before committing; keep each commit scoped to one coherent change.
+
+## Deferred research
+
+The following are intentionally deferred research items, not release blockers:
+
+- Player availability, injuries, suspensions, lineups, and verified squad news. These require timestamped sources and a leakage-safe availability snapshot.
+- Additional historical seasons and richer competition context. Any extension must preserve chronological splits and re-run calibration and RPS selection.
+- A live odds integration. This would require an explicit provider, licensing review, caching policy, failure behavior, and a new pre-kickoff leakage contract.
+
+Any deferred feature must ship with its data provenance, time-of-availability definition, validation coverage, and dashboard/API documentation before it becomes part of the production model.

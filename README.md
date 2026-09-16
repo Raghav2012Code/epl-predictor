@@ -11,13 +11,13 @@ The repository has two entry points:
 
 The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, venue splits, head-to-head history, rest days, fixture congestion, away-travel distance, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). Training rows carry exponential recency weights. A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
 
-The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for temperature calibration; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
+The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for calibration-method selection; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 46.6% | 0.432 | 1.016 | 0.207 | 0.90 | 59.3% | Production |
-| XGBoost | 48.7% | 0.403 | 1.026 | 0.208 | 0.89 | 55.3% | Benchmark |
-| Stacked | 47.2% | 0.415 | 1.016 | 0.208 | 0.89 | 57.2% | Benchmark |
+| Random Forest | 46.6% | 0.432 | 1.016 | 0.2068 | 0.90 | 59.3% | Production |
+| XGBoost | 48.7% | 0.403 | 1.026 | 0.2085 | 0.89 | 55.3% | Benchmark |
+| Stacked | 47.2% | 0.415 | 1.016 | 0.2076 | 0.89 | 57.2% | Benchmark |
 
 Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on accuracy; Random Forest keeps production on RPS.
 
@@ -31,7 +31,7 @@ The dashboard is a quiet football analysis workspace rather than a telemetry scr
 - **Simulator** provides a browser scenario estimate and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
 - **Table** provides an accessible sortable projected table with explicit official/projected data notes.
 - **Clubs** provides controlled club selection, recent results, and next fixtures.
-- **Model** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
+- **Analytics** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
 
 Run it locally:
 
@@ -42,6 +42,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
+
+The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the primary navigation scrolls without shrinking labels. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
 
 ## Setup
 
@@ -57,17 +59,15 @@ Use `--offline` when the raw datasets already exist in `data/raw`:
 .venv\Scripts\python.exe run_pipeline.py --offline
 ```
 
-Bookmaker odds are fetched from football-data.co.uk's free archive and cached under `data/raw/odds` (no scraping). Live upcoming odds need a free key and are strictly optional — the pipeline falls back to historical priors without one:
-
-```powershell
-$env:EPL_ODDS_API_KEY = "<your-theoddsapi-key>"
-```
+Bookmaker odds come from football-data.co.uk's free archive and are cached under `data/raw/odds` (no scraping). The project does not use an external live-odds API; upcoming fixtures use cached historical market signals when available and neutral priors otherwise.
 
 The full pipeline trains the Random Forest, XGBoost, and stacked ensemble, writes diagnostics, saves `models/production_model.joblib` and `models/metrics.json`, then exports the forecast CSV and Markdown report. To refresh the dashboard data after a pipeline run:
 
 ```powershell
 .venv\Scripts\python.exe export_web_data.py
 ```
+
+`web/src/data/eplData.json`, `data/predictions_2026_2027.csv`, `data/predictions_2026_2027.md`, `models/metrics.json`, and the PNGs under `visuals/` are generated artifacts. Regenerate them through the pipeline/export workflow rather than editing forecast rows, metrics, or chart output by hand.
 
 Kickoff times that are absent from the source schedule are shown as `TBC`; the pipeline never invents a 15:00 kickoff.
 
@@ -98,27 +98,37 @@ Endpoints:
 
 CORS origins can be configured with `EPL_CORS_ORIGINS`, as a comma separated list. Errors use an `{ "error": ... }` response shape.
 
+For deployment, set `EPL_ENV=production`, provide explicit comma-separated
+`EPL_CORS_ORIGINS` and `EPL_ALLOWED_HOSTS`, and mount a compatible checkpoint
+through `EPL_MODEL_PATH` when it is outside the repository. Production disables
+the interactive API documentation endpoints. Use `/health` for liveness and
+`/ready` for traffic routing; readiness returns HTTP 503 until the checkpoint
+passes compatibility validation.
+
 ## Validation
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/ -v
-cd web
+Push-Location web
 npm run build
+Pop-Location
 ```
 
-The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-safe benchmark outputs, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS. The current suite has 72 passing tests.
+Run the Python checks from the repository root and the web build from `web/`. The web build runs TypeScript checking before producing the Vite bundle. CI additionally exercises the supported Python versions and the same production frontend build.
+
+The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-method selection and reliability curves, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS.
 
 ## Repository layout
 
 ```text
 src/                       Python data, feature, model, validation, tuning, and pipeline code
 src/odds_loader.py         Cached football-data.co.uk odds ingestion + implied probabilities
-src/live_odds.py           Optional live odds via The Odds API (env key, offline-safe)
 src/tuning.py              Deterministic Optuna search for tree hyperparameters
 tests/                     Python unit and interface contract tests (odds, tuning, ensemble)
 data/                      Cached inputs, odds archive, and generated season forecasts
 models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
+web/public/visuals/        Dashboard copies of generated diagnostic PNGs
 web/                       React 19 + TypeScript + Vite 8 + Tailwind CSS 4 dashboard
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
