@@ -1,0 +1,28 @@
+# Render Blueprint for the FastAPI serving surface (api.py).
+#
+# This deploys ONLY the prediction API. The static dashboard lives on Vercel
+# (see vercel.json); point its VITE_DATA_URL at this service's /dataset.
+#
+# The production checkpoint is intentionally gitignored, so the build trains
+# it from cached data: `run_pipeline.py --offline` needs no network.
+# PYTHON_VERSION is pinned to 3.11 because requirements.txt pins
+# numpy/scikit-learn builds that predate newer interpreters.
+services:
+  - type: web
+    name: epl-predictor-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python run_pipeline.py --offline"
+    startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /ready
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: EPL_ENV
+        value: production
+      - key: EPL_MODEL_PATH
+        value: models/production_model.joblib
+      - key: EPL_CORS_ORIGINS
+        sync: false
+      - key: EPL_ALLOWED_HOSTS
+        sync: false
