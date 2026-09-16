@@ -94,6 +94,13 @@ Endpoints:
 
 CORS origins can be configured with `EPL_CORS_ORIGINS`, as a comma separated list. Errors use an `{ "error": ... }` response shape.
 
+For deployment, set `EPL_ENV=production`, provide explicit comma-separated
+`EPL_CORS_ORIGINS` and `EPL_ALLOWED_HOSTS`, and mount a compatible checkpoint
+through `EPL_MODEL_PATH` when it is outside the repository. Production disables
+the interactive API documentation endpoints. Use `/health` for liveness and
+`/ready` for traffic routing; readiness returns HTTP 503 until the checkpoint
+passes compatibility validation.
+
 ## Validation
 
 ```powershell

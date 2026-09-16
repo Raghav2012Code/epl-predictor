@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import os
 import sys
+import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
@@ -31,6 +32,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.logging_config import get_logger
+from src.dataset_validation import validate_web_dataset
 from src.pipeline import DEFAULT_MODEL_PATH, PremierLeaguePredictionPipeline
 from src.validation import assert_model_compatible, canonical_team, validate_gameweek
 
@@ -38,6 +40,29 @@ logger = get_logger(__name__)
 
 _pipeline: Optional[PremierLeaguePredictionPipeline] = None
 _model_error: Optional[str] = None
+_model_path = os.environ.get("EPL_MODEL_PATH", DEFAULT_MODEL_PATH)
+_environment = os.environ.get("EPL_ENV", "development").strip().lower()
+_is_production = _environment == "production"
+
+
+def _configured_origins() -> List[str]:
+    raw = os.environ.get("EPL_CORS_ORIGINS")
+    if raw is None:
+        return [] if _is_production else ["http://localhost:5173"]
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if _is_production and "*" in origins:
+        raise RuntimeError("EPL_CORS_ORIGINS must list explicit origins in production.")
+    return origins
+
+
+def _configured_hosts() -> List[str]:
+    raw = os.environ.get("EPL_ALLOWED_HOSTS")
+    if raw is None:
+        return [] if _is_production else ["localhost", "127.0.0.1", "testserver"]
+    hosts = [host.strip() for host in raw.split(",") if host.strip()]
+    if _is_production and (not hosts or "*" in hosts):
+        raise RuntimeError("EPL_ALLOWED_HOSTS must list explicit hosts in production.")
+    return hosts
 
 
 class OutcomePrediction(BaseModel):
@@ -72,12 +97,12 @@ class GameweekFixture(BaseModel):
 
 def _load_pipeline() -> PremierLeaguePredictionPipeline:
     pipe = PremierLeaguePredictionPipeline()
-    if not os.path.exists(DEFAULT_MODEL_PATH):
+    if not os.path.exists(_model_path):
         raise RuntimeError(
-            f"No checkpoint at {DEFAULT_MODEL_PATH}. Train first with `python run_pipeline.py`."
+            f"No checkpoint at {_model_path}. Set EPL_MODEL_PATH or train with `python run_pipeline.py`."
         )
     pipe.load_data(offline=None)
-    pipe.load_model(DEFAULT_MODEL_PATH)
+    pipe.load_model(_model_path)
     assert_model_compatible(pipe.best_model, strict=True)
     return pipe
 
@@ -85,6 +110,8 @@ def _load_pipeline() -> PremierLeaguePredictionPipeline:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _pipeline, _model_error
+    _pipeline = None
+    _model_error = None
     try:
         _pipeline = _load_pipeline()
         logger.info("API model loaded: %s", _pipeline.best_model_name)
@@ -94,8 +121,15 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="EPL Predictor API", version="1.0.0", lifespan=lifespan)
-cors_origins = [origin.strip() for origin in os.environ.get("EPL_CORS_ORIGINS", "*").split(",") if origin.strip()]
+app = FastAPI(
+    title="EPL Predictor API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
+)
+cors_origins = _configured_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -103,6 +137,20 @@ app.add_middleware(
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
+
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_configured_hosts())
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    incoming = request.headers.get("x-request-id", "")
+    request_id = incoming if incoming and len(incoming) <= 128 and all(c.isalnum() or c in "._-" for c in incoming) else str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 def _require_pipeline() -> PremierLeaguePredictionPipeline:
@@ -114,7 +162,7 @@ def _require_pipeline() -> PremierLeaguePredictionPipeline:
 def _checkpoint_sha() -> Optional[str]:
     try:
         h = hashlib.sha256()
-        with open(DEFAULT_MODEL_PATH, "rb") as f:
+        with open(_model_path, "rb") as f:
             for chunk in iter(lambda: f.read(65536), b""):
                 h.update(chunk)
         return h.hexdigest()[:16]
@@ -134,6 +182,19 @@ def health() -> Dict[str, Any]:
     return payload
 
 
+@app.get("/ready")
+def ready() -> Dict[str, Any]:
+    """Readiness probe: returns success only when a compatible model is loaded."""
+    payload = {
+        "status": "ready" if _pipeline is not None and _pipeline.best_model is not None else "not_ready",
+        "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
+        "model_error": _model_error,
+    }
+    if not payload["model_loaded"]:
+        return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
+    return payload
+
+
 @app.get("/dataset")
 def dataset() -> Dict[str, Any]:
     """Return the same validated dataset consumed by the static dashboard."""
@@ -144,7 +205,7 @@ def dataset() -> Dict[str, Any]:
         raise HTTPException(status_code=503, detail="Web dataset missing. Run export_web_data.py first.")
     try:
         with open(path, "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+            payload = validate_web_dataset(json.load(handle))
         return payload
     except (OSError, ValueError) as exc:
         logger.warning("Dataset load failed: %s", exc)

@@ -51,7 +51,7 @@ jobs:
         with:
           node-version: 22
           cache: "npm"
-          cache-dependency-path: web/package.json
+          cache-dependency-path: web/package-lock.json
 
       - name: Install Dependencies
         working-directory: web

@@ -81,4 +81,23 @@ def test_dataset_endpoint_and_cors_contract() -> None:
             headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "GET"},
         )
         assert preflight.status_code == 200
-        assert preflight.headers.get("access-control-allow-origin") == "*"
+        assert preflight.headers.get("access-control-allow-origin") == "http://localhost:5173"
+        assert response.headers.get("x-request-id")
+
+
+def test_readiness_endpoint_reports_model_state() -> None:
+    from fastapi.testclient import TestClient
+    from api import app
+
+    with TestClient(app) as client:
+        response = client.get("/ready")
+        assert response.status_code in (200, 503)
+        payload = response.json()
+        assert payload["model_loaded"] is (response.status_code == 200)
+
+
+def test_dataset_validator_rejects_incomplete_payload() -> None:
+    from src.dataset_validation import validate_web_dataset
+
+    with pytest.raises(ValueError, match=r"fixtures\[0\]\..+ is required"):
+        validate_web_dataset({"season": "2026/2027", "meta": {}, "fixtures": [{"id": 1, "gameweek": 1}]})

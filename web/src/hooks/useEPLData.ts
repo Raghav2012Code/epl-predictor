@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { EPLDataset } from '../types';
+import { isEPLDataset } from '../lib/validateDataset';
 
 export type DataState =
   | { status: 'loading' }
@@ -37,8 +38,8 @@ export function useEPLData(): DataState {
     load()
       .then((dataset) => {
         if (cancelled) return;
-        if (!dataset || !Array.isArray(dataset.fixtures) || dataset.fixtures.length === 0) {
-          throw new Error('Dataset loaded but contains no fixtures.');
+        if (!isEPLDataset(dataset)) {
+          throw new Error('Dataset loaded but failed schema validation.');
         }
         setState({ status: 'ready', dataset });
       })
