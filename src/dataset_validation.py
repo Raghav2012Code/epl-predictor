@@ -54,6 +54,7 @@ def validate_web_dataset(payload: Any) -> dict[str, Any]:
     fixtures = _require_list(data.get("fixtures"), "dataset.fixtures")
     if not fixtures:
         raise ValueError("dataset.fixtures must not be empty.")
+    fixture_ids: set[int | float] = set()
     for index, fixture in enumerate(fixtures):
         item = _require_mapping(fixture, f"fixtures[{index}]")
         for field in _FIXTURE_FIELDS:
@@ -63,10 +64,26 @@ def validate_web_dataset(payload: Any) -> dict[str, Any]:
             _require_string(item[field], f"fixtures[{index}].{field}")
         for field in ("id", "gameweek", "predHomeGoals", "predAwayGoals"):
             _require_finite_number(item[field], f"fixtures[{index}].{field}")
+        fixture_id = item["id"]
+        if fixture_id in fixture_ids:
+            raise ValueError(f"fixtures[{index}].id values must be unique.")
+        fixture_ids.add(fixture_id)
+        gameweek = float(item["gameweek"])
+        if not gameweek.is_integer() or not 1 <= gameweek <= 38:
+            raise ValueError(f"fixtures[{index}].gameweek must be between 1 and 38.")
         for field in ("homeWinProb", "drawProb", "awayWinProb"):
             _require_finite_number(item[field], f"fixtures[{index}].{field}")
             if not 0 <= float(item[field]) <= 100:
                 raise ValueError(f"fixtures[{index}].{field} must be between 0 and 100.")
+        probability_total = sum(float(item[field]) for field in ("homeWinProb", "drawProb", "awayWinProb"))
+        if abs(probability_total - 100.0) > 0.15:
+            raise ValueError(f"fixtures[{index}] probabilities must total 100.")
+
+    if "totalMatches" in data:
+        _require_finite_number(data["totalMatches"], "dataset.totalMatches")
+        total_matches = float(data["totalMatches"])
+        if not total_matches.is_integer() or int(total_matches) != len(fixtures):
+            raise ValueError("dataset.totalMatches must match the fixture count.")
 
     benchmark = _require_mapping(data.get("benchmark"), "dataset.benchmark")
     _require_list(benchmark.get("models"), "dataset.benchmark.models")

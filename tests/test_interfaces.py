@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import json
 import subprocess
 import sys
 from datetime import datetime
@@ -101,3 +103,31 @@ def test_dataset_validator_rejects_incomplete_payload() -> None:
 
     with pytest.raises(ValueError, match=r"fixtures\[0\]\..+ is required"):
         validate_web_dataset({"season": "2026/2027", "meta": {}, "fixtures": [{"id": 1, "gameweek": 1}]})
+
+
+def _exported_dataset() -> dict:
+    with open("web/src/data/eplData.json", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def test_dataset_validator_rejects_probability_totals_that_are_not_100() -> None:
+    from src.dataset_validation import validate_web_dataset
+
+    payload = _exported_dataset()
+    payload["fixtures"][0]["homeWinProb"] = 99.0
+    with pytest.raises(ValueError, match="probabilities must total 100"):
+        validate_web_dataset(payload)
+
+
+def test_dataset_validator_rejects_duplicate_ids_and_invalid_gameweeks() -> None:
+    from src.dataset_validation import validate_web_dataset
+
+    payload = _exported_dataset()
+    payload["fixtures"][1]["id"] = payload["fixtures"][0]["id"]
+    with pytest.raises(ValueError, match="unique"):
+        validate_web_dataset(payload)
+
+    payload = copy.deepcopy(_exported_dataset())
+    payload["fixtures"][0]["gameweek"] = 39
+    with pytest.raises(ValueError, match="between 1 and 38"):
+        validate_web_dataset(payload)
