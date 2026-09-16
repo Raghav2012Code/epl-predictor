@@ -17,7 +17,7 @@ Market data comes only from football-data.co.uk's free archive (cached, never sc
 ## 2. Directory Structure & Abstractions
 
 ```
-elegant-franklin/
+epl-predictor-fork/
 ├── config.yaml                # Central pipeline/model/training configuration
 ├── data/
 │   ├── raw/                   # Cached raw datasets (seasons CSVs & openfootball txt)
@@ -30,10 +30,11 @@ elegant-franklin/
 ├── visuals/                   # Generated Matplotlib diagnostic charts (PNG)
 ├── web/                       # Standalone React 19 + TS 5.9 + Vite 8 + Tailwind CSS 4 dashboard
 │   ├── src/
-│   │   ├── App.tsx            # Single-file fixture-first dashboard (generic model rendering)
+│   │   ├── App.tsx            # Fixture-first dashboard composition and page state
 │   │   ├── hooks/useEPLData.ts# Async dataset loading with skeletons + retry
 │   │   ├── data/eplData.json  # Serialized 380 fixtures, teams, benchmarks
 │   │   └── types/             # TypeScript data contracts
+│   ├── public/visuals/         # Dashboard-served copies of generated diagnostic PNGs
 │   └── package.json
 ├── export_web_data.py         # Serializer from Python pipeline to web/src/data/eplData.json
 ├── api.py                     # FastAPI serving surface (/health, /dataset, /predict)
@@ -62,6 +63,14 @@ elegant-franklin/
 ├── AGENTS.md                  # Agent architecture guide (this file)
 └── README.md                  # User and project documentation
 ```
+
+### Dashboard and generated-artifact contract
+
+- The dashboard is a fixture-first React application with `Fixtures`, `Simulator`, `Table`, `Clubs`, and `Analytics` views. Analytics includes the RPS benchmark, outcome mix, season coverage, goals by gameweek, model comparison, and diagnostic previews.
+- Responsive behavior is intentional: model metrics become labeled cards on narrow screens, dense tables may scroll horizontally, and the primary navigation remains horizontally scrollable so labels stay legible. Preserve keyboard access, visible focus states, and reduced-motion behavior when changing the UI.
+- Matplotlib diagnostics use the dashboard's light visual theme and are published from `web/public/visuals/`. If a chart is regenerated, synchronize the corresponding public asset before committing.
+- `web/src/data/eplData.json`, forecast CSV/Markdown files, `models/metrics.json`, and diagnostic PNGs are generated artifacts. Regenerate them through the pipeline/export workflow; do not hand-edit generated rows, metrics, or images.
+- Documentation must describe the current model-selection protocol, dashboard routes, generated-file workflow, and validation commands. Update `README.md` and the relevant `docs/` file when any of those contracts change.
 
 ---
 

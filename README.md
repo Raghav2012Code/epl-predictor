@@ -15,9 +15,9 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 46.6% | 0.432 | 1.016 | 0.207 | 0.90 | 59.3% | Production |
-| XGBoost | 48.7% | 0.403 | 1.026 | 0.208 | 0.89 | 55.3% | Benchmark |
-| Stacked | 47.2% | 0.415 | 1.016 | 0.208 | 0.89 | 57.2% | Benchmark |
+| Random Forest | 46.6% | 0.432 | 1.016 | 0.2068 | 0.90 | 59.3% | Production |
+| XGBoost | 48.7% | 0.403 | 1.026 | 0.2085 | 0.89 | 55.3% | Benchmark |
+| Stacked | 47.2% | 0.415 | 1.016 | 0.2076 | 0.89 | 57.2% | Benchmark |
 
 Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on accuracy; Random Forest keeps production on RPS.
 
@@ -31,7 +31,7 @@ The dashboard is a quiet football analysis workspace rather than a telemetry scr
 - **Simulator** provides a browser scenario estimate and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
 - **Table** provides an accessible sortable projected table with explicit official/projected data notes.
 - **Clubs** provides controlled club selection, recent results, and next fixtures.
-- **Model** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
+- **Analytics** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
 
 Run it locally:
 
@@ -42,6 +42,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
+
+The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the primary navigation scrolls without shrinking labels. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
 
 ## Setup
 
@@ -64,6 +66,8 @@ The full pipeline trains the Random Forest, XGBoost, and stacked ensemble, write
 ```powershell
 .venv\Scripts\python.exe export_web_data.py
 ```
+
+`web/src/data/eplData.json`, `data/predictions_2026_2027.csv`, `data/predictions_2026_2027.md`, `models/metrics.json`, and the PNGs under `visuals/` are generated artifacts. Regenerate them through the pipeline/export workflow rather than editing forecast rows, metrics, or chart output by hand.
 
 Kickoff times that are absent from the source schedule are shown as `TBC`; the pipeline never invents a 15:00 kickoff.
 
@@ -105,9 +109,12 @@ passes compatibility validation.
 
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/ -v
-cd web
+Push-Location web
 npm run build
+Pop-Location
 ```
+
+Run the Python checks from the repository root and the web build from `web/`. The web build runs TypeScript checking before producing the Vite bundle. CI additionally exercises the supported Python versions and the same production frontend build.
 
 The test suite covers zero leakage, stable same-date ordering, cold-start priors, pre-kickoff odds gates (no result columns, join coverage), Dixon–Coles direction, model save/load (including stacked checkpoints), scoreline consistency under the shared draw rule, tuning determinism, calibration-method selection and reliability curves, feature-order drift, probability totals, CLI exit codes, the dataset endpoint, and CORS.
 
@@ -121,6 +128,7 @@ tests/                     Python unit and interface contract tests (odds, tunin
 data/                      Cached inputs, odds archive, and generated season forecasts
 models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
+web/public/visuals/        Dashboard copies of generated diagnostic PNGs
 web/                       React 19 + TypeScript + Vite 8 + Tailwind CSS 4 dashboard
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
