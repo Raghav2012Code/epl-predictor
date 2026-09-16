@@ -188,6 +188,36 @@ img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; 
 @keyframes grow-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes grow-column { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @media (max-width: 720px) { .metric-explainer { align-items: start; flex-direction: column; gap: 10px; }.metric-explainer h3 { max-width: none; } }
+
+/* Match-day control room polish: a quiet shell with one warm status accent. */
+:root {
+  --surface-raised: #fbfaf7;
+  --surface-soft: #f3f1ec;
+  --ink: #173c32;
+  --ink-muted: #68716c;
+  --rule: #cfcdc5;
+  --status: #d7a35a;
+}
+
+body { background: var(--surface-soft); color: #17201c; }
+.site-rail { border-right: 1px solid rgba(255,255,255,.1); box-shadow: 12px 0 30px rgba(23,60,50,.06); }
+.site-header { box-shadow: 0 8px 24px rgba(23,60,50,.04); }
+main { padding-top: 48px; }
+.page-intro { position: relative; padding-bottom: 22px; border-bottom: 1px solid var(--rule); }
+.page-intro::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 72px; height: 3px; background: var(--status); }
+.intro-stat { min-width: 170px; padding: 14px 16px 12px; border: 1px solid #d9e5dd; border-left: 3px solid var(--status); background: #e4efe8; }
+.fixture-list, .detail-panel, .content-card, .control-panel, .scenario-panel { border-radius: 3px; box-shadow: 0 10px 26px rgba(23,60,50,.045); }
+.fixture-row.is-selected { box-shadow: inset 3px 0 var(--status); }
+.detail-panel { border-top: 3px solid var(--ink); }
+.primary-button, .stepper button, .stepper select, .compact-select, .sort-control select { border-radius: 2px; }
+.diagnostic-grid button { border-radius: 2px; box-shadow: 0 6px 16px rgba(23,60,50,.035); }
+.metric-primary { box-shadow: inset 0 3px var(--status); }
+@media (max-width: 720px) {
+  main { padding-top: 30px; }
+  .page-intro { padding-bottom: 18px; }
+  .intro-stat { margin-top: 18px; }
+  .fixture-list, .detail-panel, .content-card, .control-panel, .scenario-panel { box-shadow: 0 7px 18px rgba(23,60,50,.04); }
+}
 .fixture-actions { display: inline-flex; gap: 12px; margin-left: auto; }
 .table-wrap { overflow-x: auto; }
 .table-wrap tbody tr { transition: background-color .18s ease, transform .18s ease; }
