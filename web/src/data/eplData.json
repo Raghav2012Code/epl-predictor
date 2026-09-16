@@ -9572,7 +9572,7 @@
       {
         "name": "Random Forest",
         "isProduction": true,
-        "rps": 0.207,
+        "rps": 0.2068,
         "accuracy": 46.6,
         "macroF1": 0.432,
         "logLoss": 1.016,
@@ -9585,7 +9585,7 @@
       {
         "name": "XGBoost",
         "isProduction": false,
-        "rps": 0.208,
+        "rps": 0.2085,
         "accuracy": 48.7,
         "macroF1": 0.403,
         "logLoss": 1.026,
@@ -9598,7 +9598,7 @@
       {
         "name": "Stacked",
         "isProduction": false,
-        "rps": 0.208,
+        "rps": 0.2076,
         "accuracy": 47.2,
         "macroF1": 0.415,
         "logLoss": 1.016,

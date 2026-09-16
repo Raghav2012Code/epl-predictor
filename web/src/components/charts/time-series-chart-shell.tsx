@@ -131,6 +131,7 @@ export interface TimeSeriesChartInnerProps {
   height: number;
   data: Record<string, unknown>[];
   xDataKey: string;
+  xPadding: number;
   margin: Margin;
   animationDuration: number;
   animationEasing?: string;
@@ -181,6 +182,7 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   height,
   data,
   xDataKey,
+  xPadding,
   margin,
   animationDuration,
   animationEasing = DEFAULT_ANIMATION_EASING,
@@ -294,11 +296,12 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
       maxTime = mergeProjectionXDomainMax(maxTime, projectionConfigs);
     }
 
+    const padding = Math.min(Math.max(0, xPadding), Math.max(0, innerWidth / 2));
     return scaleTime({
-      range: [0, innerWidth],
+      range: [padding, Math.max(padding, innerWidth - padding)],
       domain: [minTime, maxTime],
     });
-  }, [innerWidth, plotData, projectionConfigs, xAccessor, xDomain]);
+  }, [innerWidth, plotData, projectionConfigs, xAccessor, xDomain, xPadding]);
 
   // When brushing, keep the full series for path rendering so edge fades stay
   // anchored to the viewport while the line pans through them. Y-domain and

@@ -160,7 +160,7 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
                 "accuracy": round(float(m["accuracy"]) * 100, 1),
                 "macroF1": round(float(m["macro_f1"]), 3),
                 "logLoss": round(float(m["log_loss"]), 3),
-                "rps": round(float(m["rps"]), 3),
+                "rps": round(float(m["rps"]), 4),
                 "homeGoalMae": round(float(m["mae_home_goals"]), 2),
                 "awayGoalMae": round(float(m["mae_away_goals"]), 2),
                 "avgGoalMae": round(float(m["avg_goal_mae"]), 2),

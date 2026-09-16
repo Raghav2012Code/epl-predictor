@@ -32,6 +32,8 @@ export interface LineChartProps {
   data: Record<string, unknown>[];
   /** Key in data for the x-axis (date). Default: "date" */
   xDataKey?: string;
+  /** Horizontal plot padding in pixels, useful when edge markers need room. */
+  xPadding?: number;
   /** Chart margins */
   margin?: Partial<Margin>;
   /** Animation duration in milliseconds. Default: 1100 */
@@ -141,6 +143,7 @@ interface ChartInnerProps {
   height: number;
   data: Record<string, unknown>[];
   xDataKey: string;
+  xPadding: number;
   margin: Margin;
   animationDuration: number;
   animationEasing?: string;
@@ -163,6 +166,7 @@ function ChartInner({
   height,
   data,
   xDataKey,
+  xPadding,
   margin,
   animationDuration,
   animationEasing,
@@ -200,6 +204,7 @@ function ChartInner({
       tweenYDomainOnXDomainChange={tweenYDomainOnXDomainChange}
       width={width}
       xDataKey={xDataKey}
+      xPadding={xPadding}
       xDomain={xDomain}
       xDomainSlotCount={xDomainSlotCount}
       yDomainTween={yDomainTween}
@@ -213,6 +218,7 @@ function ChartInner({
 export function LineChart({
   data,
   xDataKey = "date",
+  xPadding = 0,
   margin: marginProp,
   animationDuration = 1100,
   animationEasing,
@@ -279,6 +285,7 @@ export function LineChart({
             tweenYDomainOnXDomainChange={tweenYDomainOnXDomainChange}
             width={width}
             xDataKey={xDataKey}
+            xPadding={xPadding}
             xDomain={xDomain}
             xDomainSlotCount={xDomainSlotCount}
             yDomainTween={yDomainTween}

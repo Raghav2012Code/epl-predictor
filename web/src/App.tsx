@@ -16,10 +16,7 @@ import {
   MotionPreferenceProvider,
   MotionSection,
 } from "./components/Motion";
-import { BarChart } from "./components/charts/bar-chart";
-import { Bar } from "./components/charts/bar";
 import { Grid } from "./components/charts/grid";
-import { BarXAxis } from "./components/charts/bar-x-axis";
 import { ChartTooltip } from "./components/charts/tooltip";
 import { LineChart, Line } from "./components/charts/line-chart";
 import { XAxis } from "./components/charts/x-axis";
@@ -1073,7 +1070,16 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const modelChartData = dataset.benchmark.models.map((entry) => ({
     name: entry.name.replace("Random Forest", "RF").replace("Logistic Regression", "Logistic"),
     rps: entry.rps,
+    isProduction: entry.isProduction,
   }));
+  const rpsMin = Math.min(...modelChartData.map((entry) => entry.rps));
+  const rpsMax = Math.max(...modelChartData.map((entry) => entry.rps));
+  const rpsRange = Math.max(rpsMax - rpsMin, 0.001);
+  const playedFixtures = dataset.fixtures.filter((fixture) => fixture.status === "Played").length;
+  const projectedFixtures = dataset.fixtures.length - playedFixtures;
+  const coveragePercent = dataset.fixtures.length > 0
+    ? Math.round((playedFixtures / dataset.fixtures.length) * 100)
+    : 0;
   const firstKickoffByGameweek = new Map<number, string>();
   for (const fixture of dataset.fixtures) {
     if (fixture.date !== "TBC" && !firstKickoffByGameweek.has(fixture.gameweek)) {
@@ -1151,13 +1157,31 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="bklit-chart-shell">
-              <BarChart data={modelChartData} xDataKey="name" aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
-                <Grid horizontal stroke="rgba(23,60,50,.12)" strokeDasharray="2,4" />
-                <Bar dataKey="rps" fill="#1d6f52" stroke="#1d6f52" lineCap={3} />
-                <BarXAxis showAllLabels />
-                <ChartTooltip rows={(point) => [{ label: "RPS", value: Number(point.rps).toFixed(3), color: "#1d6f52" }]} />
-              </BarChart>
+            <div
+              className="rps-chart"
+              role="img"
+              aria-label="RPS comparison. Lower scores are better."
+            >
+              <div className="rps-chart-scale" aria-hidden="true">
+                <span>Higher RPS</span>
+                <span>Zoomed to observed range</span>
+                <span>Lower RPS</span>
+              </div>
+              <div className="rps-bars">
+                {modelChartData.map((entry) => {
+                  const relativeHeight = 34 + ((entry.rps - rpsMin) / rpsRange) * 66;
+                  return (
+                    <div className={`rps-bar-group ${entry.isProduction ? "is-production" : ""}`} key={entry.name}>
+                      <strong>{entry.rps.toFixed(4)}</strong>
+                      <div className="rps-bar-track">
+                        <div className="rps-bar" style={{ height: `${relativeHeight}%` }} />
+                      </div>
+                      <span>{entry.name}</span>
+                      {entry.isProduction && <small>Production</small>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1180,6 +1204,28 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
             </div>
           </CardContent>
         </Card>
+        <Card className="analytics-chart-card coverage-card">
+          <CardHeader>
+            <CardTitle>Season coverage</CardTitle>
+            <CardDescription>How much of the schedule has a recorded result.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="coverage-stat">
+              <strong>{playedFixtures}<span>/{dataset.fixtures.length}</span></strong>
+              <div>
+                <span>results recorded</span>
+                <small>{coveragePercent}% of the season</small>
+              </div>
+            </div>
+            <div className="coverage-meter" aria-label={`${coveragePercent}% of fixtures have recorded results`} role="progressbar" aria-valuemax={100} aria-valuemin={0} aria-valuenow={coveragePercent}>
+              <span style={{ width: `${coveragePercent}%` }} />
+            </div>
+            <div className="coverage-breakdown">
+              <span><i className="coverage-dot recorded" />{playedFixtures} played</span>
+              <span><i className="coverage-dot projected" />{projectedFixtures} projected</span>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="analytics-chart-card analytics-chart-wide">
           <CardHeader>
             <div className="analytics-card-heading">
@@ -1192,7 +1238,7 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
           </CardHeader>
           <CardContent>
             <div className="bklit-chart-shell">
-              <LineChart data={goalChartData} xDataKey="date" aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
+              <LineChart data={goalChartData} xDataKey="date" xPadding={10} aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
                 <Grid horizontal stroke="rgba(23,60,50,.12)" strokeDasharray="2,4" />
                 <Line dataKey="goals" stroke="#1d6f52" strokeWidth={3} showMarkers />
                 <XAxis numTicks={7} />
@@ -1229,10 +1275,10 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
                 {entry.name}
                 {entry.isProduction && <em>Production</em>}
               </strong>
-              <span>{entry.rps}</span>
-              <span>{entry.accuracy}%</span>
-              <span>{entry.logLoss}</span>
-              <span>{entry.avgGoalMae}</span>
+              <span data-label="RPS" aria-label={`RPS ${entry.rps}`}>{entry.rps}</span>
+              <span data-label="Accuracy" aria-label={`Accuracy ${entry.accuracy}%`}>{entry.accuracy}%</span>
+              <span data-label="Log loss" aria-label={`Log loss ${entry.logLoss}`}>{entry.logLoss}</span>
+              <span data-label="Goal MAE" aria-label={`Goal MAE ${entry.avgGoalMae}`}>{entry.avgGoalMae}</span>
             </div>
           ))}
         </div>
