@@ -9,3 +9,5 @@ web/dist/
 models/*.joblib
 .agents/
 ORIGINAL_REQUEST.md
+.vercel
+.env*
