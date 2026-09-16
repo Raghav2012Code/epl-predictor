@@ -1163,9 +1163,9 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
               aria-label="RPS comparison. Lower scores are better."
             >
               <div className="rps-chart-scale" aria-hidden="true">
-                <span>Higher RPS</span>
+                <span>Higher bars = higher RPS</span>
                 <span>Zoomed to observed range</span>
-                <span>Lower RPS</span>
+                <span>Lower score = better</span>
               </div>
               <div className="rps-bars">
                 {modelChartData.map((entry) => {
