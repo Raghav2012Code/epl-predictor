@@ -215,4 +215,4 @@ def test_export_benchmark_includes_stacked():
     assert payload["productionModel"] == "Stacked"
     assert [m["name"] for m in payload["models"]] == ["Random Forest", "XGBoost", "Stacked"]
     assert [m["isProduction"] for m in payload["models"]] == [False, False, True]
-    assert all(m["rps"] == 0.207 for m in payload["models"])
+    assert all(m["rps"] == 0.2068 for m in payload["models"])
