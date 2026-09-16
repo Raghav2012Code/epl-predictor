@@ -1,181 +1,60 @@
-# AGENTS.md - Developer & AI Agent Guidelines
+# Agent guide
 
-Welcome to the **Premier League Match Outcome & Scoreline Predictor** repository. This document outlines the architectural standards, design decisions, code organization, testing protocols, and contribution patterns for AI agents and human contributors working on this codebase.
+Premier League outcome and scoreline predictor. The Python pipeline trains calibrated Home/Draw/Away models and Poisson goal regressors from chronological historical data, cached pre-kickoff odds, and the published fixture schedule. The React dashboard consumes the exported dataset.
 
----
+## Repository map
 
-## 1. Project Overview & Core Mission
-
-The system ingests historical English Premier League match data, pre-kickoff bookmaker market signals, and upcoming schedules from [`openfootball/england`](https://github.com/openfootball/england) and public match databases to forecast:
-1. **Match Outcome Probabilities**: Calibrated 3-way distribution for `Home Win`, `Draw`, and `Away Win`.
-2. **Exact Scorelines**: Continuous expected goals (`Home xG` and `Away xG`) modeled via Poisson regression and reconciled into integer scorelines (e.g., `2 - 1`).
-
-Market data comes only from football-data.co.uk's free archive (cached, never scraped); there is no external live-odds API integration. A stacked ensemble (tuned Random Forest, XGBoost, logistic regression, Elo-Poisson) is benchmarked under time ordered validation; production is selected by Ranked Probability Score (RPS).
-
----
-
-## 2. Directory Structure & Abstractions
-
-```
-epl-predictor-fork/
-├── config.yaml                # Central pipeline/model/training configuration
-├── data/
-│   ├── raw/                   # Cached raw datasets (seasons CSVs & openfootball txt)
-│   ├── raw/odds/              # Cached bookmaker odds (per-season E0 CSVs + live board)
-│   ├── predictions_2026_2027.csv  # 380 fixture forecasts with probabilities and scorelines
-│   └── predictions_2026_2027.md   # Markdown table of predictions by gameweek
-├── models/
-│   ├── tuning.json            # Deterministic Optuna records (consumed at train time)
-│   └── metrics.json           # Benchmark sidecar (RF/XGBoost/Stacked + selection)
-├── visuals/                   # Generated Matplotlib diagnostic charts (PNG)
-├── web/                       # Standalone React 19 + TS 5.9 + Vite 8 + Tailwind CSS 4 dashboard
-│   ├── src/
-│   │   ├── App.tsx            # Fixture-first dashboard composition and page state
-│   │   ├── hooks/useEPLData.ts# Async dataset loading with skeletons + retry
-│   │   ├── data/eplData.json  # Serialized 380 fixtures, teams, benchmarks
-│   │   └── types/             # TypeScript data contracts
-│   ├── public/visuals/         # Dashboard-served copies of generated diagnostic PNGs
-│   └── package.json
-├── export_web_data.py         # Serializer from Python pipeline to web/src/data/eplData.json
-├── api.py                     # FastAPI serving surface (/health, /dataset, /predict)
-├── src/
-│   ├── __init__.py
-│   ├── config.py              # config.yaml loader (env overrides, yaml-optional fallback)
-│   ├── data_loader.py         # Ingestion, openfootball text parser, alias normalization
-│   ├── odds_loader.py         # football-data.co.uk odds ingestion + implied probabilities
-│   ├── feature_engineering.py # Rolling form, venue splits, H2H, rest days, market signals (zero-leakage)
-│   ├── models.py              # MatchPredictorModel (RF/XGB/LogReg), EloPoissonModel, StackedEnsembleModel
-│   ├── tuning.py              # Deterministic Optuna search (mirrors benchmark protocol)
-│   ├── evaluate.py            # RPS, time-series metrics & Matplotlib chart generation
-│   ├── validation.py          # Input validation, checkpoint compat, odds leakage gates
-│   ├── logging_config.py      # Central logging setup
-│   └── pipeline.py            # End-to-end training, benchmarking, and forecast orchestrator
-├── tests/
-│   ├── test_pipeline.py       # Core unit and integration pytest suite
-│   ├── test_odds.py           # Odds parsing, leakage contract, feature-join tests
-│   ├── test_tuning.py         # RPS, search determinism, tuning record tests
-│   ├── test_ensemble.py       # Elo member, stacking, checkpoint dispatch tests
-│   └── test_interfaces.py     # CLI/API contract tests
-├── predict.py                 # User-facing CLI tool (forecasts + market-implied line)
-├── run_pipeline.py            # Single-command pipeline runner
-├── pytest.ini                 # Pytest configuration
-├── requirements.txt           # Pinned Python package dependencies
-├── AGENTS.md                  # Agent architecture guide (this file)
-└── README.md                  # User and project documentation
+```text
+src/                 Data, features, models, validation, tuning, evaluation, pipeline
+tests/               Python contract and integration tests
+data/                Cached inputs and generated forecast CSV/Markdown
+models/              Tuning and benchmark metadata; checkpoint is generated
+visuals/             Generated diagnostic PNGs
+web/                 React + TypeScript + Vite dashboard
+web/src/data/        Serialized dashboard dataset
+web/public/visuals/  Dashboard copies of diagnostic PNGs
+api.py               FastAPI serving surface
+predict.py           CLI forecast surface
+run_pipeline.py      End-to-end pipeline runner
+export_web_data.py   Pipeline-to-dashboard serializer
+config.yaml          Central model and training configuration
 ```
 
-### Dashboard and generated-artifact contract
+## Non-negotiable model rules
 
-- The dashboard is a fixture-first React application with `Fixtures`, `Simulator`, `Table`, `Clubs`, and `Analytics` views. Analytics includes the RPS benchmark, outcome mix, season coverage, goals by gameweek, model comparison, and diagnostic previews.
-- Responsive behavior is intentional: model metrics become labeled cards on narrow screens, dense tables may scroll horizontally, and the primary navigation remains horizontally scrollable so labels stay legible. Preserve keyboard access, visible focus states, and reduced-motion behavior when changing the UI.
-- Matplotlib diagnostics use the dashboard's light visual theme and are published from `web/public/visuals/`. If a chart is regenerated, synchronize the corresponding public asset before committing.
-- `web/src/data/eplData.json`, forecast CSV/Markdown files, `models/metrics.json`, and diagnostic PNGs are generated artifacts. Regenerate them through the pipeline/export workflow; do not hand-edit generated rows, metrics, or images.
-- Documentation must describe the current model-selection protocol, dashboard routes, generated-file workflow, and validation commands. Update `README.md` and the relevant `docs/` file when any of those contracts change.
+- Zero leakage: rolling features use prior rows only; fixture history must satisfy `date < match_date`; odds may contain pre-kickoff fields only. Reject result columns (`FTHG`, `FTAG`, `FTR`) and insufficient odds joins.
+- Keep classification and Poisson goal regression separate.
+- Production selection is by lower RPS, then log loss, accuracy, and goal MAE. Calibration and evaluation slices stay disjoint; stacking uses honest out-of-fold probabilities.
+- Probabilities use `[Away, Draw, Home]` order. `favor_outcome_from_proba()` is the single draw-decision source for forecasts and scorelines.
+- Serving checkpoints must pass strict compatibility validation.
+- Generated JSON, CSV, Markdown, metrics, tuning records, and PNGs must be regenerated by their workflow, never hand-edited. Keep `visuals/` and `web/public/visuals/` synchronized.
 
----
+## Commands
 
-## 3. Strict Development Principles
-
-### Zero Data Leakage Guarantee
-> [!IMPORTANT]
-> When computing features for any match on date $T$, you **MUST NOT** use any match occurring on or after date $T$. 
-- In `src/feature_engineering.py`, every rolling calculation uses `.shift(1)` on chronological data.
-- When calling `build_fixture_features(home_team, away_team, match_date, history)`, the history is strictly filtered: `history[history["date"] < match_date]`.
-- Bookmaker odds are legal features **only when struck before kickoff** (closing aggregates qualify; results never enter). `src/odds_loader.py` drops result columns at parse time, and `src/validation.py:assert_odds_frame_clean()` / `assert_odds_coverage()` enforce the contract mechanically: no `FTHG`/`FTAG`/`FTR` columns, implied triples summing to 1, and >=95% (date, home, away) join coverage, or training refuses to run.
-
-### Ensemble & Selection Policy
-- Level-0 members are Random Forest, XGBoost, multinomial logistic regression, and Elo-Poisson (`EloPoissonModel` reads only `home_elo`/`away_elo`; league means and slope fit on training rows only). The meta-learner trains on honest out-of-fold train probabilities (`TimeSeriesSplit`), never in-sample outputs.
-- Production is selected by **RPS** (Ranked Probability Score, lower wins), tie-broken by log-loss, accuracy, goal MAE. Accuracy alone never selects.
-- Calibration compares temperature, prefit sigmoid, and prefit isotonic with RPS on the disjoint calibration/evaluation slices (`split_calibration_evaluation()`); the winning method is persisted and headline metrics use the untouched evaluation half.
-- The draw decision (`favor_outcome_from_proba()`) is the SINGLE source of truth for scorelines, forecasts, and validation decisions, with regime-aware thresholds loaded from `config.yaml` for market-present vs no-market rows. Retune both whenever the production model changes (procedure: RPS grid on the disjoint eval slice + forecast-slate plausibility band 18-27%).
-- `predict_outcome_proba()` outputs are always `(N, 3)` in `[Away, Draw, Home]` order (`align_probas()` guards degenerate slices).
-- Checkpoints are strict: `assert_model_compatible(..., strict=True)` in serving paths; `StackedEnsembleModel.fit()` refits members but keeps meta weights frozen.
-
-### Classification / Regression Separation
-- Classification and regression stay distinct estimators: the classifier optimizes 3-way probabilities, the regressors optimize count Poisson loss for goals. Do not collapse outcomes into a single regression diff without checking RPS.
-- Scorelines are harmonized in `predict_scoreline()` via the shared draw rule, never by global grid argmax.
-
-### Cross-Platform Encoding
-- Always reconfigure stdout for UTF-8 compatibility in CLI scripts:
-  ```python
-  if hasattr(sys.stdout, "reconfigure"):
-      sys.stdout.reconfigure(encoding="utf-8")
-  ```
-- Use ASCII-safe or GitHub-formatted tables (`tabulate(..., tablefmt="grid")`) to avoid Windows CP1252 crash issues.
-
----
-
-## 4. Environment & Command Recipes
-
-### Virtual Environment Setup
 ```powershell
-# Using uv (recommended)
-uv venv --python 3.11 .venv
-uv pip install -r requirements.txt
-
-# Using standard Python
+# Setup
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### Running Tests
-All agents must verify changes by running the test suite before submitting:
-```powershell
-.venv\Scripts\pytest tests/ -v
-```
+# Tests and pipeline
+.venv\Scripts\python.exe -m pytest tests/ -v
+.venv\Scripts\python.exe run_pipeline.py --offline
+.venv\Scripts\python.exe export_web_data.py
 
-### Running Pipeline & CLI
-```powershell
-# Full pipeline execution (retrain, benchmark, plot, and predict 2026/27):
-.venv\Scripts\python run_pipeline.py
-
-# Offline mode (uses data/raw cache only, no downloads):
-.venv\Scripts\python run_pipeline.py --offline
-
-# Hyperparameter search (deterministic, writes models/tuning.json):
-.venv\Scripts\python -m src.tuning --trials 40 --offline
-
-# CLI Gameweek inspection:
-.venv\Scripts\python predict.py --gameweek 7
-
-# CLI Custom Matchup:
-.venv\Scripts\python predict.py --match "Arsenal" "Chelsea"
-
-# CLI Benchmark:
-.venv\Scripts\python predict.py --benchmark
-```
-
-### Web Dashboard
-```powershell
-cd web
+# Dashboard
+Push-Location web
 npm ci
-npm run dev     # serves on http://localhost:5173
-npm run build   # typechecks (tsc) and emits web/dist/
+npm run dev
+npm run build
+Pop-Location
 ```
 
----
+Use `--offline` when cached data is available. Preserve UTF-8 output in CLI scripts and use ASCII-safe tables for Windows compatibility.
 
-## 5. Guidelines for Modifying Existing Components
+## Change rules
 
-1. **Adding New Data Features**:
-   - Add the metric calculation in `src/feature_engineering.py:compute_team_rolling_features()`.
-   - Update both `build_engineered_dataset()` and `build_fixture_features()`.
-   - Always append the new column name to `get_feature_column_names()`.
-   - Add a unit test in `tests/test_pipeline.py`.
-
-2. **Adding a New Model (e.g. LightGBM or CatBoost)**:
-   - Extend `MatchPredictorModel` in `src/models.py`.
-   - Register it in `train_and_benchmark_models()`.
-   - Update `src/evaluate.py` to plot comparisons for the new model.
-
-3. **Team Name Normalization**:
-   - Any new club or variation must be added to `TEAM_ALIASES` in `src/data_loader.py`.
-
-4. **Tuning Hyperparameters**:
-   - Extend the search space in `src/tuning.py:suggest_rf()` / `suggest_xgb()`; never hand-edit `models/tuning.json` (it is the search record, consumed at train time).
-   - Keep the protocol honest: fit on train, calibrate on the calibration slice, score RPS on the disjoint eval slice via `split_calibration_evaluation()`.
-   - Re-run the search with `python -m src.tuning --trials 40 --offline` and commit the regenerated `tuning.json`.
-
-5. **Commits**:
-   - Commit scoped work per feature with a `type(scope): subject` message, then push; never bundle unrelated phases into one commit.
+- For new features, update both training and fixture paths, register feature names, and add tests.
+- Add club aliases to `src/data_loader.py:TEAM_ALIASES`.
+- When model protocol, dashboard surfaces, generated artifacts, or commands change, update `README.md` or the relevant `docs/` file; keep this guide limited to agent-critical rules.
+- Before committing, review the staged file list, run relevant gates, use `type(scope): subject`, and keep commits scoped. Never bypass repository hooks.
