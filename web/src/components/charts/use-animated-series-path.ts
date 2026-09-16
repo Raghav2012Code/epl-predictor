@@ -18,7 +18,9 @@ export interface UseAnimatedSeriesPathOptions {
   renderData: Record<string, unknown>[];
   xAccessor: (datum: Record<string, unknown>) => Date;
   xScale: (value: Date) => number | undefined;
-  yScale: (value: number) => number | undefined;
+  yScale: ((value: number) => number | undefined) & {
+    domain: () => number[];
+  };
   dataKey: string;
   curve: CurveFactory;
   chartPhase: string;
