@@ -24,5 +24,6 @@ services:
         value: models/production_model.joblib
       - key: EPL_CORS_ORIGINS
         sync: false
-      - key: EPL_ALLOWED_HOSTS
-        sync: false
+      # EPL_ALLOWED_HOSTS is set after first deploy (the hostname only
+      # exists once Render creates the service): Dashboard -> Environment
+      # -> add EPL_ALLOWED_HOSTS=<your-service>.onrender.com, then Save.
