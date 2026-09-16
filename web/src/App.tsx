@@ -16,6 +16,17 @@ import {
   MotionPreferenceProvider,
   MotionSection,
 } from "./components/Motion";
+import { BarChart } from "./components/charts/bar-chart";
+import { Bar } from "./components/charts/bar";
+import { Grid } from "./components/charts/grid";
+import { BarXAxis } from "./components/charts/bar-x-axis";
+import { ChartTooltip } from "./components/charts/tooltip";
+import { LineChart, Line } from "./components/charts/line-chart";
+import { XAxis } from "./components/charts/x-axis";
+import { RingChart } from "./components/charts/ring-chart";
+import { Ring } from "./components/charts/ring";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { Badge } from "./components/ui/badge";
 
 type Tab = "fixtures" | "simulator" | "standings" | "clubs" | "analytics";
 type SortKey =
@@ -27,7 +38,7 @@ const tabs: Array<{ id: Tab; label: string; note: string }> = [
   { id: "simulator", label: "Simulator", note: "Explore a matchup" },
   { id: "standings", label: "Table", note: "Current and projected table" },
   { id: "clubs", label: "Clubs", note: "Team profiles" },
-  { id: "analytics", label: "Model", note: "Benchmark and diagnostics" },
+  { id: "analytics", label: "Analytics", note: "Model evidence and trends" },
 ];
 const pct = (value: number) => `${Number(value).toFixed(1)}%`;
 const confidenceFor = (fixture: Fixture) =>
@@ -1057,18 +1068,39 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const model =
     dataset.benchmark.models.find((entry) => entry.isProduction) ??
     dataset.benchmark.models[0];
-  const playedMatches = dataset.fixtures.filter(
-    (fixture) => fixture.status === "Played",
-  ).length;
-  const projectedMatches = dataset.fixtures.length - playedMatches;
   const asset = (path: string) =>
     `${import.meta.env.BASE_URL}${path.replace(/^\.?\//, "")}`;
+  const modelChartData = dataset.benchmark.models.map((entry) => ({
+    name: entry.name.replace("Random Forest", "RF").replace("Logistic Regression", "Logistic"),
+    rps: entry.rps,
+  }));
+  const firstKickoffByGameweek = new Map<number, string>();
+  for (const fixture of dataset.fixtures) {
+    if (fixture.date !== "TBC" && !firstKickoffByGameweek.has(fixture.gameweek)) {
+      firstKickoffByGameweek.set(fixture.gameweek, fixture.date);
+    }
+  }
+  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => ({
+    date: new Date(
+      firstKickoffByGameweek.get(entry.gw) ??
+        Date.UTC(2026, 7, 14 + (entry.gw - 1) * 7),
+    ),
+    goals: entry.goals,
+    average: entry.avgPerMatch,
+    gameweek: entry.gw,
+  }));
+  const outcome = dataset.analytics.outcomeDistribution;
+  const outcomeChartData = [
+    { label: "Home", value: outcome.homePct, maxValue: 100, color: "#1d6f52" },
+    { label: "Draw", value: outcome.drawPct, maxValue: 100, color: "#b46b2a" },
+    { label: "Away", value: outcome.awayPct, maxValue: 100, color: "#3d5a80" },
+  ];
   return (
     <MotionSection className="page-stack">
       <div className="page-intro">
         <div>
-          <p className="eyebrow">Model report</p>
-          <h1>Evidence for the forecast.</h1>
+          <p className="eyebrow">Analytics</p>
+          <h1>Read the season through its evidence.</h1>
           <p className="lede">
             Metrics are calculated on a time ordered holdout. This page
             separates validation evidence from the season projection so the
@@ -1106,6 +1138,69 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
           <strong>{model?.within1Goal ?? "—"}%</strong>
           <small>Scoreline tolerance</small>
         </div>
+      </div>
+      <div className="analytics-chart-grid" aria-label="Interactive analytics charts">
+        <Card className="analytics-chart-card analytics-chart-wide">
+          <CardHeader>
+            <div className="analytics-card-heading">
+              <div>
+                <CardTitle>RPS benchmark</CardTitle>
+                <CardDescription>Lower scores indicate better-calibrated probabilities.</CardDescription>
+              </div>
+              <Badge variant="outline">Production: {dataset.benchmark.productionModel}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="bklit-chart-shell">
+              <BarChart data={modelChartData} xDataKey="name" aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
+                <Grid horizontal stroke="rgba(23,60,50,.12)" strokeDasharray="2,4" />
+                <Bar dataKey="rps" fill="#1d6f52" stroke="#1d6f52" lineCap={3} />
+                <BarXAxis showAllLabels />
+                <ChartTooltip rows={(point) => [{ label: "RPS", value: Number(point.rps).toFixed(3), color: "#1d6f52" }]} />
+              </BarChart>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="analytics-chart-card">
+          <CardHeader>
+            <CardTitle>Outcome mix</CardTitle>
+            <CardDescription>Share across official and projected fixtures.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="outcome-chart-wrap">
+              <RingChart data={outcomeChartData} strokeWidth={15} ringGap={8} baseInnerRadius={38}>
+                <Ring index={0} color="#1d6f52" />
+                <Ring index={1} color="#b46b2a" />
+                <Ring index={2} color="#3d5a80" />
+              </RingChart>
+              <div className="outcome-chart-total"><strong>{dataset.fixtures.length}</strong><span>fixtures</span></div>
+            </div>
+            <div className="chart-legend">
+              {outcomeChartData.map((entry) => <span key={entry.label}><i style={{ background: entry.color }} />{entry.label} {entry.value.toFixed(1)}%</span>)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="analytics-chart-card analytics-chart-wide">
+          <CardHeader>
+            <div className="analytics-card-heading">
+              <div>
+                <CardTitle>Goals by gameweek</CardTitle>
+                <CardDescription>Observed and projected goal totals across the season schedule.</CardDescription>
+              </div>
+              <Badge variant="secondary">Offline dataset</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="bklit-chart-shell">
+              <LineChart data={goalChartData} xDataKey="date" aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
+                <Grid horizontal stroke="rgba(23,60,50,.12)" strokeDasharray="2,4" />
+                <Line dataKey="goals" stroke="#1d6f52" strokeWidth={3} showMarkers />
+                <XAxis numTicks={7} />
+                <ChartTooltip rows={(point) => [{ label: `GW${point.gameweek}`, value: `${point.goals} goals`, color: "#1d6f52" }]} />
+              </LineChart>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       <div className="content-card">
         <div className="section-heading small">
@@ -1147,80 +1242,6 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
             <h3>Probability quality matters more than a single winner.</h3>
           </div>
           <p>Ranked Probability Score rewards calibrated probability distributions, not just the most likely outcome. The production model is selected by the lowest evaluation RPS, with log loss, accuracy, and goal error retained as supporting evidence.</p>
-        </div>
-      </div>
-      <div className="analytics-grid">
-        <div className="content-card">
-          <div className="section-heading small">
-            <h2>Outcome mix</h2>
-            <span className="muted">
-              {playedMatches} official · {projectedMatches} projected
-            </span>
-          </div>
-          <div className="outcome-bars">
-            <div>
-              <span>Home</span>
-              <strong>
-                {dataset.analytics.outcomeDistribution.home} ·{" "}
-                {dataset.analytics.outcomeDistribution.homePct}%
-              </strong>
-              <i
-                style={{
-                  width: `${dataset.analytics.outcomeDistribution.homePct}%`,
-                  background: "#1d6f52",
-                }}
-              />
-            </div>
-            <div>
-              <span>Draw</span>
-              <strong>
-                {dataset.analytics.outcomeDistribution.draw} ·{" "}
-                {dataset.analytics.outcomeDistribution.drawPct}%
-              </strong>
-              <i
-                style={{
-                  width: `${dataset.analytics.outcomeDistribution.drawPct}%`,
-                  background: "#b46b2a",
-                }}
-              />
-            </div>
-            <div>
-              <span>Away</span>
-              <strong>
-                {dataset.analytics.outcomeDistribution.away} ·{" "}
-                {dataset.analytics.outcomeDistribution.awayPct}%
-              </strong>
-              <i
-                style={{
-                  width: `${dataset.analytics.outcomeDistribution.awayPct}%`,
-                  background: "#3d5a80",
-                }}
-              />
-            </div>
-          </div>
-          <p className="muted">
-            {dataset.analytics.basis ??
-              "Official scores for played matches; model scorelines for upcoming fixtures."}
-          </p>
-        </div>
-        <div className="content-card">
-          <div className="section-heading small">
-            <h2>Season goals</h2>
-            <span className="muted">
-              {dataset.analytics.totalGoals} total ·{" "}
-              {dataset.analytics.avgGoalsPerMatch}/match
-            </span>
-          </div>
-          <div className="goal-grid">
-            {dataset.analytics.goalsPerGameweek.map((entry) => (
-              <div key={entry.gw} title={`GW${entry.gw}: ${entry.goals} goals`}>
-                <span
-                  style={{ height: `${Math.min(100, entry.goals * 5)}%` }}
-                />
-                <small>{entry.gw}</small>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
       <div className="content-card">
