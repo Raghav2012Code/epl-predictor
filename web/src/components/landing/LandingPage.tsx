@@ -24,7 +24,7 @@ import type { EPLDataset, Fixture } from "../../types";
 import {
   MotionPreferenceContext,
 } from "../Motion";
-import type { AppRoute } from "../../lib/appRoute";
+import { dashboardRoutes, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
 import "../../styles/landing.css";
 
@@ -38,6 +38,14 @@ const landingLinks = [
   { label: "Methodology", href: "#methodology" },
   { label: "Trust", href: "#trust" },
 ];
+
+const dashboardLabels: Record<Exclude<AppRoute, "landing">, string> = {
+  fixtures: "Fixtures",
+  simulator: "Simulator",
+  standings: "Table",
+  clubs: "Clubs",
+  analytics: "Analytics",
+};
 
 const reveal = {
   hidden: { opacity: 0, y: 24 },
@@ -142,9 +150,13 @@ const LandingNav: React.FC<Pick<LandingPageProps, "onNavigate">> = ({ onNavigate
   return (
     <header className="landing-nav-wrap">
       <nav className="landing-nav" aria-label="Landing page navigation">
-        <button className="landing-brand" type="button" onClick={() => scrollTo("#top")} aria-label="Return to top">
-          <span className="landing-brand-mark">EPL</span>
-          <span><strong>Predictor</strong><small>2026 / 27</small></span>
+        <button className="landing-brand" type="button" onClick={() => scrollTo("#top")} aria-label="Return to top — EPL Predictor">
+          <img
+            className="landing-brand-logo"
+            src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
+            alt="EPL Predictor"
+          />
+          <span className="landing-brand-season"><small>2026 / 27</small></span>
         </button>
         <div className="landing-nav-links">
           {landingLinks.map((link) => (
@@ -194,6 +206,19 @@ const LandingNav: React.FC<Pick<LandingPageProps, "onNavigate">> = ({ onNavigate
               >
                 <span>0{index + 1}</span>{link.label}<ArrowRight size={15} aria-hidden="true" />
               </motion.a>
+            ))}
+            <span className="landing-mobile-menu-label">Dashboard views</span>
+            {dashboardRoutes.map((route, index) => (
+              <motion.button
+                key={route}
+                type="button"
+                initial={reduceMotion ? false : { opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: reduceMotion ? 0 : (landingLinks.length + index) * 0.05 }}
+                onClick={() => { setMenuOpen(false); onNavigate(route); }}
+              >
+                <span>0{landingLinks.length + index + 1}</span>{dashboardLabels[route]}<ArrowRight size={15} aria-hidden="true" />
+              </motion.button>
             ))}
             <button type="button" onClick={() => { setMenuOpen(false); onNavigate("fixtures"); }}>
               Open dashboard <ArrowRight size={15} aria-hidden="true" />

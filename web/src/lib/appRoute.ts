@@ -15,6 +15,14 @@ const routePaths: Record<AppRoute, string> = {
   analytics: "/analytics",
 };
 
+export const dashboardRoutes: Array<Exclude<AppRoute, "landing">> = [
+  "fixtures",
+  "simulator",
+  "standings",
+  "clubs",
+  "analytics",
+];
+
 const routesByPath = Object.fromEntries(
   Object.entries(routePaths).map(([route, path]) => [path, route]),
 ) as Record<string, AppRoute>;

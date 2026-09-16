@@ -49,7 +49,7 @@ npm run dev
 
 Open `http://localhost:5173`. The landing page is the default entry point; use **Explore forecasts** or `/fixtures` to enter the dashboard. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
 
-The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the primary navigation scrolls without shrinking labels. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
+The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
 
 ### Vercel deployment
 

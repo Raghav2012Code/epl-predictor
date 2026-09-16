@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { appRouteForPath, pathForAppRoute, type AppRoute } from "./appRoute";
+import {
+  appRouteForPath,
+  dashboardRoutes,
+  pathForAppRoute,
+  type AppRoute,
+} from "./appRoute";
 import { getLandingData } from "./landingData";
 
 describe("app routes", () => {
@@ -13,6 +18,16 @@ describe("app routes", () => {
     for (const route of routes) {
       expect(appRouteForPath(pathForAppRoute(route))).toBe(route);
     }
+  });
+
+  it("exposes every dashboard view to compact navigation", () => {
+    expect(dashboardRoutes).toEqual([
+      "fixtures",
+      "simulator",
+      "standings",
+      "clubs",
+      "analytics",
+    ]);
   });
 
   it("falls back safely for unknown paths", () => {
