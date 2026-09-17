@@ -161,6 +161,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="landing-page" id="top">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <motion.header
         className="landing-topbar"
         initial={reduceMotion ? false : { opacity: 0, y: -8 }}
@@ -208,7 +211,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </motion.header>
 
-      <main className="landing-main">
+      <main className="landing-main" id="main-content" tabIndex={-1}>
         <MotionSection className="landing-hero">
           <MotionList className="landing-hero-copy">
             <MotionItem>

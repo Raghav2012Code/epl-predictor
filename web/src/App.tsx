@@ -854,6 +854,7 @@ const StandingsPage: React.FC<{
                 key={row.team}
                 onClick={() => onClub(row.team)}
                 tabIndex={0}
+                role="button"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
@@ -1434,6 +1435,9 @@ const Dashboard: React.FC<{
   const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return (
       <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <aside className="site-rail">
         <button
           type="button"
@@ -1526,7 +1530,7 @@ const Dashboard: React.FC<{
             </MotionPresence>
           </div>
         </header>
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <MotionPresence>
           <MotionSection key={activeTab} className="page-transition-shell">
           {activeTab === "fixtures" && (
@@ -1579,6 +1583,15 @@ const Dashboard: React.FC<{
   );
 };
 
+const routeTitles: Record<AppRoute, string> = {
+  landing: "EPL Predictor 2026/27 — Premier League Match & Score Intelligence",
+  fixtures: "Fixtures · EPL Predictor",
+  simulator: "Simulator · EPL Predictor",
+  standings: "Table · EPL Predictor",
+  clubs: "Clubs · EPL Predictor",
+  analytics: "Analytics · EPL Predictor",
+};
+
 export const App: React.FC = () => {
   const state = useEPLData();
   const [route, setRoute] = useState<AppRoute>(() =>
@@ -1589,6 +1602,15 @@ export const App: React.FC = () => {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+  const firstRoute = useRef(true);
+  useEffect(() => {
+    document.title = routeTitles[route];
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      return;
+    }
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }, [route]);
   const navigate = (nextRoute: AppRoute) => {
     const nextPath = pathForAppRoute(nextRoute);
     if (window.location.pathname !== nextPath) {

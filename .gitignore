@@ -11,3 +11,4 @@ models/*.joblib
 ORIGINAL_REQUEST.md
 .vercel
 .env*
+*.log
