@@ -12,9 +12,13 @@ import { AppSkeleton, DataErrorPanel } from "./components/DataStates";
 import { useEPLData } from "./hooks/useEPLData";
 import {
   MotionItem,
+  MotionKeyFade,
   MotionList,
+  MotionPop,
   MotionPreferenceProvider,
+  MotionPresence,
   MotionSection,
+  RouteFade,
 } from "./components/Motion";
 import { Grid } from "./components/charts/grid";
 import { ChartTooltip } from "./components/charts/tooltip";
@@ -534,7 +538,9 @@ const FixturesPage: React.FC<{
             </div>
           )}
         </div>
-        <FixtureDetail dataset={dataset} fixture={selected} onSimulate={onSimulate} />
+        <MotionKeyFade fadeKey={selected?.id ?? "empty"} className="fixture-detail-fade">
+          <FixtureDetail dataset={dataset} fixture={selected} onSimulate={onSimulate} />
+        </MotionKeyFade>
       </div>
     </MotionSection>
   );
@@ -1357,12 +1363,13 @@ const Dashboard: React.FC<{
   dataset: EPLDataset;
   initialTab: Tab;
   onNavigate: (route: AppRoute) => void;
-}> = ({ dataset, initialTab, onNavigate }) => {
+  motionDisabled: boolean;
+  onToggleMotion: () => void;
+}> = ({ dataset, initialTab, onNavigate, motionDisabled, onToggleMotion }) => {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState("Arsenal");
-  const [motionDisabled, setMotionDisabled] = useState(false);
   const [simulatorSelection, setSimulatorSelection] = useState({
     home: "Arsenal",
     away: "Chelsea",
@@ -1426,7 +1433,6 @@ const Dashboard: React.FC<{
     : [];
   const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return (
-    <MotionPreferenceProvider disabled={motionDisabled}>
       <div className="app-shell">
       <aside className="site-rail">
         <button
@@ -1484,8 +1490,9 @@ const Dashboard: React.FC<{
               aria-label="Search clubs or fixtures"
             />
             <kbd>/</kbd>
+            <MotionPresence>
             {searchOpen && query && (
-              <div className="search-results" role="listbox">
+              <MotionPop popKey="search-results" className="search-results" role="listbox">
                 {clubHits.map((team) => (
                   <button
                     key={team.name}
@@ -1514,11 +1521,13 @@ const Dashboard: React.FC<{
                 {!clubHits.length && !fixtureHits.length && (
                   <p className="muted">No matches found.</p>
                 )}
-              </div>
+              </MotionPop>
             )}
+            </MotionPresence>
           </div>
         </header>
         <main>
+          <MotionPresence>
           <MotionSection key={activeTab} className="page-transition-shell">
           {activeTab === "fixtures" && (
             <FixturesPage
@@ -1550,10 +1559,11 @@ const Dashboard: React.FC<{
           )}
           {activeTab === "analytics" && <AnalyticsPage key="analytics" dataset={dataset} />}
           </MotionSection>
+          </MotionPresence>
         </main>
         <footer className="site-footer">
           <span>Forecasts are probabilities, not guarantees.</span>
-          <button className="text-button motion-toggle" onClick={() => setMotionDisabled((value) => !value)} aria-pressed={motionDisabled}>
+          <button className="text-button motion-toggle" onClick={onToggleMotion} aria-pressed={motionDisabled}>
             {motionDisabled ? "Motion reduced" : "Motion on"}
           </button>
           <a
@@ -1566,7 +1576,6 @@ const Dashboard: React.FC<{
         </footer>
       </div>
       </div>
-    </MotionPreferenceProvider>
   );
 };
 
@@ -1588,15 +1597,23 @@ export const App: React.FC = () => {
     setRoute(nextRoute);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
+  const [motionDisabled, setMotionDisabled] = useState(false);
+  const toggleMotion = () => setMotionDisabled((value) => !value);
   if (state.status === "loading")
     return (
-      <ErrorBoundary>
-        {route === "landing" ? (
-          <LandingPage onNavigate={navigate} />
-        ) : (
-          <AppSkeleton />
-        )}
-      </ErrorBoundary>
+      <MotionPreferenceProvider disabled={motionDisabled}>
+        <ErrorBoundary>
+          {route === "landing" ? (
+            <LandingPage
+              onNavigate={navigate}
+              motionDisabled={motionDisabled}
+              onToggleMotion={toggleMotion}
+            />
+          ) : (
+            <AppSkeleton />
+          )}
+        </ErrorBoundary>
+      </MotionPreferenceProvider>
     );
   if (state.status === "error")
     return (
@@ -1605,17 +1622,32 @@ export const App: React.FC = () => {
       </ErrorBoundary>
     );
   return (
-    <ErrorBoundary>
-      {route === "landing" ? (
-        <LandingPage dataset={state.dataset} onNavigate={navigate} />
-      ) : (
-        <Dashboard
-          dataset={state.dataset}
-          initialTab={route}
-          onNavigate={navigate}
-        />
-      )}
-    </ErrorBoundary>
+    <MotionPreferenceProvider disabled={motionDisabled}>
+      <ErrorBoundary>
+        <MotionPresence>
+          {route === "landing" ? (
+            <RouteFade routeKey="landing">
+              <LandingPage
+                dataset={state.dataset}
+                onNavigate={navigate}
+                motionDisabled={motionDisabled}
+                onToggleMotion={toggleMotion}
+              />
+            </RouteFade>
+          ) : (
+            <RouteFade routeKey="workspace">
+              <Dashboard
+                dataset={state.dataset}
+                initialTab={route}
+                onNavigate={navigate}
+                motionDisabled={motionDisabled}
+                onToggleMotion={toggleMotion}
+              />
+            </RouteFade>
+          )}
+        </MotionPresence>
+      </ErrorBoundary>
+    </MotionPreferenceProvider>
   );
 };
 export default App;
