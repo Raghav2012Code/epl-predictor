@@ -97,6 +97,30 @@ STADIUM_COORDS: Dict[str, Tuple[float, float]] = {
     "West Brom": (52.51, -1.96),
     "West Ham": (51.54, -0.02),
     "Wolves": (52.59, -2.13),
+    # Additional Historical & Cup Clubs
+    "Swansea": (51.64, -3.93),
+    "Stoke": (52.99, -2.18),
+    "Middlesbrough": (54.58, -1.22),
+    "Blackburn": (53.73, -2.49),
+    "Derby": (52.91, -1.45),
+    "Reading": (51.42, -0.98),
+    "Bolton": (53.58, -2.54),
+    "Wigan": (53.55, -2.65),
+    "Portsmouth": (50.80, -1.06),
+    "Charlton": (51.49, 0.04),
+    "Birmingham": (52.48, -1.87),
+    "Bristol City": (51.44, -2.62),
+    "Preston": (53.77, -2.69),
+    "Millwall": (51.49, -0.05),
+    "QPR": (51.51, -0.23),
+    "Plymouth": (50.39, -4.15),
+    "Sheffield Wednesday": (53.41, -1.50),
+    "Rotherham": (53.43, -1.36),
+    "Oxford": (51.72, -1.21),
+    "Peterborough": (52.56, -0.24),
+    "Blackpool": (53.80, -3.04),
+    "Barnsley": (53.55, -1.47),
+    "Wrexham": (53.05, -3.00),
 }
 
 AWAY_TRAVEL_FALLBACK_KM = 180.0
@@ -174,6 +198,30 @@ BASE_ELO: Dict[str, float] = {
     "Sunderland": 1460.0,
     "Coventry": 1430.0,
     "Hull": 1420.0,
+    # Extended Historical & Championship Sides
+    "Middlesbrough": 1520.0,
+    "Swansea": 1510.0,
+    "Stoke": 1500.0,
+    "Blackburn": 1500.0,
+    "QPR": 1490.0,
+    "Bristol City": 1480.0,
+    "Preston": 1480.0,
+    "Millwall": 1480.0,
+    "Derby": 1470.0,
+    "Sheffield Wednesday": 1470.0,
+    "Birmingham": 1460.0,
+    "Reading": 1460.0,
+    "Portsmouth": 1450.0,
+    "Bolton": 1440.0,
+    "Wigan": 1440.0,
+    "Plymouth": 1430.0,
+    "Charlton": 1430.0,
+    "Oxford": 1420.0,
+    "Blackpool": 1420.0,
+    "Barnsley": 1420.0,
+    "Peterborough": 1410.0,
+    "Rotherham": 1410.0,
+    "Wrexham": 1410.0,
 }
 
 CLUB_POWER_INDEX: Dict[str, Dict[str, float]] = {
@@ -207,6 +255,30 @@ CLUB_POWER_INDEX: Dict[str, Dict[str, float]] = {
     "West Brom": {"elo": 1490.0, "gf_baseline": 1.04, "ga_baseline": 1.83, "points_baseline": 0.85, "shots_baseline": 10.4, "target_baseline": 3.2, "poss_baseline": 42.0},
     "Sheffield United": {"elo": 1480.0, "gf_baseline": 1.02, "ga_baseline": 1.85, "points_baseline": 0.84, "shots_baseline": 10.2, "target_baseline": 3.1, "poss_baseline": 42.0},
     "Luton": {"elo": 1480.0, "gf_baseline": 1.10, "ga_baseline": 1.88, "points_baseline": 0.84, "shots_baseline": 10.3, "target_baseline": 3.2, "poss_baseline": 42.0},
+    # Extended Historical & Championship Sides
+    "Middlesbrough": {"elo": 1520.0, "gf_baseline": 1.08, "ga_baseline": 1.80, "points_baseline": 0.88, "shots_baseline": 10.5, "target_baseline": 3.3, "poss_baseline": 43.0},
+    "Swansea": {"elo": 1510.0, "gf_baseline": 1.05, "ga_baseline": 1.80, "points_baseline": 0.88, "shots_baseline": 10.5, "target_baseline": 3.3, "poss_baseline": 44.0},
+    "Stoke": {"elo": 1500.0, "gf_baseline": 1.04, "ga_baseline": 1.82, "points_baseline": 0.86, "shots_baseline": 10.2, "target_baseline": 3.2, "poss_baseline": 42.0},
+    "Blackburn": {"elo": 1500.0, "gf_baseline": 1.05, "ga_baseline": 1.82, "points_baseline": 0.86, "shots_baseline": 10.4, "target_baseline": 3.2, "poss_baseline": 43.0},
+    "QPR": {"elo": 1490.0, "gf_baseline": 1.02, "ga_baseline": 1.84, "points_baseline": 0.85, "shots_baseline": 10.2, "target_baseline": 3.2, "poss_baseline": 42.0},
+    "Bristol City": {"elo": 1480.0, "gf_baseline": 1.00, "ga_baseline": 1.85, "points_baseline": 0.84, "shots_baseline": 10.0, "target_baseline": 3.1, "poss_baseline": 42.0},
+    "Preston": {"elo": 1480.0, "gf_baseline": 0.98, "ga_baseline": 1.85, "points_baseline": 0.84, "shots_baseline": 9.8, "target_baseline": 3.0, "poss_baseline": 41.0},
+    "Millwall": {"elo": 1480.0, "gf_baseline": 0.98, "ga_baseline": 1.84, "points_baseline": 0.84, "shots_baseline": 9.8, "target_baseline": 3.0, "poss_baseline": 41.0},
+    "Derby": {"elo": 1470.0, "gf_baseline": 0.97, "ga_baseline": 1.86, "points_baseline": 0.82, "shots_baseline": 9.6, "target_baseline": 3.0, "poss_baseline": 41.0},
+    "Sheffield Wednesday": {"elo": 1470.0, "gf_baseline": 0.96, "ga_baseline": 1.86, "points_baseline": 0.82, "shots_baseline": 9.6, "target_baseline": 2.9, "poss_baseline": 41.0},
+    "Birmingham": {"elo": 1460.0, "gf_baseline": 0.95, "ga_baseline": 1.88, "points_baseline": 0.80, "shots_baseline": 9.5, "target_baseline": 2.9, "poss_baseline": 40.0},
+    "Reading": {"elo": 1460.0, "gf_baseline": 0.95, "ga_baseline": 1.88, "points_baseline": 0.80, "shots_baseline": 9.5, "target_baseline": 2.9, "poss_baseline": 40.0},
+    "Portsmouth": {"elo": 1450.0, "gf_baseline": 0.94, "ga_baseline": 1.89, "points_baseline": 0.78, "shots_baseline": 9.4, "target_baseline": 2.8, "poss_baseline": 40.0},
+    "Bolton": {"elo": 1440.0, "gf_baseline": 0.92, "ga_baseline": 1.90, "points_baseline": 0.76, "shots_baseline": 9.2, "target_baseline": 2.8, "poss_baseline": 40.0},
+    "Wigan": {"elo": 1440.0, "gf_baseline": 0.92, "ga_baseline": 1.90, "points_baseline": 0.76, "shots_baseline": 9.2, "target_baseline": 2.8, "poss_baseline": 40.0},
+    "Plymouth": {"elo": 1430.0, "gf_baseline": 0.90, "ga_baseline": 1.90, "points_baseline": 0.75, "shots_baseline": 9.0, "target_baseline": 2.7, "poss_baseline": 39.0},
+    "Charlton": {"elo": 1430.0, "gf_baseline": 0.90, "ga_baseline": 1.90, "points_baseline": 0.75, "shots_baseline": 9.0, "target_baseline": 2.7, "poss_baseline": 39.0},
+    "Oxford": {"elo": 1420.0, "gf_baseline": 0.88, "ga_baseline": 1.92, "points_baseline": 0.74, "shots_baseline": 8.8, "target_baseline": 2.6, "poss_baseline": 39.0},
+    "Blackpool": {"elo": 1420.0, "gf_baseline": 0.88, "ga_baseline": 1.92, "points_baseline": 0.74, "shots_baseline": 8.8, "target_baseline": 2.6, "poss_baseline": 39.0},
+    "Barnsley": {"elo": 1420.0, "gf_baseline": 0.88, "ga_baseline": 1.92, "points_baseline": 0.74, "shots_baseline": 8.8, "target_baseline": 2.6, "poss_baseline": 39.0},
+    "Peterborough": {"elo": 1410.0, "gf_baseline": 0.86, "ga_baseline": 1.94, "points_baseline": 0.72, "shots_baseline": 8.6, "target_baseline": 2.5, "poss_baseline": 38.0},
+    "Rotherham": {"elo": 1410.0, "gf_baseline": 0.86, "ga_baseline": 1.94, "points_baseline": 0.72, "shots_baseline": 8.6, "target_baseline": 2.5, "poss_baseline": 38.0},
+    "Wrexham": {"elo": 1410.0, "gf_baseline": 0.86, "ga_baseline": 1.94, "points_baseline": 0.72, "shots_baseline": 8.6, "target_baseline": 2.5, "poss_baseline": 38.0},
 }
 
 
@@ -277,6 +349,7 @@ def compute_dynamic_elo(
     ht_arr = matches_df["home_team"].values
     at_arr = matches_df["away_team"].values
     season_arr = matches_df["season"].values if "season" in matches_df.columns else None
+    comp_arr = matches_df["competition"].values if "competition" in matches_df.columns else None
     has_goals = "home_goals" in matches_df.columns and "away_goals" in matches_df.columns
     hg_arr = matches_df["home_goals"].values if has_goals else None
     ag_arr = matches_df["away_goals"].values if has_goals else None
@@ -363,8 +436,14 @@ def compute_dynamic_elo(
                 elif sa == 0.0 and a_streak <= -2:
                     a_streak_mult += min(0.35, 0.08 * (abs(a_streak) - 1))
 
-                k_h = k_base * g_mult * h_streak_mult
-                k_a = k_base * g_mult * a_streak_mult
+                k_eff = k_base
+                if comp_arr is not None:
+                    comp_val = str(comp_arr[i]).lower()
+                    if comp_val not in ("premierleague", "epl", ""):
+                        k_eff = k_base * 0.75
+
+                k_h = k_eff * g_mult * h_streak_mult
+                k_a = k_eff * g_mult * a_streak_mult
 
                 ratings[ht] = rh + k_h * (sh - eh)
                 ratings[at] = ra + k_a * (sa - ea)

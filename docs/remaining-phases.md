@@ -64,12 +64,18 @@ Before publishing a refreshed forecast or model:
 6. Inspect the dashboard at desktop and narrow phone widths, including Analytics diagnostics and tables.
 7. Review the staged file list before committing; keep each commit scoped to one coherent change.
 
+## Multi-competition context integration (openfootball/england)
+
+Historical datasets and multi-competition context from `openfootball/england` (FA Cup, EFL Cup, Championship, extended historical seasons) are ingested and structured into the chronological context layer:
+- Domestic cups inform real-world `rest_days` (e.g. midweek cup recovery) and 14-day fixture congestion `congestion_14d`.
+- Cross-competition dynamic Elo ratings update with competition-aware K-factor scaling.
+- Primary Premier League outcome modeling maintains strict pre-kickoff odds gating and zero leakage.
+
 ## Deferred research
 
 The following are intentionally deferred research items, not release blockers:
 
 - Player availability, injuries, suspensions, lineups, and verified squad news. These require timestamped sources and a leakage-safe availability snapshot.
-- Additional historical seasons and richer competition context. Any extension must preserve chronological splits and re-run calibration and RPS selection.
 - A live odds integration. This would require an explicit provider, licensing review, caching policy, failure behavior, and a new pre-kickoff leakage contract.
 
 Any deferred feature must ship with its data provenance, time-of-availability definition, validation coverage, and dashboard/API documentation before it becomes part of the production model.

@@ -30,7 +30,15 @@ _DEFAULTS: Dict[str, Any] = {
             "https://raw.githubusercontent.com/openfootball/england"
             "/master/2026-27/1-premierleague.txt"
         ),
-        "fixture_season": "2026-27",
+        "openfootball": {
+            "base_url": "https://raw.githubusercontent.com/openfootball/england/master",
+            "seasons": [
+                "2015-16", "2016-17", "2017-18", "2018-19", "2019-20",
+                "2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"
+            ],
+            "competitions": ["premierleague", "facup", "eflcup"],
+            "include_cups_in_context": True,
+        },
     },
     "pipeline": {"split_date": "2024-01-01"},
     "model": {
@@ -86,11 +94,32 @@ def get_config() -> Dict[str, Any]:
     split_date = os.environ.get("EPL_SPLIT_DATE")
     if split_date:
         cfg["pipeline"]["split_date"] = split_date
+    of_base = os.environ.get("OPENFOOTBALL_BASE_URL")
+    if of_base:
+        cfg["data"]["openfootball"]["base_url"] = of_base
+    of_seasons = os.environ.get("OPENFOOTBALL_SEASONS")
+    if of_seasons:
+        cfg["data"]["openfootball"]["seasons"] = [s.strip() for s in of_seasons.split(",") if s.strip()]
+    of_competitions = os.environ.get("OPENFOOTBALL_COMPETITIONS")
+    if of_competitions:
+        cfg["data"]["openfootball"]["competitions"] = [c.strip() for c in of_competitions.split(",") if c.strip()]
     return cfg
 
 
 def get_seasons() -> List[str]:
     return list(get_config()["data"]["seasons"])
+
+
+def get_openfootball_config() -> Dict[str, Any]:
+    return dict(get_config()["data"].get("openfootball", {}))
+
+
+def get_openfootball_seasons() -> List[str]:
+    return list(get_openfootball_config().get("seasons", []))
+
+
+def get_openfootball_competitions() -> List[str]:
+    return list(get_openfootball_config().get("competitions", []))
 
 
 def get_split_date() -> str:

@@ -142,6 +142,92 @@ TEAM_ALIASES: Dict[str, str] = {
     "huddersfield town": "Huddersfield",
     "huddersfield town fc": "Huddersfield",
     "huddersfield town afc": "Huddersfield",
+    # Swansea City
+    "swansea": "Swansea",
+    "swansea city": "Swansea",
+    "swansea city afc": "Swansea",
+    "swansea city fc": "Swansea",
+    # Stoke City
+    "stoke": "Stoke",
+    "stoke city": "Stoke",
+    "stoke city fc": "Stoke",
+    # Middlesbrough
+    "middlesbrough": "Middlesbrough",
+    "middlesbrough fc": "Middlesbrough",
+    "boro": "Middlesbrough",
+    # Blackburn Rovers
+    "blackburn": "Blackburn",
+    "blackburn rovers": "Blackburn",
+    "blackburn rovers fc": "Blackburn",
+    # Derby County
+    "derby": "Derby",
+    "derby county": "Derby",
+    "derby county fc": "Derby",
+    # Reading
+    "reading": "Reading",
+    "reading fc": "Reading",
+    # Bolton Wanderers
+    "bolton": "Bolton",
+    "bolton wanderers": "Bolton",
+    "bolton wanderers fc": "Bolton",
+    # Wigan Athletic
+    "wigan": "Wigan",
+    "wigan athletic": "Wigan",
+    "wigan athletic fc": "Wigan",
+    # Portsmouth
+    "portsmouth": "Portsmouth",
+    "portsmouth fc": "Portsmouth",
+    # Charlton Athletic
+    "charlton": "Charlton",
+    "charlton athletic": "Charlton",
+    "charlton athletic fc": "Charlton",
+    # Birmingham City
+    "birmingham": "Birmingham",
+    "birmingham city": "Birmingham",
+    "birmingham city fc": "Birmingham",
+    # Bristol City
+    "bristol city": "Bristol City",
+    "bristol city fc": "Bristol City",
+    # Preston North End
+    "preston": "Preston",
+    "preston north end": "Preston",
+    "preston north end fc": "Preston",
+    # Millwall
+    "millwall": "Millwall",
+    "millwall fc": "Millwall",
+    # Queens Park Rangers / QPR
+    "qpr": "QPR",
+    "queens park rangers": "QPR",
+    "queens park rangers fc": "QPR",
+    # Plymouth Argyle
+    "plymouth": "Plymouth",
+    "plymouth argyle": "Plymouth",
+    "plymouth argyle fc": "Plymouth",
+    # Sheffield Wednesday
+    "sheffield wednesday": "Sheffield Wednesday",
+    "sheffield wednesday fc": "Sheffield Wednesday",
+    "sheff wed": "Sheffield Wednesday",
+    # Rotherham United
+    "rotherham": "Rotherham",
+    "rotherham united": "Rotherham",
+    "rotherham united fc": "Rotherham",
+    # Oxford United
+    "oxford": "Oxford",
+    "oxford united": "Oxford",
+    "oxford united fc": "Oxford",
+    # Peterborough United
+    "peterborough": "Peterborough",
+    "peterborough united": "Peterborough",
+    "peterborough united fc": "Peterborough",
+    # Blackpool
+    "blackpool": "Blackpool",
+    "blackpool fc": "Blackpool",
+    # Barnsley
+    "barnsley": "Barnsley",
+    "barnsley fc": "Barnsley",
+    # Wrexham
+    "wrexham": "Wrexham",
+    "wrexham afc": "Wrexham",
 }
 
 
@@ -234,6 +320,17 @@ def download_file(
     raise RuntimeError(f"Download failed after {retries} attempt(s): {url} ({last_exc})")
 
 
+OPENFOOTBALL_BASE_URL = "https://raw.githubusercontent.com/openfootball/england/master"
+OPENFOOTBALL_CACHE_DIR = os.path.join(RAW_DATA_DIR, "openfootball")
+
+COMPETITION_FILE_MAP: Dict[str, List[str]] = {
+    "premierleague": ["1-premierleague.txt", "1-premierleague-i.txt", "1-premierleague-ii.txt"],
+    "facup": ["fa-cup.txt"],
+    "eflcup": ["efl-cup.txt", "league-cup.txt"],
+    "championship": ["2-championship.txt"],
+}
+
+
 def parse_openfootball_fixtures(
     file_path_or_url: str,
     season: str = "2026-27",
@@ -259,6 +356,9 @@ def parse_openfootball_fixtures(
     else:
         content_path = file_path_or_url
 
+    if not os.path.exists(content_path):
+        return pd.DataFrame()
+
     with open(content_path, "r", encoding="utf-8", errors="ignore") as f:
         text = f.read()
 
@@ -267,26 +367,35 @@ def parse_openfootball_fixtures(
 
     current_matchday = 1
     current_date_str = ""
-    season_start_year = int(season.split("-")[0])
+    # Extract season start year (e.g. "2026-27" -> 2026, "2021" -> 2020/2021)
+    season_digits = re.findall(r"\d{4}", season)
+    season_start_year = int(season_digits[0]) if season_digits else 2026
 
-    # Date regex like: Fri Aug 21 2026 or Sat Aug 22 or Mon Jan 4
+    # Date regex matching:
+    # Fri Aug 21 2026, Sat Aug 22, [Fri Aug 21], Fri Jan/4 2019, Jan 4 2019, etc.
     date_regex = re.compile(
-        r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+([A-Za-z]{3})\s+(\d{1,2})(?:\s+(\d{4}))?",
+        r"^(?:\[)?(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*([A-Za-z]{3})(?:/|\s+)(\d{1,2})(?:[,\s]+(\d{4}))?(?:\])?",
         re.IGNORECASE,
     )
-    matchday_regex = re.compile(r"Matchday\s+(\d+)", re.IGNORECASE)
+    # Matchday / round regex matching: Matchday 1, Round 3, Round of 16, Quarter-finals, Semi-finals, Final, etc.
+    matchday_regex = re.compile(r"(?:Matchday|Round|Stage|Week)\s+(\d+)", re.IGNORECASE)
+    round_header_regex = re.compile(
+        r"^(?:▪\s*)?(Matchday\s+\d+|Round\s+\d+|Round of \d+|Quarter-finals?|Semi-finals?|Final|Replays?|Qualifying|Group\s+[A-Z])",
+        re.IGNORECASE,
+    )
 
     # Patterns for match lines:
-    # 1. 20:00  Arsenal FC  v Coventry City FC  3-0 (2-0)
-    # 2. 12:30  Everton FC  v Chelsea FC
-    # 3. Everton FC  v Crystal Palace FC  2-0 (1-0)
-    # 4. Burnley FC  0-3 (0-2)  Manchester City FC
+    # 1. 20:00 Arsenal FC v Coventry City FC 3-0 (2-0)
+    # 2. 12:30 Everton FC v Chelsea FC
+    # 3. Everton FC v Crystal Palace FC 2-0 (1-0)
+    # 4. Chelsea FC v Everton FC 2-1 aet (1-1, 0-0)
+    # 5. Arsenal FC v Liverpool FC 1-1 aet (1-1) 5-4 pen.
     match_v_score_regex = re.compile(
-        r"^(?:(\d{1,2}:\d{2})\s+)?(.+?)\s+v\s+(.+?)(?:\s+(\d+)[\-–](\d+)(?:\s+\(\d+[\-–]\d+\))?)?$",
+        r"^(?:(\d{1,2}:\d{2})\s+)?(.+?)\s+v\s+(.+?)(?:\s+(\d+)[\-–](\d+)(?:.*?))?$",
         re.IGNORECASE,
     )
     match_score_middle_regex = re.compile(
-        r"^(?:(\d{1,2}:\d{2})\s+)?(.+?)\s+(\d+)[\-–](\d+)(?:\s+\(\d+[\-–]\d+\))?\s+(.+?)$",
+        r"^(?:(\d{1,2}:\d{2})\s+)?(.+?)\s+(\d+)[\-–](\d+)(?:\s+\(.*?\))?(?:\s+aet)?(?:\s+.*?pen\.)?\s+(.+?)$",
         re.IGNORECASE,
     )
 
@@ -295,38 +404,47 @@ def parse_openfootball_fixtures(
         if not line or line.startswith("=") or line.startswith("#"):
             continue
 
-        # Check matchday
+        # Check matchday / round
         m_day = matchday_regex.search(line)
         if m_day:
             current_matchday = int(m_day.group(1))
             continue
+        elif round_header_regex.match(line):
+            # Non-numbered round header (e.g. "Semi-finals", "Final")
+            current_matchday += 1
+            continue
 
         # Check date
         m_date = date_regex.match(line)
-        if m_date:
+        # Avoid treating a team named like "Sun..." or "Mon..." as a date if it has " v " or scores
+        if m_date and " v " not in line and not re.search(r"\d+[\-–]\d+", line):
             month_str, day_str, year_str = m_date.group(1), m_date.group(2), m_date.group(3)
+            try:
+                month_num = datetime.strptime(month_str, "%b").month
+            except ValueError:
+                month_num = 1
             if not year_str:
                 # Infer year: Aug-Dec -> start_year, Jan-Jul -> start_year + 1
-                month_num = datetime.strptime(month_str, "%b").month
                 year_val = season_start_year if month_num >= 7 else (season_start_year + 1)
             else:
                 year_val = int(year_str)
-            current_date_str = f"{year_val:04d}-{datetime.strptime(month_str, '%b').month:02d}-{int(day_str):02d}"
+            current_date_str = f"{year_val:04d}-{month_num:02d}-{int(day_str):02d}"
             continue
 
         # Check match with " v "
         m_v = match_v_score_regex.match(line)
         if m_v:
-            # Missing kickoff times are unknown, not 15:00. Use empty string
-            # so downstream consumers don't mistake a default for a real time.
             time_val = m_v.group(1) or ""
             team1_raw = m_v.group(2).strip()
             team2_raw = m_v.group(3).strip()
             hg = m_v.group(4)
             ag = m_v.group(5)
 
+            # Clean extra tokens from team2 if score regex wasn't captured strictly
+            team2_cleaned = re.split(r"\s{2,}|\s+\d+[\-–]\d+", team2_raw)[0].strip()
+
             # Avoid headers captured erroneously
-            if "Matchday" in team1_raw or "League" in team1_raw:
+            if "Matchday" in team1_raw or "League" in team1_raw or "Round" in team1_raw:
                 continue
 
             # Guard against matches appearing before any date header.
@@ -334,7 +452,7 @@ def parse_openfootball_fixtures(
                 continue
 
             home_team = standardize_team_name(team1_raw)
-            away_team = standardize_team_name(team2_raw)
+            away_team = standardize_team_name(team2_cleaned)
 
             status = "played" if (hg is not None and ag is not None) else "upcoming"
             matches.append(
@@ -382,9 +500,130 @@ def parse_openfootball_fixtures(
 
     df = pd.DataFrame(matches)
     if not df.empty and "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values(by=["date", "gameweek"]).reset_index(drop=True)
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df = df.dropna(subset=["date"]).sort_values(by=["date", "gameweek"]).reset_index(drop=True)
     return df
+
+
+def load_openfootball_competition_data(
+    competition: str = "premierleague",
+    seasons: Optional[List[str]] = None,
+    offline: bool = False,
+    force_download: bool = False,
+) -> pd.DataFrame:
+    """Loads and parses historical match data from openfootball/england for a given competition.
+
+    Supports competitions: 'premierleague', 'facup', 'eflcup', 'championship'.
+    Files are cached locally under data/raw/openfootball/{season}/{filename}.
+    """
+    from src.config import get_openfootball_config
+
+    cfg = get_openfootball_config()
+    base_url = cfg.get("base_url", OPENFOOTBALL_BASE_URL)
+    if seasons is None:
+        seasons = cfg.get("seasons", ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"])
+
+    file_candidates = COMPETITION_FILE_MAP.get(competition.lower(), [f"{competition}.txt"])
+    all_frames: List[pd.DataFrame] = []
+
+    for season in seasons:
+        season_frames: List[pd.DataFrame] = []
+        season_cache_dir = os.path.join(OPENFOOTBALL_CACHE_DIR, season)
+        os.makedirs(season_cache_dir, exist_ok=True)
+
+        for fname in file_candidates:
+            url = f"{base_url}/{season}/{fname}"
+            local_path = os.path.join(season_cache_dir, fname)
+
+            try:
+                if offline:
+                    if not os.path.exists(local_path):
+                        continue
+                else:
+                    download_file(url, local_path, force_download=force_download)
+                if os.path.exists(local_path):
+                    parsed = parse_openfootball_fixtures(local_path, season=season, is_url=False)
+                    if not parsed.empty:
+                        season_frames.append(parsed)
+            except Exception as exc:
+                logger.debug("Could not load openfootball file %s for %s: %s", fname, season, exc)
+                continue
+
+        if season_frames:
+            season_df = pd.concat(season_frames, ignore_index=True)
+            season_df["competition"] = competition.lower()
+            all_frames.append(season_df)
+
+    if not all_frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(all_frames, ignore_index=True)
+    if "date" in combined.columns:
+        combined["date"] = pd.to_datetime(combined["date"], errors="coerce")
+        combined = combined.dropna(subset=["date"]).sort_values(by="date").reset_index(drop=True)
+    return combined
+
+
+def load_multi_competition_history(
+    seasons: Optional[List[str]] = None,
+    competitions: Optional[List[str]] = None,
+    offline: bool = False,
+    force_download: bool = False,
+) -> pd.DataFrame:
+    """Loads unified chronological match dataset combining Premier League and cup competitions.
+
+    Includes domestic cups (FA Cup, EFL Cup) from openfootball/england to accurately
+    compute team rest days, 14-day fixture congestion, and cross-competition Elo ratings.
+    """
+    from src.config import get_openfootball_config
+
+    of_cfg = get_openfootball_config()
+    if competitions is None:
+        competitions = of_cfg.get("competitions", ["premierleague", "facup", "eflcup"])
+
+    # 1. Primary Premier League dataset (with in-match shots/corners stats)
+    primary_epl = load_historical_stats(seasons=seasons, offline=offline, force_download=force_download)
+    if not primary_epl.empty:
+        primary_epl["competition"] = "premierleague"
+
+    frames = [primary_epl] if not primary_epl.empty else []
+
+    # 2. Cup competitions from openfootball/england
+    cup_comps = [c for c in competitions if c.lower() != "premierleague"]
+    for comp in cup_comps:
+        cup_df = load_openfootball_competition_data(
+            competition=comp,
+            offline=offline,
+            force_download=force_download,
+        )
+        if not cup_df.empty:
+            # Add synthetic in-match stats for consistency with primary dataset
+            cup_df["home_shots"] = 12.0
+            cup_df["away_shots"] = 10.0
+            cup_df["home_shots_target"] = 4.0
+            cup_df["away_shots_target"] = 3.0
+            cup_df["home_corners"] = 5.0
+            cup_df["away_corners"] = 4.0
+            cup_df["home_possession"] = 50.0
+            cup_df["away_possession"] = 50.0
+            if "result" not in cup_df.columns:
+                cup_df["result"] = np.where(
+                    cup_df["home_goals"] > cup_df["away_goals"],
+                    "H",
+                    np.where(cup_df["home_goals"] < cup_df["away_goals"], "A", "D"),
+                )
+            frames.append(cup_df)
+
+    if not frames:
+        return pd.DataFrame()
+
+    full_history = pd.concat(frames, ignore_index=True)
+    if "date" in full_history.columns:
+        full_history["date"] = pd.to_datetime(full_history["date"], errors="coerce")
+        full_history = full_history.dropna(subset=["date", "home_team", "away_team"])
+        full_history["_source_order"] = np.arange(len(full_history), dtype=int)
+        full_history = full_history.sort_values(by=["date", "_source_order"], kind="mergesort").reset_index(drop=True)
+    return full_history
 
 
 def load_historical_stats(

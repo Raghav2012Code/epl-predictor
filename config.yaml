@@ -10,6 +10,11 @@ data:
   historical_url_template: "https://raw.githubusercontent.com/datasets/football-datasets/master/datasets/premier-league/season-{}.csv"
   fixture_url: "https://raw.githubusercontent.com/openfootball/england/master/2026-27/1-premierleague.txt"
   fixture_season: "2026-27"
+  openfootball:
+    base_url: "https://raw.githubusercontent.com/openfootball/england/master"
+    seasons: ["2015-16", "2016-17", "2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
+    competitions: ["premierleague", "facup", "eflcup"]
+    include_cups_in_context: true
 
 pipeline:
   split_date: "2024-01-01"

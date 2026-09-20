@@ -16,6 +16,7 @@ from tabulate import tabulate
 from src.data_loader import (
     load_2026_2027_fixtures,
     load_historical_stats,
+    load_multi_competition_history,
 )
 from src.evaluate import (
     plot_confusion_matrices,
@@ -68,6 +69,7 @@ class PremierLeaguePredictionPipeline:
 
     def __init__(self):
         self.raw_historical: Optional[pd.DataFrame] = None
+        self.multi_competition_history: Optional[pd.DataFrame] = None
         self.engineered_df: Optional[pd.DataFrame] = None
         self.fixtures_2026_2027: Optional[pd.DataFrame] = None
         self.odds_df: Optional[pd.DataFrame] = None
@@ -85,6 +87,14 @@ class PremierLeaguePredictionPipeline:
             offline = os.environ.get("EPL_OFFLINE", "").lower() in ("1", "true", "yes")
         if self.raw_historical is None:
             self.raw_historical = load_historical_stats(force_download=force_download, offline=offline)
+        if self.multi_competition_history is None:
+            try:
+                self.multi_competition_history = load_multi_competition_history(
+                    force_download=force_download, offline=offline
+                )
+            except Exception as exc:
+                logger.warning("Could not load multi-competition history: %s", exc)
+                self.multi_competition_history = self.raw_historical
         if self.fixtures_2026_2027 is None:
             self.fixtures_2026_2027 = load_2026_2027_fixtures(offline=offline)
         return self
