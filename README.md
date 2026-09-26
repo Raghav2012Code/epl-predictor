@@ -119,7 +119,9 @@ For deployment, set `EPL_ENV=production`, provide explicit comma-separated
 through `EPL_MODEL_PATH` when it is outside the repository. Production disables
 the interactive API documentation endpoints. Use `/health` for liveness and
 `/ready` for traffic routing; readiness returns HTTP 503 until the checkpoint
-passes compatibility validation.
+passes compatibility validation. Startup reads the cached inputs under
+`data/raw/` and downloads any missing file; set `EPL_OFFLINE=1` (also `true`
+or `yes`) to forbid network downloads.
 
 ## Validation
 
