@@ -659,12 +659,6 @@ class MatchPredictorModel:
         p_away = float(np.sum(np.triu(grid, 1)))
         return grid, np.array([p_away, p_draw, p_home])
 
-    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
-        """Returns calibrated probability matrix of shape (N, 3): [p_away, p_draw, p_home].
-
-        Blends multi-class tree probabilities with count Poisson probabilities,
-        then applies fitted temperature scaling (if calibrated).
-        """
     def _source_probas(self, X: pd.DataFrame) -> Dict[str, np.ndarray]:
         """Untempered per-source probability matrices (each (N, 3)).
 

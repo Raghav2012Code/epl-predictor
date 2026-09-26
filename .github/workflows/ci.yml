@@ -39,7 +39,7 @@ jobs:
           pytest tests/ -v --durations=10
 
   web-build:
-    name: Web App Typecheck & Build
+    name: Web App Typecheck, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -60,6 +60,10 @@ jobs:
       - name: Typecheck TypeScript
         working-directory: web
         run: npx tsc --noEmit
+
+      - name: Run Unit Tests
+        working-directory: web
+        run: npm test
 
       - name: Build Production Bundle
         working-directory: web
