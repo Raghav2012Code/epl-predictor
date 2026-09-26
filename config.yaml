@@ -44,4 +44,3 @@ model:
   odds_mask_rate: 0.15
   market_blend_grid_step: 0.05
   market_blend_max_weight: 0.50
-  ewm_spans: [5, 10]
