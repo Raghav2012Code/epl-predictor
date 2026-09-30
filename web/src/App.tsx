@@ -30,6 +30,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./com
 import { Badge } from "./components/ui/badge";
 import { LandingPage } from "./components/landing/LandingPage";
 import { appRouteForPath, pathForAppRoute, type AppRoute } from "./lib/appRoute";
+import {
+  fixtureDay,
+  nextFixtureByDate,
+  upcomingFixtures,
+} from "./lib/fixtureDates";
 
 type Tab = "fixtures" | "simulator" | "standings" | "clubs" | "analytics";
 type SortKey =
@@ -44,8 +49,27 @@ const tabs: Array<{ id: Tab; label: string; note: string }> = [
   { id: "analytics", label: "Analytics", note: "Model evidence and trends" },
 ];
 const pct = (value: number) => `${Number(value).toFixed(1)}%`;
-const confidenceFor = (fixture: Fixture) =>
-  Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb);
+/**
+ * Confidence in the outcome the model actually publishes.
+ *
+ * predictedOutcome comes from the backend's draw-band rule, which can call a
+ * draw when the home and away sides are close and the draw probability clears
+ * the regime threshold. Taking Math.max over the three probabilities is a
+ * plain argmax, so on those fixtures it reported the away probability beside
+ * "Draw" and a 1 - 1 scoreline.
+ */
+const confidenceFor = (fixture: Fixture) => {
+  switch (fixture.predictedOutcome) {
+    case "Draw":
+      return fixture.drawProb;
+    case "Away Win":
+      return fixture.awayWinProb;
+    case "Home Win":
+      return fixture.homeWinProb;
+    default:
+      return Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb);
+  }
+};
 const deltaLabel = (value: number) =>
   `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 const downloadFixturesCsv = (fixtures: Fixture[]) => {
@@ -116,25 +140,6 @@ const scoreParts = (score: string): [number, number] | null => {
   const match = score.match(/(\d+)\s*[-–]\s*(\d+)/);
   return match ? [Number(match[1]), Number(match[2])] : null;
 };
-const startOfToday = () => {
-  const day = new Date();
-  day.setHours(0, 0, 0, 0);
-  return day.getTime();
-};
-const fixtureDay = (value: string) => new Date(`${value}T00:00:00`).getTime();
-const nextFixtureByDate = (fixtures: Fixture[]) =>
-  [...fixtures]
-    .filter(
-      (fixture) =>
-        fixture.status !== "Played" &&
-        fixtureDay(fixture.date) >= startOfToday(),
-    )
-    .sort(
-      (a, b) =>
-        fixtureDay(a.date) - fixtureDay(b.date) ||
-        a.gameweek - b.gameweek ||
-        a.id - b.id,
-    )[0] ?? null;
 const resultFor = (fixture: Fixture) => {
   const score = scoreParts(fixture.actualScore);
   if (!score) return null;
@@ -151,6 +156,21 @@ const clubResultFor = (fixture: Fixture, club: string) => {
   const clubWasHome = fixture.homeTeam === club;
   const clubWon = result === "Home win" ? clubWasHome : !clubWasHome;
   return clubWon ? "Win" : "Loss";
+};
+/**
+ * Re-orients a `home - away` scoreline to the selected club's perspective.
+ *
+ * The stored score is always home-first, but the club panels frame each row
+ * from that club's point of view with a `vs` / `@` prefix. Printing the raw
+ * score next to `@` made an away win read as a defeat next to a "W" badge.
+ */
+const scoreForClub = (score: string, fixture: Fixture, club: string): string => {
+  const parts = scoreParts(score);
+  if (!parts) return score;
+  const [home, away] = parts;
+  return fixture.homeTeam === club
+    ? `${home} - ${away}`
+    : `${away} - ${home}`;
 };
 const resultTone = (result: string | null) =>
   result === "Home win" || result === "Win"
@@ -390,18 +410,15 @@ const FixturesPage: React.FC<{
         : fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
     );
   }, [filter, filtered, sort]);
+  // Auto-select the next unplayed fixture when the gameweek or search changes.
+  // Deliberately keyed on `filtered`, not `visibleFixtures`: the latter also
+  // changes with the sort order and status filter, so toggling either silently
+  // discarded the fixture the user had opened and swapped the detail panel
+  // underneath them. `selected` already falls back gracefully below.
   useEffect(() => {
-    const upcoming = visibleFixtures
-      .filter(
-        (fixture) =>
-          fixture.status !== "Played" &&
-          fixtureDay(fixture.date) >= startOfToday(),
-      )
-      .sort(
-        (a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
-      )[0];
-    setSelectedId((upcoming ?? visibleFixtures[0])?.id ?? null);
-  }, [gameweek, query, visibleFixtures]);
+    const upcoming = nextFixtureByDate(filtered);
+    setSelectedId((upcoming ?? filtered[0])?.id ?? null);
+  }, [gameweek, query, filtered]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
@@ -850,29 +867,33 @@ const StandingsPage: React.FC<{
           </thead>
           <tbody>
             {sorted.map((row) => (
+              // No role override on the row: role="button" on a <tr> removes it
+              // from the table's structural semantics, so the descendant cells
+              // stopped being associated with their <th> column headers and a
+              // screen reader announced bare numbers after one button label per
+              // club. The affordance lives on the club cell instead.
               <tr
                 key={row.team}
                 onClick={() => onClub(row.team)}
-                tabIndex={0}
-                role="button"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onClub(row.team);
-                  }
-                }}
-                aria-label={`Open ${row.team} club profile`}
                 title={`Open ${row.team} club profile`}
               >
                 <td>{row.rank}</td>
                 <td>
-                  <span className="club-cell">
+                  <button
+                    type="button"
+                    className="club-cell club-cell-button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onClub(row.team);
+                    }}
+                    aria-label={`Open ${row.team} club profile`}
+                  >
                     <TeamMark
                       team={dataset.teams[row.team]}
                       short={row.short}
                     />
                     <strong>{row.team}</strong>
-                  </span>
+                  </button>
                 </td>
                 <td>{row.played}</td>
                 <td>{row.won}</td>
@@ -913,9 +934,7 @@ const ClubsPage: React.FC<{
         fixture.homeTeam === profile.name || fixture.awayTeam === profile.name,
     )
     .sort((a, b) => a.gameweek - b.gameweek);
-  const upcoming = clubFixtures
-    .filter((fixture) => fixture.status !== "Played")
-    .slice(0, 5);
+  const upcoming = upcomingFixtures(clubFixtures, 5);
   const recent = clubFixtures
     .filter((fixture) => fixture.status === "Played")
     .slice(-5)
@@ -992,7 +1011,7 @@ const ClubsPage: React.FC<{
                     ? fixture.awayTeam
                     : fixture.homeTeam}
                 </span>
-                <strong>{fixture.actualScore}</strong>
+                <strong>{scoreForClub(fixture.actualScore, fixture, profile.name)}</strong>
               </div>
             ))
           ) : (
@@ -1018,7 +1037,7 @@ const ClubsPage: React.FC<{
                     ? fixture.awayTeam
                     : fixture.homeTeam}
                 </span>
-                <strong>{fixture.predictedScore}</strong>
+                <strong>{scoreForClub(fixture.predictedScore, fixture, profile.name)}</strong>
               </button>
             ))
           ) : (
@@ -1095,15 +1114,20 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
       firstKickoffByGameweek.set(fixture.gameweek, fixture.date);
     }
   }
-  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => ({
-    date: new Date(
-      firstKickoffByGameweek.get(entry.gw) ??
-        Date.UTC(2026, 7, 14 + (entry.gw - 1) * 7),
-    ),
-    goals: entry.goals,
-    average: entry.avgPerMatch,
-    gameweek: entry.gw,
-  }));
+  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => {
+    const kickoff = firstKickoffByGameweek.get(entry.gw);
+    return {
+      // fixtureDay pins local noon. `new Date("2026-08-21")` is parsed as UTC
+      // midnight by spec and then formatted in local time, which labelled
+      // every gameweek a day early for anyone in a UTC-negative timezone.
+      date: kickoff
+        ? new Date(`${kickoff}T12:00:00`)
+        : new Date(2026, 7, 14 + (entry.gw - 1) * 7, 12),
+      goals: entry.goals,
+      average: entry.avgPerMatch,
+      gameweek: entry.gw,
+    };
+  });
   const outcome = dataset.analytics.outcomeDistribution;
   const outcomeChartData = [
     { label: "Home", value: outcome.homePct, maxValue: 100, color: "#1d6f52" },

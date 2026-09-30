@@ -11,6 +11,23 @@ def test_service_worker_network_refreshes_navigation_shell() -> None:
     assert 'url.pathname.endsWith("/sw.js")' in source
 
 
+def test_service_worker_does_not_serve_regenerated_assets_stale() -> None:
+    """visuals/*.png and badges/*.png are copied in place, not content-hashed.
+
+    A cache-first branch under a hard-coded cache name served them indefinitely
+    stale, so a redeploy after a pipeline run left the analytics previews and
+    club marks on the previous build forever.
+    """
+    source = (ROOT / "web" / "public" / "sw.js").read_text(encoding="utf-8")
+    # Non-navigation GETs must revalidate in the background...
+    assert "return cached || network;" in source
+    # ...and must not short-circuit on a cache hit without fetching.
+    assert "if (cached) return cached;" not in source
+    # Rewrite fallbacks return index.html with a 200; storing those under asset
+    # names is what put HTML bodies into the cache behind .js requests.
+    assert "text\\/html" in source or "text/html" in source
+
+
 def test_dashboard_uses_an_absolute_base_so_trailing_slash_routes_resolve_assets() -> None:
     """A relative Vite base breaks every trailing-slash route.
 

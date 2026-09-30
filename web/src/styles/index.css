@@ -98,6 +98,14 @@ main { max-width: 1360px; margin: 0 auto; padding: 54px clamp(20px, 5vw, 68px) 7
 .fixture-date small { margin-top: 5px; }
 .fixture-teams { display: grid; gap: 7px; font-size: 13px; font-weight: 650; }
 .fixture-teams > span, .club-cell { display: flex; align-items: center; gap: 8px; }
+  /* The club cell is the table's click affordance so the <tr> keeps its row
+     role and the cells stay associated with their column headers. */
+  .club-cell-button {
+    background: none; border: 0; padding: 0; margin: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+  }
+  .club-cell-button:focus-visible { outline: 2px solid #1d6f52; outline-offset: 2px; border-radius: 4px; }
+  tbody tr:hover { cursor: pointer; }
 .team-mark { display: inline-grid; flex: 0 0 30px; place-items: center; width: 30px; height: 30px; aspect-ratio: 1; border: 2px solid; background: #f1efe9; color: #1e322b; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
 img.team-mark { display: inline-block; padding: 2px; border: 1px solid #e2dfd7; background: #f1efe9; object-fit: contain; }
 .fixture-score { font-family: Georgia, serif; font-size: 22px; white-space: nowrap; }

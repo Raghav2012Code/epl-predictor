@@ -143,15 +143,25 @@ export const MotionNumber: React.FC<{
   const reduceMotion = useMotionDisabled();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.6 });
-  const motionValue = useMotionValue(0);
+  // Seed with the real value. Starting at 0 rendered a literal "0" (or
+  // "0.0000" for the benchmark RPS) for every metric until the section was
+  // scrolled into view, so print preview, automated screenshot tooling and
+  // anything reading the DOM without a real scroll saw fabricated figures.
+  const motionValue = useMotionValue(value);
   const text = useTransform(motionValue, (current) => current.toFixed(decimals));
 
   useEffect(() => {
-    if (!inView) return;
+    if (!inView) {
+      // Until the section scrolls into view, hold the real figure so the DOM,
+      // print output and assistive tech never see a placeholder zero.
+      motionValue.set(value);
+      return;
+    }
     if (reduceMotion) {
       motionValue.set(value);
       return;
     }
+    motionValue.set(0);
     const controls = animate(motionValue, value, {
       duration: 0.9,
       ease: [0.22, 1, 0.36, 1],

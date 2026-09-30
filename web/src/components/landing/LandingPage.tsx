@@ -13,6 +13,7 @@ import {
 } from "../Motion";
 import { dashboardRoutes, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
+import { nextFixtureByDate, upcomingFixtures } from "../../lib/fixtureDates";
 import "../../styles/landing.css";
 
 type LandingPageProps = {
@@ -121,14 +122,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const reduceMotion = useMotionDisabled();
   const landingData = getLandingData(dataset ?? undefined);
   const fixtures = dataset?.fixtures ?? [];
-  const nextFixture =
-    fixtures.find((fixture) => fixture.status !== "Played") ?? fixtures[0] ?? null;
+  const nextFixture = nextFixtureByDate(fixtures);
   const playedCount = fixtures.filter((fixture) => fixture.status === "Played").length;
   const totalCount = dataset?.totalMatches ?? landingData.totalMatches;
   const models = dataset?.benchmark.models ?? [];
   const production =
     models.find((entry) => entry.isProduction) ?? models[0] ?? null;
-  const upcoming = fixtures.filter((fixture) => fixture.status !== "Played").slice(0, 3);
+  const upcoming = upcomingFixtures(fixtures, 3);
   const recent = fixtures
     .filter((fixture) => fixture.status === "Played")
     .slice(-3)
