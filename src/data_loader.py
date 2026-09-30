@@ -323,12 +323,35 @@ def download_file(
 OPENFOOTBALL_BASE_URL = "https://raw.githubusercontent.com/openfootball/england/master"
 OPENFOOTBALL_CACHE_DIR = os.path.join(RAW_DATA_DIR, "openfootball")
 
+# Filenames published by openfootball/england. The cup files are `facup.txt`
+# and `eflcup.txt`; there are no `fa-cup.txt` / `efl-cup.txt` / `league-cup.txt`
+# variants, so requesting them made every cup fetch 404 and silently dropped
+# the entire multi-competition context layer.
 COMPETITION_FILE_MAP: Dict[str, List[str]] = {
-    "premierleague": ["1-premierleague.txt", "1-premierleague-i.txt", "1-premierleague-ii.txt"],
-    "facup": ["fa-cup.txt"],
-    "eflcup": ["efl-cup.txt", "league-cup.txt"],
+    "premierleague": ["1-premierleague.txt"],
+    "facup": ["facup.txt"],
+    "eflcup": ["eflcup.txt"],
     "championship": ["2-championship.txt"],
 }
+
+
+def season_label_start_year(season: str) -> int:
+    """Maps a season label to the calendar year the season starts in.
+
+    openfootball publishes ``2015-16`` style labels, while the historical and
+    odds feeds use 4-character codes (``2425``, ``2021``, ``2627``) that all
+    start in 2000 + code[:2]. Taking the first four digits instead, as this
+    did before, read ``2021`` as the year 2021 and shifted an entire season
+    five years into the future.
+    """
+    label = str(season).strip()
+    dashed = re.match(r"^(\d{4})-\d{2}$", label)
+    if dashed:
+        return int(dashed.group(1))
+    compact = re.match(r"^(\d{4})$", label)
+    if compact:
+        return 2000 + int(compact.group(1)[:2])
+    return 2026
 
 
 def parse_openfootball_fixtures(
@@ -367,9 +390,7 @@ def parse_openfootball_fixtures(
 
     current_matchday = 1
     current_date_str = ""
-    # Extract season start year (e.g. "2026-27" -> 2026, "2021" -> 2020/2021)
-    season_digits = re.findall(r"\d{4}", season)
-    season_start_year = int(season_digits[0]) if season_digits else 2026
+    season_start_year = season_label_start_year(season)
 
     # Date regex matching:
     # Fri Aug 21 2026, Sat Aug 22, [Fri Aug 21], Fri Jan/4 2019, Jan 4 2019, etc.
@@ -377,8 +398,14 @@ def parse_openfootball_fixtures(
         r"^(?:\[)?(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*([A-Za-z]{3})(?:/|\s+)(\d{1,2})(?:[,\s]+(\d{4}))?(?:\])?",
         re.IGNORECASE,
     )
-    # Matchday / round regex matching: Matchday 1, Round 3, Round of 16, Quarter-finals, Semi-finals, Final, etc.
-    matchday_regex = re.compile(r"(?:Matchday|Round|Stage|Week)\s+(\d+)", re.IGNORECASE)
+    # Matchday / round regex matching: Matchday 1, Round 3, Round of 16,
+    # Regular Season - 12, Quarter-finals, Semi-finals, Final, etc.
+    # The optional separator matters: openfootball renamed the Premier League
+    # header to "Regular Season - N" in 2025-26, and without it every row in
+    # that season collapsed onto the initialiser gameweek of 1.
+    matchday_regex = re.compile(
+        r"(?:Matchday|Round|Stage|Week|Regular Season)\s*(?:[-\u2013]\s*)?(\d+)", re.IGNORECASE
+    )
     round_header_regex = re.compile(
         r"^(?:▪\s*)?(Matchday\s+\d+|Round\s+\d+|Round of \d+|Quarter-finals?|Semi-finals?|Final|Replays?|Qualifying|Group\s+[A-Z])",
         re.IGNORECASE,
@@ -546,7 +573,10 @@ def load_openfootball_competition_data(
                     if not parsed.empty:
                         season_frames.append(parsed)
             except Exception as exc:
-                logger.debug("Could not load openfootball file %s for %s: %s", fname, season, exc)
+                # Warning, not debug: an unreachable cup file silently removes
+                # rest-day, congestion and cross-competition Elo context, and
+                # the pipeline otherwise reports success with reduced data.
+                logger.warning("Could not load openfootball file %s for %s: %s", fname, season, exc)
                 continue
 
         if season_frames:
