@@ -1,17 +1,27 @@
-pandas==2.2.3
-numpy==1.26.4
-scikit-learn==1.4.2
-scipy==1.15.3
-xgboost==2.0.3
-matplotlib==3.8.4
-pyparsing==3.1.4
-tabulate==0.9.0
-requests==2.31.0
-pytest==8.2.2
-joblib==1.4.2
+# Pinned to the versions the suite and the generated artifacts were produced
+# against. The previous pins described a stack nobody was running: the working
+# environment resolved to pandas 3.0.5, numpy 2.4.6, scikit-learn 1.9.0,
+# xgboost 3.2.0, scipy 1.17.1, matplotlib 3.11.1, fastapi 0.141.1, joblib 1.6.0,
+# pytest 9.1.1, requests 2.34.2, anyio 4.15.1 and uvicorn 0.52.4, while CI
+# installed this file. So CI was validating a different stack than the one
+# that trained the checkpoint, and a scikit-learn API removal that killed two
+# of three calibration paths was invisible to the build.
+#
+# Keep these in step with the environment that runs the pipeline.
+pandas==3.0.5
+numpy==2.4.6
+scikit-learn==1.9.0
+scipy==1.17.1
+xgboost==3.2.0
+matplotlib==3.11.1
+pyparsing==3.3.2
+tabulate==0.10.0
+requests==2.34.2
+pytest==9.1.1
+joblib==1.6.0
 pyyaml==6.0.3
 optuna==5.0.0
-fastapi==0.115.6
-anyio==4.4.0
+fastapi==0.141.1
+anyio==4.15.1
 httpx==0.28.1
-uvicorn==0.34.0
+uvicorn==0.52.4
