@@ -12,3 +12,8 @@ ORIGINAL_REQUEST.md
 .vercel
 .env*
 *.log
+# Runtime scraper/download caches. Regenerate with
+# `python run_pipeline.py --warm-cache`; never commit them.
+data/raw/openfootball/
+data/raw/.manifest.json
+.playwright-mcp/
