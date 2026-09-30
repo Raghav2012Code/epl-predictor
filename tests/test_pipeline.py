@@ -19,7 +19,67 @@ from src.feature_engineering import (
     build_fixture_features,
     get_feature_column_names,
 )
-from src.models import MatchPredictorModel, train_and_benchmark_models
+from src.models import EloPoissonModel, MatchPredictorModel, StackedEnsembleModel, train_and_benchmark_models
+from src.pipeline import restore_calibration, snapshot_calibration
+
+
+def test_calibration_constants_survive_the_full_data_refit():
+    """The refit must not silently discard held-out calibration constants.
+
+    Calibrating after the refit fits the constants on rows the model has
+    already trained on, which shrinks the residuals and drove the blend search
+    to zero weight. They are now fitted first and carried across.
+    """
+    model = MatchPredictorModel("rf")
+    model.calibration_temperature = 1.35
+    model.calibration_scores = {"temperature": 0.21, "sigmoid": 0.22, "isotonic": 0.24}
+    model.home_goal_correction = 1.0347
+    model.away_goal_correction = 1.1067
+    model.market_blend_weight = 0.45
+
+    snapshot = snapshot_calibration(model)
+    # MatchPredictorModel.fit resets exactly these fields.
+    model.market_blend_weight = 0.0
+    model.no_market_blend_weight = 0.0
+    model.calibration_method = "temperature"
+    model.calibration_scores = {}
+    restore_calibration(model, snapshot)
+
+    assert model.calibration_temperature == 1.35
+    assert model.calibration_scores["temperature"] == 0.21
+    assert model.market_blend_weight == 0.45
+    assert abs(model.home_goal_correction - 1.0347) < 1e-12
+    assert abs(model.away_goal_correction - 1.1067) < 1e-12
+
+
+def test_prefit_calibration_winner_degrades_instead_of_claiming_a_dead_mapping():
+    """A sigmoid/isotonic winner cannot survive the refit; say so honestly."""
+    model = MatchPredictorModel("rf")
+    model.calibration_method = "sigmoid"
+    model.calibrated_classifier = object()
+
+    restore_calibration(model, snapshot_calibration(model))
+
+    assert model.calibration_method == "temperature"
+    assert model.calibrated_classifier is None
+
+
+def test_stacked_member_calibration_is_restored_with_the_ensemble():
+    stacked = StackedEnsembleModel(
+        {"rf": MatchPredictorModel("rf"), "elopoisson": EloPoissonModel()}, object()
+    )
+    stacked.calibration_temperature = 2.0
+    for member in stacked.members.values():
+        member.calibration_temperature = 1.5
+
+    snapshot = snapshot_calibration(stacked)
+    stacked.calibration_temperature = 1.0
+    for member in stacked.members.values():
+        member.calibration_temperature = 1.0
+    restore_calibration(stacked, snapshot)
+
+    assert stacked.calibration_temperature == 2.0
+    assert all(member.calibration_temperature == 1.5 for member in stacked.members.values())
 
 
 def test_standardize_team_name():

@@ -64,6 +64,63 @@ def _round_probabilities(probabilities: List[float]) -> List[float]:
     return [round(int(value) / 10.0, 1) for value in units]
 
 
+# Calibration constants that a full-data refit invalidates or resets. These are
+# fitted on rows held out from the benchmark fit, then carried across the refit.
+_CALIBRATION_ATTRIBUTES = (
+    "calibration_temperature",
+    "calibration_method",
+    "calibration_scores",
+    "home_goal_correction",
+    "away_goal_correction",
+    "market_blend_weight",
+    "no_market_blend_weight",
+)
+
+# Prefit calibration mappings wrap a reference to the classifier that fit()
+# mutates in place, so they cannot survive a refit. Selecting one requires a
+# held-out slice, which no longer exists once every row is training data.
+_PREFIT_METHODS = {"sigmoid", "isotonic"}
+
+
+def snapshot_calibration(model: Any) -> Dict[str, Any]:
+    """Captures the calibration constants needed after a full-data refit."""
+    state: Dict[str, Any] = {
+        name: getattr(model, name, None)
+        for name in _CALIBRATION_ATTRIBUTES
+    }
+    state["calibrated_classifier"] = getattr(model, "calibrated_classifier", None)
+    members = getattr(model, "members", None)
+    if isinstance(members, dict):
+        state["members"] = {key: snapshot_calibration(m) for key, m in members.items()}
+    return state
+
+
+def restore_calibration(model: Any, state: Dict[str, Any]) -> None:
+    """Reapplies calibration constants captured before the refit."""
+    for name in _CALIBRATION_ATTRIBUTES:
+        value = state.get(name)
+        if value is not None:
+            setattr(model, name, value)
+
+    if state.get("calibration_method") in _PREFIT_METHODS:
+        logger.warning(
+            "Calibration method %r cannot survive the full-data refit; falling back "
+            "to the temperature fitted on held-out rows.",
+            state["calibration_method"],
+        )
+        model.calibration_method = "temperature"
+        model.calibrated_classifier = None
+    else:
+        model.calibrated_classifier = None
+
+    members = getattr(model, "members", None)
+    member_state = state.get("members")
+    if isinstance(members, dict) and isinstance(member_state, dict):
+        for key, member in members.items():
+            if key in member_state:
+                restore_calibration(member, member_state[key])
+
+
 class PremierLeaguePredictionPipeline:
     """End-to-end management pipeline for training, evaluation, and inference."""
 
@@ -198,6 +255,26 @@ class PremierLeaguePredictionPipeline:
         )
         logger.info("      - Diagnostic charts saved to 'visuals/' directory.")
 
+        # Calibrate while the model still excludes val_df, then refit on
+        # everything and carry the constants across. Calibrating after the
+        # refit fits them on rows the model has already trained on, which
+        # shrinks the residuals artificially: the blend search then concludes no
+        # market blending is needed and the goal corrections understate the
+        # residual bias they exist to remove.
+        calibration_slice, _ = split_calibration_evaluation(len(val_df))
+        calibration_snapshot: Dict[str, Any] = {}
+        if calibration_slice.stop:
+            cal_X = val_df[self.feature_cols].iloc[calibration_slice]
+            cal_outcome = val_df["target_outcome"].iloc[calibration_slice]
+            self.best_model.calibrate_goals(
+                cal_X,
+                val_df["target_home_goals"].iloc[calibration_slice],
+                val_df["target_away_goals"].iloc[calibration_slice],
+            )
+            self.best_model.calibrate_market_blend(cal_X, cal_outcome)
+            self.best_model.calibrate_outcome(cal_X, cal_outcome)
+            calibration_snapshot = snapshot_calibration(self.best_model)
+
         # Re-train best model on 100% of historical data for maximum forecasting accuracy
         logger.info("      - Refitting best model on full historical dataset for upcoming forecasts...")
         from src.config import get_config as _get_cfg_refit
@@ -214,24 +291,8 @@ class PremierLeaguePredictionPipeline:
             self.engineered_df["target_away_goals"],
             sample_weight=_refit_weights,
         )
-        # Refit invalidates any prefit sigmoid/isotonic mapping. Rebuild the
-        # selected calibration strategy against the refit classifier while
-        # keeping the evaluation tail untouched.
-        calibration_slice, _ = split_calibration_evaluation(len(val_df))
-        if calibration_slice.stop:
-            self.best_model.calibrate_goals(
-                val_df[self.feature_cols].iloc[calibration_slice],
-                val_df["target_home_goals"].iloc[calibration_slice],
-                val_df["target_away_goals"].iloc[calibration_slice],
-            )
-            self.best_model.calibrate_market_blend(
-                val_df[self.feature_cols].iloc[calibration_slice],
-                val_df["target_outcome"].iloc[calibration_slice],
-            )
-            self.best_model.calibrate_outcome(
-                val_df[self.feature_cols].iloc[calibration_slice],
-                val_df["target_outcome"].iloc[calibration_slice],
-            )
+        if calibration_snapshot:
+            restore_calibration(self.best_model, calibration_snapshot)
         self.save_model(DEFAULT_MODEL_PATH)
 
         return self.metrics
