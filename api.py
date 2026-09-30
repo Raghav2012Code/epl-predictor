@@ -45,24 +45,37 @@ _environment = os.environ.get("EPL_ENV", "development").strip().lower()
 _is_production = _environment == "production"
 
 
-def _configured_origins() -> List[str]:
-    raw = os.environ.get("EPL_CORS_ORIGINS")
+def _split_env_list(name: str) -> List[str]:
+    raw = os.environ.get(name)
     if raw is None:
-        return [] if _is_production else ["http://localhost:5173"]
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-    if _is_production and "*" in origins:
-        raise RuntimeError("EPL_CORS_ORIGINS must list explicit origins in production.")
-    return origins
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _configured_origins() -> List[str]:
+    origins = _split_env_list("EPL_CORS_ORIGINS")
+    if _is_production:
+        # An unset variable must fail as loudly as an empty or wildcard one:
+        # returning [] silently disables CORS and the dashboard renders blank.
+        if not origins:
+            raise RuntimeError("EPL_CORS_ORIGINS must list explicit origins in production.")
+        if "*" in origins:
+            raise RuntimeError("EPL_CORS_ORIGINS must not contain '*' in production.")
+        return origins
+    return origins or ["http://localhost:5173"]
 
 
 def _configured_hosts() -> List[str]:
-    raw = os.environ.get("EPL_ALLOWED_HOSTS")
-    if raw is None:
-        return [] if _is_production else ["localhost", "127.0.0.1", "testserver"]
-    hosts = [host.strip() for host in raw.split(",") if host.strip()]
-    if _is_production and (not hosts or "*" in hosts):
-        raise RuntimeError("EPL_ALLOWED_HOSTS must list explicit hosts in production.")
-    return hosts
+    hosts = _split_env_list("EPL_ALLOWED_HOSTS")
+    if _is_production:
+        # Returning [] here would install TrustedHostMiddleware with an empty
+        # pattern list, which rejects every incoming Host header with a 400.
+        if not hosts:
+            raise RuntimeError("EPL_ALLOWED_HOSTS must list explicit hosts in production.")
+        if "*" in hosts:
+            raise RuntimeError("EPL_ALLOWED_HOSTS must not contain '*' in production.")
+        return hosts
+    return hosts or ["localhost", "127.0.0.1", "testserver"]
 
 
 class OutcomePrediction(BaseModel):
@@ -138,6 +151,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_configured_hosts())
@@ -290,8 +304,11 @@ def gameweek(gameweek: int) -> List[Dict[str, Any]]:
     return out
 
 
-@app.exception_handler(HTTPException)
-async def _http_error_handler(request, exc: HTTPException):  # type: ignore[no-untyped-def]
+# Register on StarletteHTTPException, not fastapi.HTTPException: the router
+# raises the Starlette parent for 404 (unmatched route) and 405 (wrong
+# method), so a handler bound to the subclass never sees those.
+@app.exception_handler(StarletteHTTPException)
+async def _http_error_handler(request, exc: StarletteHTTPException):  # type: ignore[no-untyped-def]
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
 
 

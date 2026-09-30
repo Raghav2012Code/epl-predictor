@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -14,6 +15,8 @@ import pytest
 from src.feature_engineering import build_engineered_dataset, build_fixture_features, get_feature_column_names
 from src.pipeline import _round_probabilities
 from src.validation import assert_model_compatible
+
+_HOST_ENV_KEYS = ("EPL_ENV", "EPL_ALLOWED_HOSTS", "EPL_CORS_ORIGINS")
 
 
 def _match(date: str, home: str, away: str, home_goals: int = 1, away_goals: int = 0) -> dict:
@@ -66,6 +69,73 @@ def test_invalid_gameweek_has_nonzero_cli_exit() -> None:
     )
     assert result.returncode == 2
     assert "between 1 and 38" in result.stdout
+
+
+def test_production_requires_explicit_hosts_and_origins(monkeypatch) -> None:
+    """Unset must fail exactly like empty/wildcard, never degrade silently.
+
+    Returning [] for EPL_ALLOWED_HOSTS installs TrustedHostMiddleware with an
+    empty pattern list, which answers 400 to every request; returning [] for
+    EPL_CORS_ORIGINS silently disables CORS.
+    """
+    import api
+
+    def _resolve(production: bool, hosts, origins):
+        monkeypatch.setattr(api, "_is_production", production)
+        for name, value in (("EPL_ALLOWED_HOSTS", hosts), ("EPL_CORS_ORIGINS", origins)):
+            if value is None:
+                monkeypatch.delenv(name, raising=False)
+            else:
+                monkeypatch.setenv(name, value)
+        return api._configured_hosts(), api._configured_origins()
+
+    for label, value in (("unset", None), ("empty", ""), ("wildcard", "*")):
+        for position in (0, 1):
+            bad_hosts = None if position == 1 else value
+            bad_origins = None if position == 0 else value
+            with pytest.raises(RuntimeError, match="must (list explicit|not contain)"):
+                _resolve(True, bad_hosts, bad_origins)
+
+    assert _resolve(True, "api.example.com", "https://app.example.com") == (
+        ["api.example.com"],
+        ["https://app.example.com"],
+    )
+    assert _resolve(False, None, None) == (
+        ["localhost", "127.0.0.1", "testserver"],
+        ["http://localhost:5173"],
+    )
+
+
+def test_production_import_fails_fast_without_explicit_origins() -> None:
+    """Importing api in production with no CORS config must raise, not serve.
+
+    _configured_origins() runs at import time before _configured_hosts(), so
+    this exercises the import guard; the host guard itself is covered by
+    test_production_requires_explicit_hosts_and_origins.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _HOST_ENV_KEYS}
+    env["EPL_ENV"] = "production"
+    result = subprocess.run(
+        [sys.executable, "-c", "import api"],
+        capture_output=True, text=True, check=False, env=env,
+    )
+    assert result.returncode != 0
+    assert "EPL_CORS_ORIGINS must list explicit origins in production." in result.stderr
+
+
+def test_router_errors_use_the_documented_error_shape() -> None:
+    """404/405 come from Starlette, not fastapi, so both must map to {"error": ...}."""
+    from fastapi.testclient import TestClient
+    from api import app
+
+    with TestClient(app) as client:
+        missing_route = client.get("/definitely-not-a-route")
+        assert missing_route.status_code == 404
+        assert "error" in missing_route.json()
+
+        wrong_method = client.post("/health")
+        assert wrong_method.status_code == 405
+        assert "error" in wrong_method.json()
 
 
 def test_dataset_endpoint_and_cors_contract() -> None:
