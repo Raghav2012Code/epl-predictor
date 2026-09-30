@@ -30,6 +30,10 @@ _DEFAULTS: Dict[str, Any] = {
             "https://raw.githubusercontent.com/openfootball/england"
             "/master/2026-27/1-premierleague.txt"
         ),
+        # Without this default, load_2026_2027_fixtures raises KeyError when
+        # config.yaml or pyyaml is absent, contradicting the documented
+        # promise that the loader never raises in those cases.
+        "fixture_season": "2026-27",
         "openfootball": {
             "base_url": "https://raw.githubusercontent.com/openfootball/england/master",
             "seasons": [

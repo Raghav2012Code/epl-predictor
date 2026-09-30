@@ -51,7 +51,12 @@ DEFAULT_MODEL_PATH = os.path.join(MODELS_DIR, "production_model.joblib")
 
 def _round_probabilities(probabilities: List[float]) -> List[float]:
     """Round percentages to one decimal place while preserving a 100% total."""
-    raw = np.asarray(probabilities, dtype=float) * 1000.0
+    values = np.asarray(probabilities, dtype=float)
+    if not np.all(np.isfinite(values)):
+        # A non-finite leg would floor to INT_MIN and overflow the remainder
+        # into a ~9.2e17 "percentage"; fall back to an even split instead.
+        return [round(100.0 / 3.0, 1)] * 3
+    raw = values * 1000.0
     units = np.floor(raw + 1e-9).astype(int)
     remaining = int(1000 - units.sum())
     remainders = raw - units
@@ -163,7 +168,20 @@ class PremierLeaguePredictionPipeline:
         logger.info("[1/5] Loading historical match data and 2026/2027 fixtures...")
         self.load_data(force_download=force_download, offline=offline)
 
-        logger.info(f"      - Loaded {len(self.raw_historical)} historical matches across 6 seasons.")
+        league_seasons = (
+            self.raw_historical["season"].nunique() if "season" in self.raw_historical.columns else None
+        )
+        logger.info(
+            f"      - Loaded {len(self.raw_historical)} historical matches"
+            + (f" across {league_seasons} seasons." if league_seasons is not None else ".")
+        )
+        if self.multi_competition_history is not None:
+            cup_rows = len(self.multi_competition_history)
+            extra = max(0, cup_rows - len(self.raw_historical))
+            logger.info(
+                f"      - Multi-competition context loaded: {cup_rows} matches "
+                f"({extra} from non-league competitions)."
+            )
         logger.info(f"      - Loaded {len(self.fixtures_2026_2027)} matches for 2026/2027 Premier League.")
 
         logger.info("[2/5] Engineering rolling form, venue splits, and head-to-head metrics...")

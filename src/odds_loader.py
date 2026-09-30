@@ -181,9 +181,13 @@ def load_odds_frame(
     if os.path.exists(COMBINED_CACHE) and not force_download:
         try:
             combined = pd.read_csv(COMBINED_CACHE, parse_dates=["date"])
-            seasons_present = set(combined["season"].astype(str))
+            combined["season"] = combined["season"].astype(str)
+            seasons_present = set(combined["season"])
             if set(seasons) <= seasons_present:
-                return combined
+                # Narrow to the requested seasons. Returning the whole cache
+                # would silently widen the caller to every cached season, so
+                # requesting one season handed back all nine.
+                return combined[combined["season"].isin(seasons)].reset_index(drop=True)
         except Exception as exc:
             logger.warning("Odds combined cache unreadable, rebuilding: %s", exc)
 
