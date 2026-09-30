@@ -17,11 +17,13 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 48.3% | 0.442 | 1.009 | 0.2048 | 0.91 | 60.4% | Benchmark |
-| XGBoost | 48.7% | 0.431 | 1.011 | 0.2051 | 0.92 | 62.9% | Benchmark |
-| Stacked | 48.9% | 0.447 | 1.006 | 0.2044 | 0.89 | 58.3% | Production |
+| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | Benchmark |
+| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | Benchmark |
+| Stacked | 48.9% | 0.447 | 1.006 | 0.2043 | 0.89 | 58.5% | Production |
 
-Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) now leads on both accuracy and RPS in this validation run.
+These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale.
+
+Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on RPS, log loss, macro F1 and goal MAE. Its accuracy is level with XGBoost at 48.9%, not ahead of it.
 
 These are validation measurements, not a promise of future accuracy. Exact scorelines are especially uncertain; probabilities should be read as distributions.
 
