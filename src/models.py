@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -20,6 +20,11 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+try:  # scikit-learn >= 1.6
+    from sklearn.frozen import FrozenEstimator
+except ImportError:  # pragma: no cover - scikit-learn < 1.6
+    FrozenEstimator = None  # type: ignore[assignment]
 from xgboost import XGBClassifier, XGBRegressor
 
 
@@ -249,6 +254,21 @@ def supremacy_to_means(
 # Outcome label mapping: 0 -> Away Win (A), 1 -> Draw (D), 2 -> Home Win (H)
 OUTCOME_NAMES = {0: "Away Win", 1: "Draw", 2: "Home Win"}
 OUTCOME_CODES = {0: "A", 1: "D", 2: "H"}
+
+
+def _build_prefit_calibrator(estimator, method: str):
+    """Returns a CalibratedClassifierCV wrapping an already-fitted estimator.
+
+    ``cv="prefit"`` was deprecated in scikit-learn 1.6 and removed in 1.9,
+    where it raises InvalidParameterError. That error subclasses ValueError,
+    so the caller's broad ``except`` turned a hard API break into a silent
+    ``inf`` score and left sigmoid/isotonic permanently unreachable. Prefer the
+    explicit FrozenEstimator and fall back to the legacy string on older
+    scikit-learn.
+    """
+    if FrozenEstimator is not None:
+        return CalibratedClassifierCV(FrozenEstimator(estimator), method=method)
+    return CalibratedClassifierCV(estimator, method=method, cv="prefit")
 
 
 def _fit_with_weights(estimator, X, y, sample_weight) -> None:
@@ -509,6 +529,12 @@ class MatchPredictorModel:
             self.market_blend_weight = 0.0
             self.no_market_blend_weight = 0.0
             return 0.0, 0.0
+        # predict_outcome_proba applies the market blend unconditionally, so a
+        # pre-existing weight would be compounded here and the effective weight
+        # would exceed market_blend_max_weight. Reset first so the grid always
+        # searches against a clean, un-blended base.
+        self.market_blend_weight = 0.0
+        self.no_market_blend_weight = 0.0
         base = self.predict_outcome_proba(X_cal, apply_temperature=False)
         market = X_cal[["odds_implied_home", "odds_implied_draw", "odds_implied_away"]].to_numpy(dtype=float)
         missing = X_cal["odds_missing"].to_numpy(dtype=float)
@@ -577,9 +603,29 @@ class MatchPredictorModel:
     ) -> Dict[str, Any]:
         """Compares temperature, sigmoid, and isotonic on disjoint slices."""
         if self.classifier is None:
-            self.calibrate_temperature(X_cal, y_cal)
+            # Member-only models (the stacked ensemble) have no single
+            # classifier to wrap in a CalibratedClassifierCV, so temperature
+            # is the only applicable strategy. Score it on a disjoint half
+            # rather than recording a sentinel 0.0, which is indistinguishable
+            # from a perfect score once persisted to the checkpoint and served
+            # through /model-info.
+            fit_slice, score_slice = split_calibration_evaluation(len(X_cal))
+            fit_X = X_cal.iloc[fit_slice] if fit_slice.stop else X_cal
+            fit_y = y_cal.iloc[fit_slice] if fit_slice.stop else y_cal
+            score_X = X_cal.iloc[score_slice] if score_slice.start else X_cal
+            score_y = np.asarray(y_cal.iloc[score_slice] if score_slice.start else y_cal, dtype=int)
+            self.calibrate_temperature(fit_X, fit_y)
+            temperature_score = (
+                _rps_loss(self.predict_outcome_proba(score_X), score_y)
+                if len(score_y)
+                else float("inf")
+            )
             self.calibration_method = "temperature"
-            self.calibration_scores = {"temperature": 0.0, "sigmoid": float("inf"), "isotonic": float("inf")}
+            self.calibration_scores = {
+                "temperature": float(temperature_score),
+                "sigmoid": float("inf"),
+                "isotonic": float("inf"),
+            }
             return {"winner": "temperature", "scores": self.calibration_scores}
 
         # Keep candidate fitting and selection disjoint. The outer evaluation
@@ -602,12 +648,16 @@ class MatchPredictorModel:
         candidates = {}
         for method in ("sigmoid", "isotonic"):
             try:
-                candidate = CalibratedClassifierCV(self.classifier, method=method, cv="prefit")
+                candidate = _build_prefit_calibrator(self.classifier, method)
                 candidate.fit(fit_X, fit_y)
                 calibrated = align_probas(candidate.classes_, candidate.predict_proba(score_X))
                 scores[method] = _rps_loss(self._apply_market_blend(_blend(calibrated), score_X), score_y)
                 candidates[method] = candidate
-            except (ValueError, TypeError, RuntimeError):
+            except (ValueError, TypeError, RuntimeError) as exc:
+                # Log rather than swallow: a dead candidate silently narrows
+                # calibration to temperature only, which reads as a successful
+                # selection rather than a reduced one.
+                logger.warning("Calibration method %r unavailable: %s", method, exc)
                 scores[method] = float("inf")
 
         winner = min(("temperature", "sigmoid", "isotonic"), key=lambda name: scores[name])
@@ -659,12 +709,6 @@ class MatchPredictorModel:
         p_away = float(np.sum(np.triu(grid, 1)))
         return grid, np.array([p_away, p_draw, p_home])
 
-    def predict_outcome_proba(self, X: pd.DataFrame, apply_temperature: bool = True) -> np.ndarray:
-        """Returns calibrated probability matrix of shape (N, 3): [p_away, p_draw, p_home].
-
-        Blends multi-class tree probabilities with count Poisson probabilities,
-        then applies fitted temperature scaling (if calibrated).
-        """
     def _source_probas(self, X: pd.DataFrame) -> Dict[str, np.ndarray]:
         """Untempered per-source probability matrices (each (N, 3)).
 
@@ -1215,13 +1259,22 @@ class StackedEnsembleModel(MatchPredictorModel):
         return blended
 
     def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
-        """Mean of member expected-goal means."""
+        """Bias-corrected mean of member expected-goal means.
+
+        The goal corrections must be applied here too. calibrate_goals fits
+        them from this method's own output and persists them to the checkpoint,
+        models/metrics.json and /model-info; because this override shadowed the
+        base implementation (which multiplies by the corrections), they were
+        computed, reported, and never used.
+        """
         homes, aways = [], []
         for key in STACK_MEMBER_ORDER:
             exp_hg, exp_ag = self.members[key].predict_expected_goals(X)
             homes.append(np.asarray(exp_hg, dtype=float))
             aways.append(np.asarray(exp_ag, dtype=float))
-        return np.mean(homes, axis=0), np.mean(aways, axis=0)
+        mean_h = np.mean(homes, axis=0) * self.home_goal_correction
+        mean_a = np.mean(aways, axis=0) * self.away_goal_correction
+        return mean_h, mean_a
 
     def get_feature_importances(self) -> pd.Series:
         """Mean importance over members that report any (the forests)."""
@@ -1366,9 +1419,20 @@ def train_stacked_ensemble(
         fold_members = _build_level_zero_members()
         sw_fold = None if sw_full is None else sw_full[np.asarray(train_idx)]
         for key in STACK_MEMBER_ORDER:
-            fold_members[key].fit(
-                X_train.iloc[train_idx], y_train_outcome.iloc[train_idx],
-                y_train_hg.iloc[train_idx], y_train_ag.iloc[train_idx],
+            # Calibrate on the same slice as the production members. Fitting
+            # only .fit() left every fold member at the default temperature of
+            # 1.0 while the served members applied theirs, so the meta-learner
+            # learned coefficients on a different distribution than it receives
+            # at inference. X_cal comes from val_df, which is disjoint from
+            # X_train, so this adds no leakage of the held-out fold rows.
+            _fit_and_calibrate_member(
+                fold_members[key],
+                X_train.iloc[train_idx],
+                y_train_outcome.iloc[train_idx],
+                y_train_hg.iloc[train_idx],
+                y_train_ag.iloc[train_idx],
+                X_cal,
+                y_cal,
                 sample_weight=sw_fold,
             )
         oof_probas[held_idx] = np.concatenate(
