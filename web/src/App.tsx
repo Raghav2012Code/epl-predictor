@@ -211,6 +211,7 @@ const TeamMark: React.FC<{
 const ProbabilityStrip: React.FC<{ fixture: Fixture }> = ({ fixture }) => (
   <div
     className="probability-strip"
+    role="img"
     aria-label={`Home ${pct(fixture.homeWinProb)}, draw ${pct(fixture.drawProb)}, away ${pct(fixture.awayWinProb)}`}
   >
     <span className="prob-home" style={{ width: `${fixture.homeWinProb}%` }} />
