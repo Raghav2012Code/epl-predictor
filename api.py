@@ -9,9 +9,12 @@ Endpoints:
 Run:
     uvicorn api:app --host 0.0.0.0 --port 8000
 
-The service loads the cached checkpoint (offline data) at startup and
-refuses to serve predictions when the checkpoint is missing or has
-drifted from the current feature set.
+At startup the service loads the checkpoint from EPL_MODEL_PATH (default
+models/production_model.joblib) and the cached historical and fixture data
+under data/raw. A missing cache file is downloaded unless EPL_OFFLINE is
+set (1/true/yes), which forbids network access. The service refuses to
+serve predictions when the checkpoint is missing or has drifted from the
+current feature set.
 """
 
 from __future__ import annotations
