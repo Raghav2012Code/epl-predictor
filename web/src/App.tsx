@@ -358,7 +358,7 @@ const FixtureDetail: React.FC<{
         className="primary-button"
         onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}
       >
-        Open in simulator <ArrowUpRight size={16} />
+        Open in simulator <ArrowUpRight size={16} aria-hidden="true" />
       </button>
     </article>
   );
@@ -488,8 +488,9 @@ const FixturesPage: React.FC<{
             }
             disabled={gameweek <= (gameweeks[0] ?? 1)}
             aria-label="Previous gameweek"
+            title="Previous gameweek (←)"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={18} aria-hidden="true" />
           </button>
           <select
             value={gameweek}
@@ -510,8 +511,9 @@ const FixturesPage: React.FC<{
             }
             disabled={gameweek >= (gameweeks[gameweeks.length - 1] ?? 38)}
             aria-label="Next gameweek"
+            title="Next gameweek (→)"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={18} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -1373,7 +1375,7 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
                 onClick={() => setSelectedImage(null)}
                 aria-label="Close diagnostic preview"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
             <img src={asset(selectedImage.src)} alt={selectedImage.title} />
@@ -1421,11 +1423,16 @@ const Dashboard: React.FC<{
         (
           searchRef.current?.querySelector("input") as HTMLInputElement | null
         )?.focus();
+      } else if (event.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+        (
+          searchRef.current?.querySelector("input") as HTMLInputElement | null
+        )?.blur();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [searchOpen]);
   const selectClub = (club: string) => {
     setSelectedClub(club);
     setQuery("");
@@ -1517,15 +1524,19 @@ const Dashboard: React.FC<{
               onFocus={() => setSearchOpen(true)}
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
+                  event.stopPropagation();
                   if (query) {
                     setQuery("");
                   } else {
                     setSearchOpen(false);
+                    (event.target as HTMLInputElement).blur();
                   }
                 }
               }}
               placeholder="Search clubs or fixtures"
               aria-label="Search clubs or fixtures"
+              aria-expanded={Boolean(searchOpen && query)}
+              aria-autocomplete="list"
             />
             {query ? (
               <button
@@ -1619,7 +1630,7 @@ const Dashboard: React.FC<{
             target="_blank"
             rel="noreferrer"
           >
-            View source <ArrowUpRight size={14} />
+            View source <ArrowUpRight size={14} aria-hidden="true" />
           </a>
         </footer>
       </div>
