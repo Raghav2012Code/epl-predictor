@@ -1515,10 +1515,29 @@ const Dashboard: React.FC<{
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  if (query) {
+                    setQuery("");
+                  } else {
+                    setSearchOpen(false);
+                  }
+                }
+              }}
               placeholder="Search clubs or fixtures"
               aria-label="Search clubs or fixtures"
             />
-            <kbd>/</kbd>
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            ) : (
+              <kbd>/</kbd>
+            )}
             <MotionPresence>
             {searchOpen && query && (
               <MotionPop popKey="search-results" className="search-results" role="listbox">
