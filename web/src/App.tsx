@@ -1525,8 +1525,12 @@ const Dashboard: React.FC<{
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   event.stopPropagation();
-                  setSearchOpen(false);
-                  (event.target as HTMLInputElement).blur();
+                  if (query) {
+                    setQuery("");
+                  } else {
+                    setSearchOpen(false);
+                    (event.target as HTMLInputElement).blur();
+                  }
                 }
               }}
               placeholder="Search clubs or fixtures"
@@ -1534,7 +1538,17 @@ const Dashboard: React.FC<{
               aria-expanded={Boolean(searchOpen && query)}
               aria-autocomplete="list"
             />
-            <kbd>/</kbd>
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            ) : (
+              <kbd>/</kbd>
+            )}
             <MotionPresence>
             {searchOpen && query && (
               <MotionPop popKey="search-results" className="search-results" role="listbox">

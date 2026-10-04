@@ -74,6 +74,7 @@ const TeamBadge: React.FC<{ team?: TeamProfile; short?: string; badge?: string }
 const ProbabilityStrip: React.FC<{ fixture: Fixture }> = ({ fixture }) => (
   <div
     className="probability-strip"
+    role="img"
     aria-label={`Home ${pct(fixture.homeWinProb)}, draw ${pct(fixture.drawProb)}, away ${pct(fixture.awayWinProb)}`}
   >
     <MotionBar className="prob-home" value={1} style={{ width: `${fixture.homeWinProb}%` }} />
