@@ -961,11 +961,14 @@ def build_feature_context(
     history = _chronological(history, "match_id")
     _, _, _, _, current_ratings, rating_histories = compute_dynamic_elo(history)
     team_df = transform_matches_to_team_perspective(history)
+    # Pre-group team_df by team name for O(1) dictionary lookups during batch fixture inference
+    team_by_name = {team: sub for team, sub in team_df.groupby("team", sort=False)} if not team_df.empty else {}
     return {
         "history": history,
         "current_ratings": current_ratings,
         "rating_histories": rating_histories,
         "team_df": team_df,
+        "team_by_name": team_by_name,
         "as_of_date": as_of_date,
     }
 
@@ -989,6 +992,7 @@ def build_fixture_features(
     feature_cols = get_feature_column_names()
 
     use_cache = False
+    team_by_name: Optional[Dict[str, pd.DataFrame]] = None
     if precomputed_context is not None:
         ctx_history = precomputed_context.get("history")
         ctx_as_of = precomputed_context.get("as_of_date")
@@ -1005,6 +1009,7 @@ def build_fixture_features(
         current_ratings = precomputed_context["current_ratings"]
         rating_histories = precomputed_context["rating_histories"]
         team_df = precomputed_context["team_df"]
+        team_by_name = precomputed_context.get("team_by_name")
     else:
         history = history_matches_df[history_matches_df["date"] < match_date].copy()
         # An empty history still gets team-specific priors below.  Returning a
@@ -1031,7 +1036,12 @@ def build_fixture_features(
     a_m5 = (a_elo - a_hist[-5]) if len(a_hist) >= 5 else (a_elo - BASE_ELO.get(away_team, 1420.0))
 
     def extract_latest_team_stats(team_name: str, is_home: int) -> Dict[str, float]:
-        sub = team_df[team_df["team"] == team_name]
+        # Fast O(1) dictionary lookup when precomputed_context contains team_by_name,
+        # avoiding O(N) DataFrame filtering over thousands of historical rows.
+        if team_by_name is not None and team_name in team_by_name:
+            sub = team_by_name[team_name]
+        else:
+            sub = team_df[team_df["team"] == team_name]
         if not sub.empty and "date" in sub.columns:
             sub = sub[sub["date"] < match_date]
         stats: Dict[str, float] = {}
