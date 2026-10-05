@@ -663,7 +663,14 @@ const SimulatorPage: React.FC<{
               <p className="eyebrow">Adjust assumptions</p>
               <h2>Scenario controls</h2>
             </div>
-            <button className="text-button" onClick={resetScenario}>Reset</button>
+            <button
+              type="button"
+              className="text-button"
+              onClick={resetScenario}
+              aria-label="Reset scenario controls"
+            >
+              Reset
+            </button>
           </div>
           <label>
             Home club
@@ -699,6 +706,8 @@ const SimulatorPage: React.FC<{
               max="30"
               value={homeBoost}
               onChange={(event) => setHomeBoost(Number(event.target.value))}
+              aria-label={`${homeTeam} form adjustment`}
+              aria-valuetext={`${homeBoost > 0 ? "+" : ""}${homeBoost}%`}
             />
             <span>
               {homeBoost > 0 ? "+" : ""}
@@ -713,6 +722,8 @@ const SimulatorPage: React.FC<{
               max="30"
               value={awayBoost}
               onChange={(event) => setAwayBoost(Number(event.target.value))}
+              aria-label={`${awayTeam} form adjustment`}
+              aria-valuetext={`${awayBoost > 0 ? "+" : ""}${awayBoost}%`}
             />
             <span>
               {awayBoost > 0 ? "+" : ""}
