@@ -161,6 +161,23 @@ def recency_weights(dates, half_life_days: float = 730.0, ref=None):
     return np.power(0.5, age_days / float(half_life_days))
 
 
+def _ewm_last(arr_or_list: Any, span: int) -> float:
+    """Computes the final value of an exponentially weighted moving average (adjust=False).
+
+    Optimized for short historical metric series in fixture feature extraction,
+    avoiding heavy pandas .ewm() object allocation overhead.
+    """
+    if not len(arr_or_list):
+        return 0.0
+    lst = arr_or_list.tolist() if isinstance(arr_or_list, np.ndarray) else arr_or_list
+    alpha = 2.0 / (span + 1.0)
+    one_minus_alpha = 1.0 - alpha
+    val = float(lst[0])
+    for x in lst[1:]:
+        val = alpha * float(x) + one_minus_alpha * val
+    return val
+
+
 # Historical baseline Elo ratings & power parameters across 2020-2026
 BASE_ELO: Dict[str, float] = {
     # Elite Title Contenders
@@ -1092,31 +1109,54 @@ def build_fixture_features(
         # must use raw observed means too. No Bayesian shrinkage here: a
         # shrunk serving feature the model never saw during training is a
         # train/serve skew. Cold starts (no history) still use priors above.
-        # Rolling overall
+        # Performance optimization: extract 2D numpy array once to avoid repetitive
+        # pandas Series object allocation across windows and metrics.
+        metrics_cols = ["goals_for", "goals_against", "shots_for", "shots_target_for", "possession", "points"]
+        sub_vals = sub[metrics_cols].to_numpy(dtype=float)
+
         for w in WINDOWS:
-            recent_w = sub.tail(w)
-            stats[f"roll_goals_for_{w}"] = float(recent_w["goals_for"].mean())
-            stats[f"roll_goals_against_{w}"] = float(recent_w["goals_against"].mean())
-            stats[f"roll_goal_diff_{w}"] = float(recent_w["goals_for"].mean() - recent_w["goals_against"].mean())
-            stats[f"roll_shots_for_{w}"] = float(recent_w["shots_for"].mean())
-            stats[f"roll_shots_target_for_{w}"] = float(recent_w["shots_target_for"].mean())
-            stats[f"roll_possession_{w}"] = float(recent_w["possession"].mean())
-            stats[f"roll_points_{w}"] = float(recent_w["points"].mean())
+            recent_w = sub_vals[-w:]
+            gf, ga, sf, stf, poss, pts = recent_w.mean(axis=0)
+            stats[f"roll_goals_for_{w}"] = float(gf)
+            stats[f"roll_goals_against_{w}"] = float(ga)
+            stats[f"roll_goal_diff_{w}"] = float(gf - ga)
+            stats[f"roll_shots_for_{w}"] = float(sf)
+            stats[f"roll_shots_target_for_{w}"] = float(stf)
+            stats[f"roll_possession_{w}"] = float(poss)
+            stats[f"roll_points_{w}"] = float(pts)
+
+        # Performance optimization: compute EWM metrics via fast list iteration
+        # instead of invoking pandas .ewm() repeatedly.
+        gf_arr = sub_vals[:, 0].tolist()
+        ga_arr = sub_vals[:, 1].tolist()
+        gd_arr = (sub_vals[:, 0] - sub_vals[:, 1]).tolist()
+        sf_arr = sub_vals[:, 2].tolist()
+        stf_arr = sub_vals[:, 3].tolist()
+        pts_arr = sub_vals[:, 5].tolist()
+
+        ewm_map = {
+            "goals_for": gf_arr,
+            "goals_against": ga_arr,
+            "goal_diff": gd_arr,
+            "shots_for": sf_arr,
+            "shots_target_for": stf_arr,
+            "points": pts_arr,
+        }
+
         for span in EWM_SPANS:
             for metric in EWM_METRICS:
-                values = sub[metric].astype(float)
-                stats[f"ewm_{metric}_{span}"] = float(
-                    values.ewm(span=span, adjust=False, min_periods=1).mean().iloc[-1]
-                )
+                stats[f"ewm_{metric}_{span}"] = _ewm_last(ewm_map[metric], span)
 
         # Venue specific: raw venue means; fall back to overall rolling when
         # the side has no history at this venue (matches training, where a
         # missing venue average falls back to the overall rolling average).
-        venue_sub = sub[sub["is_home"] == is_home].tail(5)
+        venue_sub = sub[sub["is_home"] == is_home]
         if not venue_sub.empty:
-            stats["venue_roll_goals_for_5"] = float(venue_sub["goals_for"].mean())
-            stats["venue_roll_goals_against_5"] = float(venue_sub["goals_against"].mean())
-            stats["venue_roll_points_5"] = float(venue_sub["points"].mean())
+            v_vals = venue_sub[["goals_for", "goals_against", "points"]].tail(5).to_numpy(dtype=float)
+            v_gf, v_ga, v_pts = v_vals.mean(axis=0)
+            stats["venue_roll_goals_for_5"] = float(v_gf)
+            stats["venue_roll_goals_against_5"] = float(v_ga)
+            stats["venue_roll_points_5"] = float(v_pts)
         else:
             stats["venue_roll_goals_for_5"] = stats["roll_goals_for_5"]
             stats["venue_roll_goals_against_5"] = stats["roll_goals_against_5"]
@@ -1160,7 +1200,7 @@ def build_fixture_features(
     )
     feature_dict["away_travel_km"] = haversine_km(home_team, away_team)
 
-    # H2H
+    # H2H - Performance optimization: Vectorized numpy arrays instead of pd.iterrows()
     h2h_sub = history[
         (history["date"] < match_date)
         & (
@@ -1170,21 +1210,17 @@ def build_fixture_features(
     ].tail(5)
 
     if not h2h_sub.empty:
-        h_wins = 0
-        gd_sum = 0
-        for _, m in h2h_sub.iterrows():
-            if m["home_team"] == home_team:
-                gd = m["home_goals"] - m["away_goals"]
-                if gd > 0:
-                    h_wins += 1
-            else:
-                gd = m["away_goals"] - m["home_goals"]
-                if gd > 0:
-                    h_wins += 1
-            gd_sum += gd
-        feature_dict["h2h_home_win_rate"] = h_wins / len(h2h_sub)
-        feature_dict["h2h_goal_diff"] = gd_sum / len(h2h_sub)
-        feature_dict["h2h_matches_count"] = len(h2h_sub)
+        ht_arr = h2h_sub["home_team"].values
+        hg_arr = h2h_sub["home_goals"].values
+        ag_arr = h2h_sub["away_goals"].values
+        is_home_mask = (ht_arr == home_team)
+        gd_arr = np.where(is_home_mask, hg_arr - ag_arr, ag_arr - hg_arr)
+        h_wins = int(np.sum(gd_arr > 0))
+        gd_sum = float(np.sum(gd_arr))
+        m_count = len(h2h_sub)
+        feature_dict["h2h_home_win_rate"] = float(h_wins / m_count)
+        feature_dict["h2h_goal_diff"] = float(gd_sum / m_count)
+        feature_dict["h2h_matches_count"] = m_count
     else:
         feature_dict["h2h_home_win_rate"] = 0.33
         feature_dict["h2h_goal_diff"] = 0.0
