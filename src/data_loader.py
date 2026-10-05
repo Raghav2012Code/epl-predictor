@@ -237,42 +237,6 @@ def standardize_team_name(name: str) -> str:
     return TEAM_ALIASES.get(clean, name.strip())
 
 
-def _manifest_path() -> str:
-    return os.path.join(RAW_DATA_DIR, ".manifest.json")
-
-
-def _record_download(url: str, local_path: str) -> None:
-    """Records a checksum manifest entry for a cached download (best-effort)."""
-    import hashlib
-    import json as _json
-    import time as _time
-
-    try:
-        h = hashlib.sha256()
-        with open(local_path, "rb") as f:
-            for chunk in iter(lambda: f.read(65536), b""):
-                h.update(chunk)
-        manifest: dict = {}
-        mp = _manifest_path()
-        if os.path.exists(mp):
-            try:
-                with open(mp, "r", encoding="utf-8") as f:
-                    manifest = _json.load(f) or {}
-            except Exception:
-                manifest = {}
-        manifest[os.path.basename(local_path)] = {
-            "url": url,
-            "sha256": h.hexdigest(),
-            "bytes": os.path.getsize(local_path),
-            "downloaded_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
-        }
-        os.makedirs(os.path.dirname(mp), exist_ok=True)
-        with open(mp, "w", encoding="utf-8") as f:
-            _json.dump(manifest, f, indent=2)
-    except Exception as exc:
-        logger.warning("Could not write download manifest: %s", exc)
-
-
 def download_file(
     url: str,
     local_path: str,
@@ -282,9 +246,8 @@ def download_file(
 ) -> str:
     """Downloads a file if not already cached locally.
 
-    Retries transient failures with exponential backoff, writes atomically
-    (temp file + rename) so interrupted downloads never leave corrupt cache,
-    and records a sha256 manifest entry.
+    Retries transient failures with exponential backoff and writes atomically
+    (temp file + rename) so interrupted downloads never leave corrupt cache.
     """
     import time as _time
 
@@ -305,7 +268,6 @@ def download_file(
             ) as out_file:
                 out_file.write(response.read())
             os.replace(tmp_path, local_path)
-            _record_download(url, local_path)
             return local_path
         except Exception as exc:
             last_exc = exc

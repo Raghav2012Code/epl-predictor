@@ -55,30 +55,24 @@ def _split_env_list(name: str) -> List[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-def _configured_origins() -> List[str]:
-    origins = _split_env_list("EPL_CORS_ORIGINS")
+def _require_explicit_env(name: str, noun: str) -> List[str]:
+    values = _split_env_list(name)
     if _is_production:
-        # An unset variable must fail as loudly as an empty or wildcard one:
-        # returning [] silently disables CORS and the dashboard renders blank.
-        if not origins:
-            raise RuntimeError("EPL_CORS_ORIGINS must list explicit origins in production.")
-        if "*" in origins:
-            raise RuntimeError("EPL_CORS_ORIGINS must not contain '*' in production.")
-        return origins
-    return origins or ["http://localhost:5173"]
+        # An unset variable must fail as loudly as an empty or wildcard one.
+        if not values:
+            raise RuntimeError(f"{name} must list explicit {noun} in production.")
+        if "*" in values:
+            raise RuntimeError(f"{name} must not contain '*' in production.")
+        return values
+    return values
+
+
+def _configured_origins() -> List[str]:
+    return _require_explicit_env("EPL_CORS_ORIGINS", "origins") or ["http://localhost:5173"]
 
 
 def _configured_hosts() -> List[str]:
-    hosts = _split_env_list("EPL_ALLOWED_HOSTS")
-    if _is_production:
-        # Returning [] here would install TrustedHostMiddleware with an empty
-        # pattern list, which rejects every incoming Host header with a 400.
-        if not hosts:
-            raise RuntimeError("EPL_ALLOWED_HOSTS must list explicit hosts in production.")
-        if "*" in hosts:
-            raise RuntimeError("EPL_ALLOWED_HOSTS must not contain '*' in production.")
-        return hosts
-    return hosts or ["localhost", "127.0.0.1", "testserver"]
+    return _require_explicit_env("EPL_ALLOWED_HOSTS", "hosts") or ["localhost", "127.0.0.1", "testserver"]
 
 
 class OutcomePrediction(BaseModel):
@@ -178,22 +172,24 @@ def _require_pipeline() -> PremierLeaguePredictionPipeline:
 
 def _checkpoint_sha() -> Optional[str]:
     try:
-        h = hashlib.sha256()
         with open(_model_path, "rb") as f:
-            for chunk in iter(lambda: f.read(65536), b""):
-                h.update(chunk)
-        return h.hexdigest()[:16]
+            return hashlib.file_digest(f, "sha256").hexdigest()[:16]
     except Exception:
         return None
 
 
-@app.get("/health")
-def health() -> Dict[str, Any]:
-    payload = {
-        "status": "ok" if _pipeline is not None else "degraded",
-        "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
+def _service_status(status_ok: str, status_bad: str) -> Dict[str, Any]:
+    loaded = _pipeline is not None and _pipeline.best_model is not None
+    return {
+        "status": status_ok if loaded else status_bad,
+        "model_loaded": loaded,
         "model_error": _model_error,
     }
+
+
+@app.get("/health")
+def health() -> Dict[str, Any]:
+    payload = _service_status("ok", "degraded")
     if _pipeline is None:
         return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
     return payload
@@ -202,11 +198,7 @@ def health() -> Dict[str, Any]:
 @app.get("/ready")
 def ready() -> Dict[str, Any]:
     """Readiness probe: returns success only when a compatible model is loaded."""
-    payload = {
-        "status": "ready" if _pipeline is not None and _pipeline.best_model is not None else "not_ready",
-        "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
-        "model_error": _model_error,
-    }
+    payload = _service_status("ready", "not_ready")
     if not payload["model_loaded"]:
         return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
     return payload

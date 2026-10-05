@@ -1,6 +1,5 @@
 "use client";
 
-import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
 import { arc as arcGenerator } from "@visx/shape";
 import type { Transition } from "motion/react";
@@ -359,7 +358,7 @@ const RingChartCore = memo(function RingChartCore({
           style={{ gridArea: "1 / 1", contain: "layout style paint" }}
           width={size}
         >
-          <Group left={center} top={center}>
+          <g transform={`translate(${center}, ${center})`}>
             {scrubRingLayers
               ? scrubRingLayers.map((layer, index) => (
                   <g key={data[index]?.label ?? index}>
@@ -371,7 +370,7 @@ const RingChartCore = memo(function RingChartCore({
                 ))
               : null}
             {svgChildren}
-          </Group>
+          </g>
         </svg>
 
         {/* HTML layer with center content - stacked on top via grid */}

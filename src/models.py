@@ -40,9 +40,9 @@ def apply_temperature_scaling(probas: np.ndarray, t: float) -> np.ndarray:
 
 def _rps_loss(probas: np.ndarray, y: np.ndarray) -> float:
     """Computes multiclass Ranked Probability Score for [Away, Draw, Home]."""
-    cumulative = np.cumsum(np.asarray(probas, dtype=float), axis=1)[:, :2]
-    truth = np.eye(3, dtype=float)[np.asarray(y, dtype=int)][:, :2]
-    return float(np.mean(np.sum((cumulative - np.cumsum(truth, axis=1)) ** 2, axis=1) / 2.0))
+    from src.evaluate import ranked_probability_score
+
+    return float(ranked_probability_score(y, probas))
 
 
 def blend_market_probabilities(
@@ -181,8 +181,8 @@ def tune_draw_rule(
         return decisions, float(np.mean(decisions == 1))
 
     def _rps(decisions, truth):
-        one_hot = np.eye(3, dtype=float)[decisions]
-        return float(np.mean(np.sum((np.cumsum(one_hot, axis=1)[:, :2] - np.cumsum(np.eye(3)[truth], axis=1)[:, :2]) ** 2, axis=1) / 2.0))
+        one_hot = np.eye(3, dtype=float)[np.asarray(decisions, dtype=int)]
+        return _rps_loss(one_hot, np.asarray(truth, dtype=int))
 
     result: Dict[str, float] = {}
     for prefix, is_missing in (("market", False), ("no_market", True)):
@@ -251,21 +251,12 @@ def supremacy_to_means(
     return lam_h, lam_a
 
 
-# Outcome label mapping: 0 -> Away Win (A), 1 -> Draw (D), 2 -> Home Win (H)
-OUTCOME_NAMES = {0: "Away Win", 1: "Draw", 2: "Home Win"}
-OUTCOME_CODES = {0: "A", 1: "D", 2: "H"}
+# Outcome label mapping removed: no production or test consumer
+# referenced OUTCOME_NAMES / OUTCOME_CODES (only a dead import in pipeline).
 
 
 def _build_prefit_calibrator(estimator, method: str):
-    """Returns a CalibratedClassifierCV wrapping an already-fitted estimator.
-
-    ``cv="prefit"`` was deprecated in scikit-learn 1.6 and removed in 1.9,
-    where it raises InvalidParameterError. That error subclasses ValueError,
-    so the caller's broad ``except`` turned a hard API break into a silent
-    ``inf`` score and left sigmoid/isotonic permanently unreachable. Prefer the
-    explicit FrozenEstimator and fall back to the legacy string on older
-    scikit-learn.
-    """
+    """Returns a CalibratedClassifierCV wrapping an already-fitted estimator."""
     if FrozenEstimator is not None:
         return CalibratedClassifierCV(FrozenEstimator(estimator), method=method)
     return CalibratedClassifierCV(estimator, method=method, cv="prefit")
@@ -584,7 +575,7 @@ class MatchPredictorModel:
         best_t, best_rps = 1.0, float("inf")
         grid = np.arange(gmin, gmax + gstep / 2, gstep)
         for t in [round(float(x), 2) for x in grid]:
-            scaled = self._apply_temperature(probas, t)
+            scaled = apply_temperature_scaling(probas, t)
             clipped = np.clip(scaled, eps, 1 - eps)
             rps = _rps_loss(clipped, y)
             if rps < best_rps:
@@ -644,7 +635,7 @@ class MatchPredictorModel:
 
         self.calibrate_temperature(fit_X, fit_y)
         temperature_base = self._apply_market_blend(_blend(raw_sources["clf"]), score_X)
-        scores = {"temperature": _rps_loss(self._apply_temperature(temperature_base, self.calibration_temperature), score_y)}
+        scores = {"temperature": _rps_loss(apply_temperature_scaling(temperature_base, self.calibration_temperature), score_y)}
         candidates = {}
         for method in ("sigmoid", "isotonic"):
             try:
@@ -665,11 +656,6 @@ class MatchPredictorModel:
         self.calibration_scores = {key: float(value) for key, value in scores.items()}
         self.calibrated_classifier = candidates.get(winner)
         return {"winner": winner, "scores": self.calibration_scores}
-
-    @staticmethod
-    def _apply_temperature(probas: np.ndarray, t: float) -> np.ndarray:
-        """Applies temperature scaling: softmax(log(p)/T) row-wise."""
-        return apply_temperature_scaling(probas, t)
 
     @staticmethod
     def compute_poisson_grid(h_exp: float, a_exp: float, max_goals: int = 10) -> Tuple[np.ndarray, np.ndarray]:
@@ -748,7 +734,7 @@ class MatchPredictorModel:
 
         blended = self._apply_market_blend(blended, X)
         if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
-            blended = self._apply_temperature(blended, self.calibration_temperature)
+            blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
     def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
@@ -1228,10 +1214,6 @@ class StackedEnsembleModel(MatchPredictorModel):
         parts = [np.asarray(self.members[key].predict_outcome_proba(X)) for key in STACK_MEMBER_ORDER]
         return np.concatenate(parts, axis=1)
 
-    def apply_params(self, params: Dict[str, Any]) -> StackedEnsembleModel:
-        """No-op: tuned params live on the members (applied at build)."""
-        return self
-
     def fit(
         self, X: pd.DataFrame, y_outcome: pd.Series, y_hg: pd.Series, y_ag: pd.Series,
         sample_weight=None,
@@ -1255,7 +1237,7 @@ class StackedEnsembleModel(MatchPredictorModel):
         blended = align_probas(self.meta.classes_, self.meta.predict_proba(stacked))
         blended = self._apply_market_blend(blended, X)
         if apply_temperature and self.calibration_method == "temperature" and self.calibration_temperature != 1.0:
-            blended = self._apply_temperature(blended, self.calibration_temperature)
+            blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
     def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:

@@ -33,8 +33,6 @@ from src.feature_engineering import (
     get_feature_column_names,
 )
 from src.models import (
-    OUTCOME_CODES,
-    OUTCOME_NAMES,
     MatchPredictorModel,
     favor_outcome_from_proba,
     split_calibration_evaluation,
@@ -383,21 +381,17 @@ class PremierLeaguePredictionPipeline:
         """
         from src.odds_loader import lookup_odds
 
-        def _finite(row: Optional[Dict[str, float]]) -> Optional[Dict[str, float]]:
-            if not row:
-                return None
+        if self.odds_df is None:
+            return None
+        row = lookup_odds(self.odds_df, home_team, away_team, match_date)
+        if not row:
+            return None
+        try:
             legs = (row.get("odds_implied_home"), row.get("odds_implied_draw"),
                     row.get("odds_implied_away"))
-            try:
-                if all(float(v) == float(v) for v in legs):
-                    return row
-            except (TypeError, ValueError):
-                pass
+            return row if all(float(v) == float(v) for v in legs) else None
+        except (TypeError, ValueError):
             return None
-
-        if self.odds_df is not None:
-            return _finite(lookup_odds(self.odds_df, home_team, away_team, match_date))
-        return None
 
     def forecast_2026_2027_season(self) -> pd.DataFrame:
         """Forecasts all 380 fixtures for the 2026/2027 season and exports results."""

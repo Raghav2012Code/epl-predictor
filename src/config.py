@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 try:
     import yaml  # type: ignore
@@ -41,7 +41,6 @@ _DEFAULTS: Dict[str, Any] = {
                 "2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"
             ],
             "competitions": ["premierleague", "facup", "eflcup"],
-            "include_cups_in_context": True,
         },
     },
     "pipeline": {"split_date": "2024-01-01"},
@@ -110,20 +109,8 @@ def get_config() -> Dict[str, Any]:
     return cfg
 
 
-def get_seasons() -> List[str]:
-    return list(get_config()["data"]["seasons"])
-
-
 def get_openfootball_config() -> Dict[str, Any]:
     return dict(get_config()["data"].get("openfootball", {}))
-
-
-def get_openfootball_seasons() -> List[str]:
-    return list(get_openfootball_config().get("seasons", []))
-
-
-def get_openfootball_competitions() -> List[str]:
-    return list(get_openfootball_config().get("competitions", []))
 
 
 def get_split_date() -> str:

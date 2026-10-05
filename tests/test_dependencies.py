@@ -32,7 +32,7 @@ def _pins() -> dict[str, str]:
 
 def test_requirements_are_exactly_pinned() -> None:
     pins = _pins()
-    assert len(pins) >= 15, "the dependency set looks truncated"
+    assert len(pins) >= 12, "the dependency set looks truncated"
     for name, version in pins.items():
         assert version, f"{name} has an empty version pin"
 

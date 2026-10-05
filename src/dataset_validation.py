@@ -20,26 +20,30 @@ _FIXTURE_FIELDS = (
 )
 
 
+def _reject(condition: bool, path: str, message: str) -> None:
+    if not condition:
+        raise ValueError(f"{path} {message}")
+
+
 def _require_mapping(value: Any, path: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{path} must be an object.")
+    _reject(isinstance(value, Mapping), path, "must be an object.")
     return value
 
 
 def _require_list(value: Any, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be an array.")
+    _reject(isinstance(value, list), path, "must be an array.")
     return value
 
 
 def _require_string(value: Any, path: str) -> None:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string.")
+    _reject(isinstance(value, str) and bool(value.strip()), path, "must be a non-empty string.")
 
 
 def _require_finite_number(value: Any, path: str) -> None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
-        raise ValueError(f"{path} must be a finite number.")
+    _reject(
+        not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(float(value)),
+        path, "must be a finite number.",
+    )
 
 
 def validate_web_dataset(payload: Any) -> dict[str, Any]:

@@ -49,11 +49,6 @@ MOVE_OPEN_TRIPLE = ("B365H", "B365D", "B365A")
 MOVE_CLOSE_TRIPLE = ("B365CH", "B365CD", "B365CA")
 
 
-def odds_cache_path(season: str) -> str:
-    """Returns the local cache path for one season's odds CSV."""
-    return os.path.join(ODDS_CACHE_DIR, f"E0_{season}.csv")
-
-
 def download_season_odds(
     season: str,
     force_download: bool = False,
@@ -64,7 +59,7 @@ def download_season_odds(
     With ``offline=True`` only the local cache is used; a missing cache
     raises FileNotFoundError with an actionable message.
     """
-    local_path = odds_cache_path(season)
+    local_path = os.path.join(ODDS_CACHE_DIR, f"E0_{season}.csv")
     if offline:
         if not os.path.exists(local_path):
             raise FileNotFoundError(
@@ -98,9 +93,10 @@ def implied_probabilities(
 
 def _triple_from_row(row: pd.Series, triple: Tuple[str, str, str]) -> Tuple[float, float, float, float]:
     """Implied probabilities for one column triple; NaNs when unavailable."""
-    if all(col in row.index for col in triple):
+    try:
         return implied_probabilities(row[triple[0]], row[triple[1]], row[triple[2]])
-    return (np.nan, np.nan, np.nan, np.nan)
+    except KeyError:
+        return (np.nan, np.nan, np.nan, np.nan)
 
 
 def select_odds_triple(row: pd.Series) -> Tuple[float, float, float, float, str]:

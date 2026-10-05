@@ -56,17 +56,15 @@ def get_pipeline(force_retrain: bool = False, fast_mode: bool = False, offline: 
 
 def _resolve_engine_label() -> str:
     """Reads the production engine from checkpoint, falling back to XGBoost."""
-    model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
-    if os.path.exists(model_path):
-        try:
-            import joblib as _joblib
+    import joblib
 
-            payload = _joblib.load(model_path)
-            mt = payload.get("model_type", "xgboost") if isinstance(payload, dict) else "xgboost"
-            return {"rf": "Random Forest", "xgboost": "XGBoost"}.get(str(mt).lower(), "Stacked")
-        except Exception:
-            pass
-    return "XGBoost"
+    model_path = os.path.join(os.path.dirname(__file__), "models", "production_model.joblib")
+    try:
+        payload = joblib.load(model_path)
+        mt = payload.get("model_type", "xgboost") if isinstance(payload, dict) else "xgboost"
+    except Exception:
+        mt = "xgboost"
+    return {"rf": "Random Forest", "xgboost": "XGBoost"}.get(str(mt).lower(), "Stacked")
 
 
 def run_gameweek_prediction(gameweek_num: int, force_retrain: bool = False, offline: bool | None = None):
