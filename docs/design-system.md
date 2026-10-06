@@ -91,3 +91,15 @@ Plain, sentence case, from the fan's side. "Result pending" for a past fixture
 without a recorded score. Predicted scorelines are labelled "Predicted score",
 never "expected goals" (the dataset's predicted goal fields are the rounded
 scoreline, not xG). Errors say what happened and what to do next.
+
+## Implementation notes
+
+- Styles: `tokens.css` (tokens), `base.css` (element defaults), `split-bar.css`,
+  `shell.css` (top bar, tab bar, shared controls, loading/error), `pages.css`
+  (the five views), `landing.css`. No legacy page CSS remains.
+- Under 980px the fixture detail opens as a bottom sheet from a row tap
+  (Escape, Close button or backdrop dismiss it; focus returns to the row).
+- Fixtures are grouped by day when sorted by kickoff. Dark scores are final,
+  grey scores are predicted.
+- Analytics shows the RPS comparison on a zoomed axis and says so on the page.
+- The footer toggle is labelled "Reduce motion" and uses `aria-pressed`.

@@ -1,0 +1,118 @@
+/*
+ * Split-board design tokens. Source of truth: docs/design-system.md.
+ * Every colour, space, radius and type role used by the dashboard comes
+ * from here; do not introduce raw hex values in component styles.
+ */
+:root {
+  /* Colour */
+  --paper: #ffffff;
+  --concourse: #f1f3f6;
+  --line: #dce1e8;
+  --ink: #13233a;
+  --ink-soft: #55657a;
+  --home: #1e7a4c;
+  --draw: #aeb7c2;
+  --away: #2d5bd0;
+  --signal: #f2b705;
+
+  /* Spacing scale (px): 4, 8, 12, 16, 24, 32, 48, 64 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radii: controls, overlays, split-bar segments. Nothing else is rounded. */
+  --radius-control: 6px;
+  --radius-overlay: 10px;
+  --radius-bar: 3px;
+
+  /* The one elevation, reserved for overlays (dialog, search results, sheet). */
+  --elevation-overlay: 0 12px 32px rgb(19 35 58 / 0.16), 0 2px 6px rgb(19 35 58 / 0.08);
+
+  /* Layout */
+  --content-max: 1240px;
+  --gutter: 24px;
+  --topbar-height: 60px;
+  --tabbar-height: 60px;
+
+  /* Type */
+  --font-family: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-25: 25px;
+  --fs-31: 31px;
+  --fs-39: 39px;
+  --fs-49: 49px;
+  --fs-display: clamp(64px, 9vw, 88px);
+  --wdth-score: 62;
+  --wdth-heading: 78;
+  --wdth-body: 100;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-quick: 160ms;
+  --duration-sweep: 400ms;
+
+  /*
+   * Bridge for the vendored chart and shadcn components (src/components/charts,
+   * src/components/ui). They read these names directly; alias them to the
+   * split-board palette instead of carrying a second theme.
+   */
+  --foreground: var(--ink);
+  --muted-foreground: var(--ink-soft);
+  --border: var(--line);
+  --chart-1: var(--home);
+  --chart-2: var(--away);
+  --chart-3: var(--draw);
+  --chart-4: var(--ink-soft);
+  --chart-5: var(--ink);
+  --chart-background: var(--paper);
+  --chart-foreground: var(--ink);
+  --chart-foreground-muted: var(--ink-soft);
+  --chart-label: var(--ink-soft);
+  --chart-grid: var(--line);
+  --chart-brush-border: var(--line);
+  --chart-crosshair: var(--ink);
+  --chart-line-primary: var(--home);
+  --chart-line-secondary: var(--away);
+  --chart-tooltip-background: var(--ink);
+  --chart-tooltip-foreground: var(--paper);
+  --chart-tooltip-muted: var(--line);
+  --chart-marker-background: var(--paper);
+  --chart-marker-border: var(--line);
+  --chart-marker-foreground: var(--ink);
+}
+
+@media (max-width: 639px) {
+  :root { --gutter: 16px; }
+}
+
+/* Type roles (sentence case everywhere; never uppercase or tracked-out). */
+.num {
+  font-variation-settings: "wdth" 62;
+  font-stretch: 62%;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.num-display { font-size: var(--fs-display); }
+.heading {
+  font-variation-settings: "wdth" 78;
+  font-stretch: 78%;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.15;
+}
+.label {
+  color: var(--ink-soft);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  line-height: 1.35;
+}

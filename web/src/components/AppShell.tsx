@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Search } from "lucide-react";
+import {
+  CalendarDays,
+  ChartColumn,
+  ListOrdered,
+  Search,
+  Shield,
+  SlidersHorizontal,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import type { EPLDataset } from "../types";
 import { MotionPop, MotionPresence, MotionSection } from "./Motion";
 import { TeamMark } from "./TeamMark";
@@ -11,12 +20,12 @@ import { ClubsPage } from "../pages/ClubsPage";
 import { AnalyticsPage } from "../pages/AnalyticsPage";
 
 export type Tab = "fixtures" | "simulator" | "standings" | "clubs" | "analytics";
-export const tabs: Array<{ id: Tab; label: string; note: string }> = [
-  { id: "fixtures", label: "Fixtures", note: "Gameweeks and forecasts" },
-  { id: "simulator", label: "Simulator", note: "Explore a matchup" },
-  { id: "standings", label: "Table", note: "Current and projected table" },
-  { id: "clubs", label: "Clubs", note: "Team profiles" },
-  { id: "analytics", label: "Analytics", note: "Model evidence and trends" },
+export const tabs: Array<{ id: Tab; label: string; icon: LucideIcon }> = [
+  { id: "fixtures", label: "Fixtures", icon: CalendarDays },
+  { id: "simulator", label: "Simulator", icon: SlidersHorizontal },
+  { id: "standings", label: "Table", icon: ListOrdered },
+  { id: "clubs", label: "Clubs", icon: Shield },
+  { id: "analytics", label: "Analytics", icon: ChartColumn },
 ];
 
 export const AppShell: React.FC<{
@@ -40,204 +49,229 @@ export const AppShell: React.FC<{
     onNavigate(tab);
   };
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [mobileSearch, setMobileSearch] = useState(false);
   useEffect(() => {
     const onPointer = (event: PointerEvent) => {
-      if (!searchRef.current?.contains(event.target as Node))
+      if (!searchRef.current?.contains(event.target as Node)) {
         setSearchOpen(false);
+        setMobileSearch(false);
+      }
     };
     document.addEventListener("pointerdown", onPointer);
     return () => document.removeEventListener("pointerdown", onPointer);
   }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "/" && document.activeElement?.tagName !== "INPUT") {
+      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+      if (event.key === "/" && tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA") {
         event.preventDefault();
-        (
-          searchRef.current?.querySelector("input") as HTMLInputElement | null
-        )?.focus();
+        setMobileSearch(true);
+        inputRef.current?.focus();
+      }
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setMobileSearch(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const closeSearch = () => {
+    setQuery("");
+    setSearchOpen(false);
+    setMobileSearch(false);
+  };
   const selectClub = (club: string) => {
     setSelectedClub(club);
-    setQuery("");
-    setSearchOpen(false);
+    closeSearch();
     navigateTo("clubs");
-  };
-  const goHome = () => {
-    setQuery("");
-    setSearchOpen(false);
-    navigateTo("fixtures");
   };
   const openSimulator = (home: string, away: string) => {
     setSimulatorSelection({ home, away });
-    setQuery("");
-    setSearchOpen(false);
+    closeSearch();
     navigateTo("simulator");
   };
-  const clubHits = query
+  const toggleMobileSearch = () => {
+    const next = !mobileSearch;
+    setMobileSearch(next);
+    if (next) window.setTimeout(() => inputRef.current?.focus(), 0);
+    else closeSearch();
+  };
+  const needle = query.trim().toLowerCase();
+  const clubHits = needle
     ? Object.values(dataset.teams)
-        .filter((team) => team.name.toLowerCase().includes(query.toLowerCase()))
+        .filter((team) => team.name.toLowerCase().includes(needle))
         .slice(0, 4)
     : [];
-  const fixtureHits = query
+  const fixtureHits = needle
     ? dataset.fixtures
         .filter((fixture) =>
-          `${fixture.homeTeam} ${fixture.awayTeam}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
+          `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(needle),
         )
         .slice(0, 4)
     : [];
-  const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return (
-      <div className="app-shell">
+    <div className="app">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <aside className="site-rail">
-        <button
-          type="button"
-          className="brand brand-home"
-          onClick={goHome}
-          aria-label="Back to fixtures home"
-        >
-          <img
-            className="brand-logo"
-            src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
-            alt="EPL Predictor"
-            draggable={false}
-          />
-          <div className="brand-copy">
-            <small>Match analysis · {dataset.season}</small>
-          </div>
-        </button>
-        <nav aria-label="Primary navigation">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? "active" : ""}
-              onClick={() => navigateTo(tab.id)}
-              aria-current={activeTab === tab.id ? "page" : undefined}
-            >
-              <span>{tab.label}</span>
-              <small>{tab.note}</small>
-            </button>
-          ))}
-        </nav>
-        <div className="rail-footer">
-          <span>Data snapshot</span>
-          <strong>{dataset.totalMatches} fixtures</strong>
-          <small>Offline dataset · no live API</small>
-          <small>Scores and schedules are versioned with the export.</small>
-        </div>
-      </aside>
-      <div className="site-content">
-        <header className="site-header">
-          <div>
-            <p className="eyebrow">Premier League · {dataset.season}</p>
-            <h2>{active.label}</h2>
-          </div>
-          <div className="search-box" ref={searchRef}>
-            <Search size={17} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setSearchOpen(true);
-              }}
-              onFocus={() => setSearchOpen(true)}
-              placeholder="Search clubs or fixtures"
-              aria-label="Search clubs or fixtures"
+      <header className="topbar">
+        <div className="wrap topbar__inner">
+          <button
+            type="button"
+            className="brand"
+            onClick={() => {
+              closeSearch();
+              navigateTo("fixtures");
+            }}
+            aria-label="EPL Predictor, back to fixtures"
+          >
+            <img
+              className="brand__logo"
+              src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
+              alt=""
+              draggable={false}
             />
-            <kbd>/</kbd>
+            <span className="brand__season">{dataset.season}</span>
+          </button>
+          <nav className="tabs" aria-label="Primary">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                className="tabs__item"
+                onClick={() => navigateTo(id)}
+                aria-current={activeTab === id ? "page" : undefined}
+              >
+                <Icon className="tabs__icon" size={22} strokeWidth={2} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className={`search${mobileSearch ? " search--open" : ""}`} ref={searchRef}>
+            <button
+              type="button"
+              className="search__toggle"
+              onClick={toggleMobileSearch}
+              aria-label={mobileSearch ? "Close search" : "Search clubs and fixtures"}
+              aria-expanded={mobileSearch}
+            >
+              {mobileSearch ? <X size={20} aria-hidden="true" /> : <Search size={20} aria-hidden="true" />}
+            </button>
+            <div className="search__field">
+              <Search size={16} aria-hidden="true" />
+              <input
+                ref={inputRef}
+                className="search__input"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onFocus={() => setSearchOpen(true)}
+                placeholder="Search clubs and fixtures"
+                aria-label="Search clubs and fixtures"
+                autoComplete="off"
+              />
+              <kbd className="search__hint" aria-hidden="true">/</kbd>
+            </div>
             <MotionPresence>
-            {searchOpen && query && (
-              <MotionPop popKey="search-results" className="search-results" role="listbox">
-                {clubHits.map((team) => (
-                  <button
-                    key={team.name}
-                    onClick={() => selectClub(team.name)}
-                    role="option"
-                  >
-                    <TeamMark team={team} />
-                    {team.name}
-                    <small>Club profile</small>
-                  </button>
-                ))}
-                {fixtureHits.map((fixture) => (
-                  <button
-                    key={fixture.id}
-                    onClick={() =>
-                      openSimulator(fixture.homeTeam, fixture.awayTeam)
-                    }
-                    role="option"
-                  >
-                    <span>
+              {searchOpen && needle && (
+                <MotionPop popKey="search-results" className="search__results" role="listbox">
+                  {clubHits.length > 0 && <p className="label search__group">Clubs</p>}
+                  {clubHits.map((team) => (
+                    <button
+                      key={team.name}
+                      type="button"
+                      className="search__option"
+                      onClick={() => selectClub(team.name)}
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <TeamMark team={team} />
+                      {team.name}
+                      <span className="search__option-hint">Club profile</span>
+                    </button>
+                  ))}
+                  {fixtureHits.length > 0 && <p className="label search__group">Fixtures</p>}
+                  {fixtureHits.map((fixture) => (
+                    <button
+                      key={fixture.id}
+                      type="button"
+                      className="search__option"
+                      onClick={() => openSimulator(fixture.homeTeam, fixture.awayTeam)}
+                      role="option"
+                      aria-selected="false"
+                    >
                       {fixture.homeTeam} v {fixture.awayTeam}
-                    </span>
-                    <small>Open simulator</small>
-                  </button>
-                ))}
-                {!clubHits.length && !fixtureHits.length && (
-                  <p className="muted">No matches found.</p>
-                )}
-              </MotionPop>
-            )}
+                      <span className="search__option-hint">GW{fixture.gameweek}, open in simulator</span>
+                    </button>
+                  ))}
+                  {!clubHits.length && !fixtureHits.length && (
+                    <p className="search__empty">
+                      No club or fixture matches "{query.trim()}". Try a club name.
+                    </p>
+                  )}
+                </MotionPop>
+              )}
             </MotionPresence>
           </div>
-        </header>
-        <main id="main-content" tabIndex={-1}>
-          <MotionPresence>
-          <MotionSection key={activeTab} className="page-transition-shell">
-          {activeTab === "fixtures" && (
-            <FixturesPage
-              key="fixtures"
-              dataset={dataset}
-              query={query}
-              onSimulate={openSimulator}
-            />
-          )}
-          {activeTab === "simulator" && (
-            <SimulatorPage
-              key="simulator"
-              dataset={dataset}
-              initialHome={simulatorSelection.home}
-              initialAway={simulatorSelection.away}
-            />
-          )}
-          {activeTab === "standings" && (
-            <StandingsPage key="standings" dataset={dataset} onClub={selectClub} />
-          )}
-          {activeTab === "clubs" && (
-            <ClubsPage
-              key="clubs"
-              dataset={dataset}
-              selectedClub={selectedClub}
-              setSelectedClub={setSelectedClub}
-              onSimulate={openSimulator}
-            />
-          )}
-          {activeTab === "analytics" && <AnalyticsPage key="analytics" dataset={dataset} />}
+        </div>
+      </header>
+      <main className="wrap main" id="main-content" tabIndex={-1}>
+        <MotionPresence>
+          <MotionSection key={activeTab}>
+            {activeTab === "fixtures" && (
+              <FixturesPage
+                key="fixtures"
+                dataset={dataset}
+                query={query}
+                onSimulate={openSimulator}
+              />
+            )}
+            {activeTab === "simulator" && (
+              <SimulatorPage
+                key="simulator"
+                dataset={dataset}
+                initialHome={simulatorSelection.home}
+                initialAway={simulatorSelection.away}
+              />
+            )}
+            {activeTab === "standings" && (
+              <StandingsPage key="standings" dataset={dataset} onClub={selectClub} />
+            )}
+            {activeTab === "clubs" && (
+              <ClubsPage
+                key="clubs"
+                dataset={dataset}
+                selectedClub={selectedClub}
+                setSelectedClub={setSelectedClub}
+                onSimulate={openSimulator}
+              />
+            )}
+            {activeTab === "analytics" && <AnalyticsPage key="analytics" dataset={dataset} />}
           </MotionSection>
-          </MotionPresence>
-        </main>
-        <footer className="site-footer">
+        </MotionPresence>
+      </main>
+      <footer className="footer">
+        <div className="wrap footer__inner">
           <span>Forecasts are probabilities, not guarantees.</span>
-          <button className="text-button motion-toggle" onClick={onToggleMotion} aria-pressed={motionDisabled}>
-            {motionDisabled ? "Motion reduced" : "Motion on"}
-          </button>
-          <a
-            href="https://github.com/Raghav2012Code/epl-predictor"
-            target="_blank"
-            rel="noreferrer"
-          >
-            View source <ArrowUpRight size={14} />
-          </a>
-        </footer>
-      </div>
-      </div>
+          <div className="footer__actions">
+            <button
+              type="button"
+              className="text-button"
+              onClick={onToggleMotion}
+              aria-pressed={motionDisabled}
+            >
+              Reduce motion
+            </button>
+            <a href="https://github.com/Raghav2012Code/epl-predictor" target="_blank" rel="noreferrer">
+              View source
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 };
