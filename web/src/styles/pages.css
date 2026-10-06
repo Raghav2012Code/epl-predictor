@@ -115,7 +115,7 @@
   text-align: center;
 }
 .detail__team { display: grid; justify-items: center; gap: var(--space-1); min-width: 0; }
-.detail__team .team-mark { width: 48px; height: 48px; font-size: var(--fs-14); }
+.detail__team .team-mark { width: 56px; height: 56px; font-size: var(--fs-14); }
 .detail__team strong {
   font-variation-settings: "wdth" 78;
   font-stretch: 78%;
@@ -271,7 +271,7 @@
   background: transparent;
   color: var(--ink);
 }
-.club-picker__item .team-mark { width: 32px; height: 32px; }
+.club-picker__item .team-mark { width: 36px; height: 36px; }
 .club-picker__item:hover,
 .club-picker__item[aria-pressed="true"] { background: var(--concourse); }
 .club-picker__item[aria-pressed="true"]::after {
