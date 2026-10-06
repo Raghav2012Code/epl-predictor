@@ -1,9 +1,22 @@
 import React, { useMemo } from "react";
-import type { EPLDataset } from "../types";
-import { MotionSection } from "../components/Motion";
+import type { EPLDataset, VenueSplit } from "../types";
 import { TeamMark } from "../components/TeamMark";
-import { resultTone } from "../lib/format";
 import { clubResultFor } from "../lib/fixtures";
+
+const chipFor = (result: string | null) =>
+  result === "Win" ? "W" : result === "Loss" ? "L" : result === "Draw" ? "D" : "-";
+
+const SplitRow: React.FC<{ label: string; split?: VenueSplit }> = ({ label, split }) =>
+  split ? (
+    <tr>
+      <th scope="row">{label}</th>
+      <td className="num">{split.w}</td>
+      <td className="num">{split.d}</td>
+      <td className="num">{split.l}</td>
+      <td className="num">{split.gf}</td>
+      <td className="num">{split.ga}</td>
+    </tr>
+  ) : null;
 
 export const ClubsPage: React.FC<{
   dataset: EPLDataset;
@@ -11,16 +24,18 @@ export const ClubsPage: React.FC<{
   setSelectedClub: (club: string) => void;
   onSimulate: (home: string, away: string) => void;
 }> = ({ dataset, selectedClub, setSelectedClub, onSimulate }) => {
-  const names = useMemo(
-    () =>
-      Object.values(dataset.teams)
-        .sort((a, b) => a.rank - b.rank)
-        .map((team) => team.name),
+  const teams = useMemo(
+    () => Object.values(dataset.teams).sort((a, b) => a.rank - b.rank),
     [dataset.teams],
   );
-  const profile = dataset.teams[selectedClub] ?? dataset.teams[names[0]];
+  const profile = dataset.teams[selectedClub] ?? teams[0];
   if (!profile)
-    return <div className="empty-state">No club data available.</div>;
+    return (
+      <div className="empty">
+        <strong>No club data</strong>
+        Reload the page to load the season file again.
+      </div>
+    );
   const clubFixtures = dataset.fixtures
     .filter(
       (fixture) =>
@@ -34,112 +49,170 @@ export const ClubsPage: React.FC<{
     .filter((fixture) => fixture.status === "Played")
     .slice(-5)
     .reverse();
+  const opponent = (home: string, away: string) =>
+    home === profile.name ? `vs ${away}` : `at ${home}`;
   return (
-    <MotionSection className="page-stack clubs-page">
-      <div className="section-heading">
+    <>
+      <header className="page-head">
         <div>
-          <p className="eyebrow">Club profile</p>
-          <h1>Follow one club through the season.</h1>
+          <h1>Clubs</h1>
+          <p className="label page-head__sub">
+            Season projection for one club, with its results and next matches.
+          </p>
         </div>
         <select
-          className="compact-select"
+          className="select club-select"
           value={profile.name}
           onChange={(event) => setSelectedClub(event.target.value)}
-          aria-label="Select a club"
+          aria-label="Choose a club"
         >
-          {names.map((name) => (
-            <option key={name}>{name}</option>
+          {teams.map((team) => (
+            <option key={team.name}>{team.name}</option>
           ))}
         </select>
+      </header>
+
+      <div className="club-picker" role="group" aria-label="Choose a club">
+        {teams.map((team) => (
+          <button
+            key={team.name}
+            type="button"
+            className="club-picker__item"
+            aria-pressed={team.name === profile.name}
+            aria-label={team.name}
+            title={team.name}
+            onClick={() => setSelectedClub(team.name)}
+          >
+            <TeamMark team={team} />
+            <span className="label">{team.short}</span>
+          </button>
+        ))}
       </div>
-      <article className="club-hero" style={{ borderTopColor: profile.color }}>
-        <div className="club-identity">
+
+      <article className="club-hero" aria-labelledby="club-name">
+        <div className="club-hero__identity">
           <TeamMark team={profile} />
           <div>
-            <p className="eyebrow">
-              #{profile.rank} · {profile.points} points
+            <h2 id="club-name">{profile.name}</h2>
+            <p className="label">
+              {profile.stadium}. Projected position {profile.rank}, {profile.points} points.
             </p>
-            <h2>{profile.name}</h2>
-            <p className="muted">{profile.stadium}</p>
           </div>
         </div>
-        <div className="club-kpis">
+        <dl className="club-hero__kpis">
           <div>
-            <span>Record</span>
-            <strong>
-              {profile.won}–{profile.drawn}–{profile.lost}
-            </strong>
+            <dt className="label">Record</dt>
+            <dd className="num">
+              {profile.won}-{profile.drawn}-{profile.lost}
+            </dd>
           </div>
           <div>
-            <span>Goals</span>
-            <strong>
-              {profile.gf}–{profile.ga}
-            </strong>
+            <dt className="label">Goals for and against</dt>
+            <dd className="num">
+              {profile.gf}-{profile.ga}
+            </dd>
           </div>
           <div>
-            <span>Win rate</span>
-            <strong>{profile.winRate}%</strong>
+            <dt className="label">Win rate</dt>
+            <dd className="num">{profile.winRate}%</dd>
           </div>
           <div>
-            <span>Avg rest</span>
-            <strong>{profile.restDaysAvg}d</strong>
+            <dt className="label">Average rest</dt>
+            <dd className="num">{profile.restDaysAvg} days</dd>
           </div>
-        </div>
+        </dl>
+        {profile.last5Form?.length > 0 && (
+          <div className="club-hero__form">
+            <span className="label">Last five</span>
+            <span className="form-chips" role="img" aria-label={`Last five: ${profile.last5Form.join(", ")}`}>
+              {profile.last5Form.map((result, index) => (
+                <span key={index} className={`form-chip form-chip--${result}`} aria-hidden="true">
+                  {result}
+                </span>
+              ))}
+            </span>
+          </div>
+        )}
       </article>
-      <div className="two-column">
-        <div className="content-card">
-          <div className="section-heading small">
-            <h2>Recent results</h2>
-            <span className="muted">Official</span>
-          </div>
+
+      <div className="club-grid">
+        <section aria-labelledby="club-recent">
+          <h3 id="club-recent">Recent results</h3>
           {recent.length ? (
-            recent.map((fixture) => (
-              <div className="mini-fixture" key={fixture.id}>
-                <span
-                  className={`result-badge ${resultTone(clubResultFor(fixture, profile.name))}`}
-                >
-                  {clubResultFor(fixture, profile.name)?.[0] ?? "—"}
-                </span>
-                <span>
-                  {fixture.homeTeam === profile.name ? "vs" : "@"}{" "}
-                  {fixture.homeTeam === profile.name
-                    ? fixture.awayTeam
-                    : fixture.homeTeam}
-                </span>
-                <strong>{fixture.actualScore}</strong>
-              </div>
-            ))
+            <ul className="rows">
+              {recent.map((fixture) => {
+                const result = clubResultFor(fixture, profile.name);
+                const letter = chipFor(result);
+                return (
+                  <li className="rows__item" key={fixture.id}>
+                    <span className={`form-chip form-chip--${letter}`} aria-label={result ?? "No result"}>
+                      {letter}
+                    </span>
+                    <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
+                    <span className="rows__score num">{fixture.actualScore}</span>
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
-            <p className="muted">No completed fixtures.</p>
+            <div className="empty">
+              <strong>No results yet</strong>
+              {profile.name} have not played a match in this dataset.
+            </div>
           )}
-        </div>
-        <div className="content-card">
-          <div className="section-heading small">
-            <h2>Next fixtures</h2>
-            <span className="muted">Model score</span>
-          </div>
+        </section>
+        <section aria-labelledby="club-next">
+          <h3 id="club-next">Next matches</h3>
           {upcoming.length ? (
-            upcoming.map((fixture) => (
-              <button
-                className="mini-fixture interactive"
-                key={fixture.id}
-                onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}
-              >
-                <span className="muted">GW{fixture.gameweek}</span>
-                <span>
-                  {fixture.homeTeam === profile.name ? "vs" : "@"}{" "}
-                  {fixture.homeTeam === profile.name
-                    ? fixture.awayTeam
-                    : fixture.homeTeam}
-                </span>
-                <strong>{fixture.predictedScore}</strong>
-              </button>
-            ))
+            <ul className="rows">
+              {upcoming.map((fixture) => (
+                <li key={fixture.id}>
+                  <button
+                    type="button"
+                    className="rows__item rows__item--action"
+                    onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}
+                    aria-label={`Gameweek ${fixture.gameweek}, ${fixture.homeTeam} v ${fixture.awayTeam}, predicted score ${fixture.predictedScore}. Open in simulator.`}
+                  >
+                    <span className="label rows__gw">GW{fixture.gameweek}</span>
+                    <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
+                    <span className="rows__score rows__score--predicted num">{fixture.predictedScore}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : (
-            <p className="muted">Season complete.</p>
+            <div className="empty">
+              <strong>Season complete</strong>
+              {profile.name} have no matches left to forecast.
+            </div>
           )}
-        </div>
+          <p className="label rows__note">Grey scores are predicted. Select a match to open it in the simulator.</p>
+        </section>
       </div>
-    </MotionSection>
+
+      {(profile.homeSplit || profile.awaySplit) && (
+        <section className="club-venue" aria-labelledby="club-venue">
+          <h3 id="club-venue">Home and away</h3>
+          <div className="table-scroll">
+            <table className="venue">
+              <thead>
+                <tr>
+                  <th scope="col"><span className="sr-only">Venue</span></th>
+                  <th scope="col">W</th>
+                  <th scope="col">D</th>
+                  <th scope="col">L</th>
+                  <th scope="col">GF</th>
+                  <th scope="col">GA</th>
+                </tr>
+              </thead>
+              <tbody>
+                <SplitRow label="Home" split={profile.homeSplit} />
+                <SplitRow label="Away" split={profile.awaySplit} />
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </>
   );
 };

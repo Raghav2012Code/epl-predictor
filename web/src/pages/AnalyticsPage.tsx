@@ -1,15 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { EPLDataset } from "../types";
-import { MotionSection } from "../components/Motion";
+import { SplitBar } from "../components/SplitBar";
 import { Grid } from "../components/charts/grid";
 import { ChartTooltip } from "../components/charts/tooltip";
 import { LineChart, Line } from "../components/charts/line-chart";
 import { XAxis } from "../components/charts/x-axis";
-import { RingChart } from "../components/charts/ring-chart";
-import { Ring } from "../components/charts/ring";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 
 export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [selectedImage, setSelectedImage] = useState<{
@@ -57,14 +53,10 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
     dataset.benchmark.models[0];
   const asset = (path: string) =>
     `${import.meta.env.BASE_URL}${path.replace(/^\.?\//, "")}`;
-  const modelChartData = dataset.benchmark.models.map((entry) => ({
-    name: entry.name.replace("Random Forest", "RF").replace("Logistic Regression", "Logistic"),
-    rps: entry.rps,
-    isProduction: entry.isProduction,
-  }));
-  const rpsMin = Math.min(...modelChartData.map((entry) => entry.rps));
-  const rpsMax = Math.max(...modelChartData.map((entry) => entry.rps));
-  const rpsRange = Math.max(rpsMax - rpsMin, 0.001);
+  const rpsValues = dataset.benchmark.models.map((entry) => entry.rps);
+  const rpsMin = Math.min(...rpsValues);
+  const rpsMax = Math.max(...rpsValues);
+  const rpsRange = Math.max(rpsMax - rpsMin, 0.0001);
   const playedFixtures = dataset.fixtures.filter((fixture) => fixture.status === "Played").length;
   const projectedFixtures = dataset.fixtures.length - playedFixtures;
   const coveragePercent = dataset.fixtures.length > 0
@@ -86,227 +78,165 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
     gameweek: entry.gw,
   }));
   const outcome = dataset.analytics.outcomeDistribution;
-  const outcomeChartData = [
-    { label: "Home", value: outcome.homePct, maxValue: 100, color: "#1d6f52" },
-    { label: "Draw", value: outcome.drawPct, maxValue: 100, color: "#b46b2a" },
-    { label: "Away", value: outcome.awayPct, maxValue: 100, color: "#3d5a80" },
+  const metrics: Array<{ label: string; value: string; note: string }> = [
+    { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },
+    { label: "Accuracy", value: `${model?.accuracy ?? "n/a"}%`, note: "Share of outcomes called correctly." },
+    { label: "Log loss", value: `${model?.logLoss ?? "n/a"}`, note: "Probability quality. Lower is better." },
+    { label: "Goal error", value: `${model?.avgGoalMae ?? "n/a"}`, note: "Mean absolute error in goals." },
+    { label: "Within one goal", value: `${model?.within1Goal ?? "n/a"}%`, note: "Scorelines off by at most one." },
   ];
   return (
-    <MotionSection className="page-stack">
-      <div className="page-intro">
+    <>
+      <header className="page-head">
         <div>
-          <p className="eyebrow">Analytics</p>
-          <h1>Read the season through its evidence.</h1>
-          <p className="lede">
-            Metrics are calculated on a time ordered holdout. This page
-            separates validation evidence from the season projection so the
-            interface never presents a scenario as a measured result.
+          <h1>Analytics</h1>
+          <p className="label page-head__sub">
+            Evidence for the {dataset.benchmark.productionModel} model, measured
+            on a time-ordered holdout. Projections are never counted as results.
           </p>
         </div>
-        <div className="intro-stat">
-          <strong>{dataset.benchmark.productionModel}</strong>
-          <span>selected for production</span>
-        </div>
-      </div>
-      <div className="metric-grid">
-        <div className="metric-primary">
-          <span>RPS</span>
-          <strong>{model?.rps ?? "—"}</strong>
-          <small>Primary selection metric · lower is better</small>
-        </div>
-        <div>
-          <span>Accuracy</span>
-          <strong>{model?.accuracy ?? "—"}%</strong>
-          <small>Outcome argmax</small>
-        </div>
-        <div>
-          <span>Log loss</span>
-          <strong>{model?.logLoss ?? "—"}</strong>
-          <small>Probability quality</small>
-        </div>
-        <div>
-          <span>Goal MAE</span>
-          <strong>{model?.avgGoalMae ?? "—"}</strong>
-          <small>Expected goals</small>
-        </div>
-        <div>
-          <span>Within one goal</span>
-          <strong>{model?.within1Goal ?? "—"}%</strong>
-          <small>Scoreline tolerance</small>
-        </div>
-      </div>
-      <div className="analytics-chart-grid" aria-label="Interactive analytics charts">
-        <Card className="analytics-chart-card analytics-chart-wide">
-          <CardHeader>
-            <div className="analytics-card-heading">
-              <div>
-                <CardTitle>RPS benchmark</CardTitle>
-                <CardDescription>Lower scores indicate better-calibrated probabilities.</CardDescription>
-              </div>
-              <Badge variant="outline">Production: {dataset.benchmark.productionModel}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="rps-chart"
-              role="img"
-              aria-label="RPS comparison. Lower scores are better."
-            >
-              <div className="rps-chart-scale" aria-hidden="true">
-                <span>Higher bars = higher RPS</span>
-                <span>Zoomed to observed range</span>
-                <span>Lower score = better</span>
-              </div>
-              <div className="rps-bars">
-                {modelChartData.map((entry) => {
-                  const relativeHeight = 34 + ((entry.rps - rpsMin) / rpsRange) * 66;
-                  return (
-                    <div className={`rps-bar-group ${entry.isProduction ? "is-production" : ""}`} key={entry.name}>
-                      <strong>{entry.rps.toFixed(4)}</strong>
-                      <div className="rps-bar-track">
-                        <div className="rps-bar" style={{ height: `${relativeHeight}%` }} />
-                      </div>
-                      <span>{entry.name}</span>
-                      {entry.isProduction && <small>Production</small>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="analytics-chart-card">
-          <CardHeader>
-            <CardTitle>Outcome mix</CardTitle>
-            <CardDescription>Share across official and projected fixtures.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="outcome-chart-wrap">
-              <RingChart data={outcomeChartData} strokeWidth={15} ringGap={8} baseInnerRadius={38}>
-                <Ring index={0} color="#1d6f52" />
-                <Ring index={1} color="#b46b2a" />
-                <Ring index={2} color="#3d5a80" />
-              </RingChart>
-              <div className="outcome-chart-total"><strong>{dataset.fixtures.length}</strong><span>fixtures</span></div>
-            </div>
-            <div className="chart-legend">
-              {outcomeChartData.map((entry) => <span key={entry.label}><i style={{ background: entry.color }} />{entry.label} {entry.value.toFixed(1)}%</span>)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="analytics-chart-card coverage-card">
-          <CardHeader>
-            <CardTitle>Season coverage</CardTitle>
-            <CardDescription>How much of the schedule has a recorded result.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="coverage-stat">
-              <strong>{playedFixtures}<span>/{dataset.fixtures.length}</span></strong>
-              <div>
-                <span>results recorded</span>
-                <small>{coveragePercent}% of the season</small>
-              </div>
-            </div>
-            <div className="coverage-meter" aria-label={`${coveragePercent}% of fixtures have recorded results`} role="progressbar" aria-valuemax={100} aria-valuemin={0} aria-valuenow={coveragePercent}>
-              <span style={{ width: `${coveragePercent}%` }} />
-            </div>
-            <div className="coverage-breakdown">
-              <span><i className="coverage-dot recorded" />{playedFixtures} played</span>
-              <span><i className="coverage-dot projected" />{projectedFixtures} projected</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="analytics-chart-card analytics-chart-wide">
-          <CardHeader>
-            <div className="analytics-card-heading">
-              <div>
-                <CardTitle>Goals by gameweek</CardTitle>
-                <CardDescription>Observed and projected goal totals across the season schedule.</CardDescription>
-              </div>
-              <Badge variant="secondary">Offline dataset</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bklit-chart-shell">
-              <LineChart data={goalChartData} xDataKey="date" xPadding={10} aspectRatio="2.25 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
-                <Grid horizontal stroke="rgba(23,60,50,.12)" strokeDasharray="2,4" />
-                <Line dataKey="goals" stroke="#1d6f52" strokeWidth={3} showMarkers />
-                <XAxis numTicks={7} />
-                <ChartTooltip rows={(point) => [{ label: `GW${point.gameweek}`, value: `${point.goals} goals`, color: "#1d6f52" }]} />
-              </LineChart>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="content-card">
-        <div className="section-heading small">
-          <div>
-            <p className="eyebrow">Validation</p>
-            <h2>Model comparison</h2>
+      </header>
+
+      <dl className="metrics" aria-label={`${dataset.benchmark.productionModel} model metrics`}>
+        {metrics.map((metric) => (
+          <div key={metric.label}>
+            <dt className="label">{metric.label}</dt>
+            <dd className="num">{metric.value}</dd>
+            <dd className="label">{metric.note}</dd>
           </div>
-          <span className="muted">
-            Lower log loss and goal error are better
-          </span>
-        </div>
-        <div className="model-table">
-          <div className="model-row model-header">
-            <span>Model</span>
-            <span>RPS</span>
-            <span>Accuracy</span>
-            <span>Log loss</span>
-            <span>Goal MAE</span>
-          </div>
+        ))}
+      </dl>
+
+      <section className="block" aria-labelledby="models-title">
+        <h2 id="models-title">Model comparison</h2>
+        <p className="label block__sub">
+          The production model has the lowest RPS, which rewards honest
+          probabilities rather than a single correct guess.
+        </p>
+        <div
+          className="rps"
+          role="img"
+          aria-label={`RPS by model, lower is better: ${dataset.benchmark.models.map((entry) => `${entry.name} ${entry.rps}`).join(", ")}`}
+        >
           {dataset.benchmark.models.map((entry) => (
-            <div
-              className={`model-row ${entry.isProduction ? "selected-row" : ""}`}
-              key={entry.name}
-            >
-              <strong>
-                {entry.name}
-                {entry.isProduction && <em>Production</em>}
-              </strong>
-              <span data-label="RPS" aria-label={`RPS ${entry.rps}`}>{entry.rps}</span>
-              <span data-label="Accuracy" aria-label={`Accuracy ${entry.accuracy}%`}>{entry.accuracy}%</span>
-              <span data-label="Log loss" aria-label={`Log loss ${entry.logLoss}`}>{entry.logLoss}</span>
-              <span data-label="Goal MAE" aria-label={`Goal MAE ${entry.avgGoalMae}`}>{entry.avgGoalMae}</span>
+            <div className={`rps__row${entry.isProduction ? " is-production" : ""}`} key={entry.name}>
+              <span className="rps__name">{entry.name}</span>
+              <span className="rps__track">
+                <span
+                  className="rps__tick"
+                  style={{ left: `${4 + ((entry.rps - rpsMin) / rpsRange) * 92}%` }}
+                />
+              </span>
+              <span className="rps__value num">{entry.rps.toFixed(4)}</span>
             </div>
           ))}
+          <p className="label rps__scale">
+            The axis runs from {rpsMin.toFixed(4)} to {rpsMax.toFixed(4)}, so
+            small gaps look large. The models are close.
+          </p>
         </div>
-        <div className="metric-explainer">
-          <div>
-            <p className="eyebrow">Why RPS leads</p>
-            <h3>Probability quality matters more than a single winner.</h3>
+        <div className="table-scroll">
+          <table className="league models">
+            <caption className="sr-only">Validation results by model</caption>
+            <thead>
+              <tr>
+                <th scope="col" className="models__name">Model</th>
+                <th scope="col">RPS</th>
+                <th scope="col">Accuracy</th>
+                <th scope="col" className="is-optional">Log loss</th>
+                <th scope="col">Goal error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dataset.benchmark.models.map((entry) => (
+                <tr key={entry.name} className={entry.isProduction ? "is-production" : undefined}>
+                  <th scope="row" className="models__name">
+                    {entry.name}
+                    {entry.isProduction && <span className="tag">Production</span>}
+                  </th>
+                  <td className="num">{entry.rps}</td>
+                  <td className="num">{entry.accuracy}%</td>
+                  <td className="num is-optional">{entry.logLoss}</td>
+                  <td className="num">{entry.avgGoalMae}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="block-grid">
+        <section className="block" aria-labelledby="mix-title">
+          <h2 id="mix-title">Outcome mix</h2>
+          <p className="label block__sub">
+            Forecast outcomes across all {dataset.fixtures.length} fixtures,
+            official and projected.
+          </p>
+          <SplitBar size="detail" home={outcome.homePct} draw={outcome.drawPct} away={outcome.awayPct} />
+          <p className="block__note">
+            {outcome.home} home wins, {outcome.draw} draws and {outcome.away} away wins.
+          </p>
+        </section>
+        <section className="block" aria-labelledby="coverage-title">
+          <h2 id="coverage-title">Season coverage</h2>
+          <p className="label block__sub">How much of the schedule has a recorded result.</p>
+          <p className="coverage__figure num">
+            {playedFixtures}
+            <span>/{dataset.fixtures.length}</span>
+          </p>
+          <div
+            className="meter"
+            role="progressbar"
+            aria-label="Fixtures with a recorded result"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={coveragePercent}
+          >
+            <span style={{ width: `${coveragePercent}%` }} />
           </div>
-          <p>Ranked Probability Score rewards calibrated probability distributions, not just the most likely outcome. The production model is selected by the lowest evaluation RPS, with log loss, accuracy, and goal error retained as supporting evidence.</p>
-        </div>
+          <p className="block__note">
+            {playedFixtures} played, {projectedFixtures} projected. {coveragePercent}% of the season is on record.
+          </p>
+        </section>
       </div>
-      <div className="content-card">
-        <div className="section-heading small">
-          <div>
-            <p className="eyebrow">Diagnostics</p>
-            <h2>Training signals</h2>
-          </div>
-          <span className="muted">Generated from the current benchmark</span>
+
+      <section className="block" aria-labelledby="goals-title">
+        <h2 id="goals-title">Goals by gameweek</h2>
+        <p className="label block__sub">
+          Recorded and projected goal totals across the schedule.
+        </p>
+        <div className="chart">
+          <LineChart data={goalChartData} xDataKey="date" xPadding={10} aspectRatio="2.4 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
+            <Grid horizontal stroke="var(--line)" strokeDasharray="2,4" />
+            <Line dataKey="goals" stroke="var(--home)" strokeWidth={3} showMarkers />
+            <XAxis numTicks={7} />
+            <ChartTooltip rows={(point) => [{ label: `GW${point.gameweek}`, value: `${point.goals} goals`, color: "var(--home)" }]} />
+          </LineChart>
         </div>
-        <div className="diagnostic-grid">
+      </section>
+
+      <section className="block" aria-labelledby="diag-title">
+        <h2 id="diag-title">Training diagnostics</h2>
+        <p className="label block__sub">
+          Charts generated from the current benchmark. Select one to enlarge it.
+        </p>
+        <ul className="diagnostics">
           {dataset.benchmark.diagnostics.map((diagnostic) => (
-            <button
-              key={diagnostic.id}
-              onClick={() => setSelectedImage(diagnostic)}
-            >
-              <img
-                src={asset(diagnostic.src)}
-                alt={diagnostic.title}
-                loading="lazy"
-              />
-              <span>
-                <strong>{diagnostic.title}</strong>
-                <small>{diagnostic.caption}</small>
-              </span>
-            </button>
+            <li key={diagnostic.id}>
+              <button
+                type="button"
+                className="diagnostics__item"
+                onClick={() => setSelectedImage(diagnostic)}
+              >
+                <img src={asset(diagnostic.src)} alt="" loading="lazy" />
+                <span className="diagnostics__title">{diagnostic.title}</span>
+                <span className="label">{diagnostic.caption}</span>
+              </button>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </section>
+
       {selectedImage && (
         <div
           className="dialog-backdrop"
@@ -316,27 +246,32 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
           }}
         >
           <div
-            className="image-dialog"
+            className="dialog"
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="diagnostic-title"
           >
-            <div className="section-heading small">
+            <div className="dialog__head">
               <h2 id="diagnostic-title">{selectedImage.title}</h2>
               <button
                 ref={closeRef}
+                type="button"
+                className="btn btn--quiet"
                 onClick={() => setSelectedImage(null)}
-                aria-label="Close diagnostic preview"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" /> Close
               </button>
             </div>
-            <img src={asset(selectedImage.src)} alt={selectedImage.title} />
-            <p className="muted">{selectedImage.caption}</p>
+            <img
+              className="dialog__image"
+              src={asset(selectedImage.src)}
+              alt={`${selectedImage.title}. ${selectedImage.caption}`}
+            />
+            <p className="label">{selectedImage.caption}</p>
           </div>
         </div>
       )}
-    </MotionSection>
+    </>
   );
 };

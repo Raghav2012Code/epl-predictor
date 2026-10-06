@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
-import type { EPLDataset, Fixture } from "../types";
-import { MotionSection } from "../components/Motion";
+import React, { useEffect, useId, useMemo, useState } from "react";
+import type { EPLDataset } from "../types";
 import { TeamMark } from "../components/TeamMark";
-import { ProbabilityStrip } from "../components/ProbabilityStrip";
-import { deltaLabel, pct, scoreParts } from "../lib/format";
+import { SplitBar } from "../components/SplitBar";
+import { deltaLabel, scoreParts } from "../lib/format";
 import { calculateScenario } from "../lib/fixtures";
 
 export const SimulatorPage: React.FC<{
@@ -20,6 +19,7 @@ export const SimulatorPage: React.FC<{
   const [homeBoost, setHomeBoost] = useState(0);
   const [awayBoost, setAwayBoost] = useState(0);
   const [neutral, setNeutral] = useState(false);
+  const uid = useId();
   useEffect(() => {
     setHomeTeam(initialHome);
     setAwayTeam(initialAway);
@@ -77,37 +77,40 @@ export const SimulatorPage: React.FC<{
     setNeutral(false);
   };
   if (!home || !away || !scenario)
-    return <div className="empty-state">Club data is unavailable.</div>;
-  const scenarioFixture = {
-    homeWinProb: scenario.homeProb,
-    drawProb: scenario.drawProb,
-    awayWinProb: scenario.awayProb,
-  } as Fixture;
+    return (
+      <div className="empty">
+        <strong>Club data is unavailable</strong>
+        Reload the page to load the season file again.
+      </div>
+    );
+  const changed = homeBoost !== 0 || awayBoost !== 0 || neutral;
+  const homeMove = baseline ? scenario.homeProb - baseline.homeProb : 0;
+  const formatBoost = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
   return (
-    <MotionSection className="page-stack">
-      <div className="page-intro">
+    <>
+      <header className="page-head">
         <div>
-          <p className="eyebrow">Scenario tool</p>
-          <h1>Ask a different question.</h1>
-          <p className="lede">
-            Adjust form and venue assumptions to see how the matchup moves.
-            Scenario numbers are browser estimates; the scheduled forecast
-            remains the production reference.
+          <h1>Simulator</h1>
+          <p className="label page-head__sub">
+            Change form and venue to see how a matchup moves. Scenario numbers
+            are estimates made in your browser; the scheduled forecast stays the
+            reference.
           </p>
         </div>
-      </div>
-      <div className="simulator-layout">
-        <div className="control-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Adjust assumptions</p>
-              <h2>Scenario controls</h2>
-            </div>
-            <button className="text-button" onClick={resetScenario}>Reset</button>
+      </header>
+      <div className="sim">
+        <form className="sim__controls" onSubmit={(event) => event.preventDefault()} aria-label="Scenario controls">
+          <div className="sim__controls-head">
+            <h2>Scenario</h2>
+            <button type="button" className="text-button" onClick={resetScenario} disabled={!changed && homeTeam === initialHome && awayTeam === initialAway}>
+              Reset
+            </button>
           </div>
-          <label>
-            Home club
+          <div className="field">
+            <label htmlFor={`${uid}-home`}>Home club</label>
             <select
+              id={`${uid}-home`}
+              className="select"
               value={homeTeam}
               onChange={(event) => setHomeTeam(event.target.value)}
             >
@@ -117,10 +120,12 @@ export const SimulatorPage: React.FC<{
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Away club
+          </div>
+          <div className="field">
+            <label htmlFor={`${uid}-away`}>Away club</label>
             <select
+              id={`${uid}-away`}
+              className="select"
               value={awayTeam}
               onChange={(event) => setAwayTeam(event.target.value)}
             >
@@ -130,99 +135,102 @@ export const SimulatorPage: React.FC<{
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Home form{" "}
+          </div>
+          <div className="field">
+            <div className="field__row">
+              <label htmlFor={`${uid}-hf`}>{homeTeam} form</label>
+              <output htmlFor={`${uid}-hf`} className="num">{formatBoost(homeBoost)}</output>
+            </div>
             <input
+              id={`${uid}-hf`}
+              className="range"
               type="range"
               min="-30"
               max="30"
               value={homeBoost}
               onChange={(event) => setHomeBoost(Number(event.target.value))}
             />
-            <span>
-              {homeBoost > 0 ? "+" : ""}
-              {homeBoost}%
-            </span>
-          </label>
-          <label>
-            Away form{" "}
+          </div>
+          <div className="field">
+            <div className="field__row">
+              <label htmlFor={`${uid}-af`}>{awayTeam} form</label>
+              <output htmlFor={`${uid}-af`} className="num">{formatBoost(awayBoost)}</output>
+            </div>
             <input
+              id={`${uid}-af`}
+              className="range"
               type="range"
               min="-30"
               max="30"
               value={awayBoost}
               onChange={(event) => setAwayBoost(Number(event.target.value))}
             />
-            <span>
-              {awayBoost > 0 ? "+" : ""}
-              {awayBoost}%
-            </span>
-          </label>
-          <label className="check-row">
+          </div>
+          <label className="check">
             <input
               type="checkbox"
               checked={neutral}
               onChange={(event) => setNeutral(event.target.checked)}
-            />{" "}
-            Neutral venue
+            />
+            Neutral venue, no home advantage
           </label>
-        </div>
-        <div className="scenario-panel">
-          <div className="scenario-score">
-            <div>
+        </form>
+
+        <section className="sim__result" aria-label="Scenario result">
+          <div className="detail__teams">
+            <div className="detail__team">
               <TeamMark team={home} />
               <strong>{homeTeam}</strong>
+              <span className="label">Home</span>
             </div>
-            <span>
-              {scenario.homeScore} — {scenario.awayScore}
-            </span>
-            <div>
+            <div className="detail__score">
+              <span className="num detail__goals">
+                {scenario.homeScore}
+                <span aria-hidden="true"> - </span>
+                <span className="sr-only"> to </span>
+                {scenario.awayScore}
+              </span>
+              <span className="label">Scenario score</span>
+            </div>
+            <div className="detail__team">
               <TeamMark team={away} />
               <strong>{awayTeam}</strong>
+              <span className="label">Away</span>
             </div>
           </div>
-          <ProbabilityStrip fixture={scenarioFixture} />
-          <div className="probability-labels">
-            <span>
-              <b>{pct(scenario.homeProb)}</b> Home
-            </span>
-            <span>
-              <b>{pct(scenario.drawProb)}</b> Draw
-            </span>
-            <span>
-              <b>{pct(scenario.awayProb)}</b> Away
-            </span>
-          </div>
-          {baseline && (
-            <div className="scenario-delta" aria-live="polite">
-              <div>
-                <span>Against baseline</span>
-                <strong>{scenario.homeProb >= baseline.homeProb ? "Home" : "Away"} moves {deltaLabel(Math.abs(scenario.homeProb - baseline.homeProb))}</strong>
-              </div>
-              <p>{homeBoost || awayBoost || neutral ? "Your assumptions shift the browser scenario; the scheduled forecast remains unchanged." : "Move a control to compare your scenario with the neutral baseline."}</p>
-            </div>
-          )}
-          <div className="scenario-grid">
+          <SplitBar
+            size="detail"
+            home={scenario.homeProb}
+            draw={scenario.drawProb}
+            away={scenario.awayProb}
+          />
+          <p className="sim__delta" aria-live="polite">
+            {changed
+              ? `Compared with the unadjusted baseline, ${homeTeam}'s win chance ${
+                  homeMove === 0 ? "does not change" : `${homeMove > 0 ? "rises" : "falls"} by ${deltaLabel(Math.abs(homeMove)).replace("+", "")}`
+                }.`
+              : "Move a control to compare your scenario with the unadjusted baseline."}
+          </p>
+          <dl className="facts facts--grid">
             <div>
-              <span>Expected home goals</span>
-              <strong>{scenario.homeExpected.toFixed(2)}</strong>
+              <dt className="label">Expected {homeTeam} goals</dt>
+              <dd className="num">{scenario.homeExpected.toFixed(2)}</dd>
             </div>
             <div>
-              <span>Expected away goals</span>
-              <strong>{scenario.awayExpected.toFixed(2)}</strong>
+              <dt className="label">Expected {awayTeam} goals</dt>
+              <dd className="num">{scenario.awayExpected.toFixed(2)}</dd>
             </div>
             <div>
-              <span>Scheduled forecast</span>
-              <strong>{production?.predictedScore ?? "Not scheduled"}</strong>
+              <dt className="label">Scheduled forecast</dt>
+              <dd className="num">{production?.predictedScore ?? "Not scheduled"}</dd>
             </div>
             <div>
-              <span>Forecast source</span>
-              <strong>{dataset.benchmark.productionModel}</strong>
+              <dt className="label">Forecast model</dt>
+              <dd>{dataset.benchmark.productionModel}</dd>
             </div>
-          </div>
-        </div>
+          </dl>
+        </section>
       </div>
-    </MotionSection>
+    </>
   );
 };

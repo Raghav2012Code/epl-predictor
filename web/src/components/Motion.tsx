@@ -19,9 +19,9 @@ export const MotionPreferenceProvider: React.FC<{ disabled: boolean; children: R
 export const useMotionDisabled = () => useReducedMotion() || useContext(MotionPreferenceContext);
 
 export const pageVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
 };
 
 export const staggerVariants = {
@@ -47,7 +47,7 @@ export const MotionSection: React.FC<
       viewport={inView ? { once: true, amount: 0.25 } : undefined}
       exit={reduceMotion ? undefined : "exit"}
       variants={reduceMotion ? undefined : pageVariants}
-      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.section>

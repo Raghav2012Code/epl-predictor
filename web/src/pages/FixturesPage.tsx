@@ -1,155 +1,224 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { EPLDataset, Fixture } from "../types";
-import { MotionItem, MotionKeyFade, MotionList, MotionSection } from "../components/Motion";
 import { TeamMark } from "../components/TeamMark";
-import { ProbabilityStrip } from "../components/ProbabilityStrip";
-import { confidenceFor, displayDate, fixtureDay, pct, startOfToday } from "../lib/format";
+import { SplitBar } from "../components/SplitBar";
+import {
+  confidenceFor,
+  fixtureDay,
+  kickoff,
+  longDay,
+  pct,
+  scoreParts,
+  shortDay,
+  startOfToday,
+} from "../lib/format";
 import { downloadFixturesCsv, nextFixtureByDate, resultFor } from "../lib/fixtures";
 
 type FixtureFilter = "all" | "upcoming" | "played";
 type FixtureSort = "date" | "confidence";
 
+const filters: Array<[FixtureFilter, string]> = [
+  ["all", "All"],
+  ["upcoming", "Upcoming"],
+  ["played", "Played"],
+];
+
+/** Goals for each side: the final score once played, the predicted score before. */
+const goalsFor = (fixture: Fixture): [number, number] => {
+  const source =
+    fixture.status === "Played" ? fixture.actualScore : fixture.predictedScore;
+  return (
+    scoreParts(source) ?? [fixture.predHomeGoals, fixture.predAwayGoals]
+  );
+};
+
+const pickLabel = (fixture: Fixture) =>
+  fixture.predictedOutcome === "Home Win"
+    ? `${fixture.homeTeam} win`
+    : fixture.predictedOutcome === "Away Win"
+      ? `${fixture.awayTeam} win`
+      : "Draw";
+
+const resultLabel = (fixture: Fixture) => {
+  const result = resultFor(fixture);
+  return result === "Home win"
+    ? `${fixture.homeTeam} win`
+    : result === "Away win"
+      ? `${fixture.awayTeam} win`
+      : result;
+};
+
 const FixtureRow: React.FC<{
   fixture: Fixture;
+  index: number;
   selected: boolean;
-  onSelect: () => void;
-}> = ({ fixture, selected, onSelect }) => {
-  const actual = fixture.status === "Played" ? fixture.actualScore : null;
+  isNext: boolean;
+  showDate: boolean;
+  onSelect: (target: HTMLElement) => void;
+}> = ({ fixture, index, selected, isNext, showDate, onSelect }) => {
+  const played = fixture.status === "Played";
+  const [homeGoals, awayGoals] = goalsFor(fixture);
   return (
-    <button
-      className={`fixture-row ${selected ? "is-selected" : ""}`}
-      onClick={onSelect}
-      aria-pressed={selected}
-    >
-      <span className="fixture-date">
-        {displayDate(fixture.date)}
-        <small>
-          GW{fixture.gameweek} ·{" "}
-          {fixture.time === "TBC" ? "Kickoff TBC" : fixture.time}
-        </small>
-      </span>
-      <span className="fixture-teams">
-        <span>
-          <TeamMark short={fixture.homeShort} badge={fixture.homeBadge} />
-          {fixture.homeTeam}
+    <li>
+      <button
+        type="button"
+        className={`match${selected ? " is-selected" : ""}${played ? " is-played" : ""}`}
+        onClick={(event) => onSelect(event.currentTarget)}
+        aria-pressed={selected}
+        aria-label={`${fixture.homeTeam} v ${fixture.awayTeam}, ${showDate ? `${shortDay(fixture.date)}, ` : ""}${
+          fixture.time === "TBC" ? "kickoff to be confirmed" : `kickoff ${fixture.time}`
+        }. ${played ? "Final" : "Predicted"} score ${homeGoals} to ${awayGoals}. Forecast: home win ${fixture.homeWinProb.toFixed(1)} percent, draw ${fixture.drawProb.toFixed(1)}, away win ${fixture.awayWinProb.toFixed(1)}.${isNext ? " Next match." : ""}`}
+      >
+        <span className="match__when" aria-hidden="true">
+          <span className="match__time num">{kickoff(fixture.time)}</span>
+          {isNext && (
+            <span className="match__next">
+              <i /> Next
+            </span>
+          )}
+          {showDate && <span className="label">{shortDay(fixture.date)}</span>}
         </span>
-        <span>
-          <TeamMark short={fixture.awayShort} badge={fixture.awayBadge} />
-          {fixture.awayTeam}
+        <span className="match__teams" aria-hidden="true">
+          <span className="match__team">
+            <TeamMark short={fixture.homeShort} badge={fixture.homeBadge} />
+            <span className="match__name">{fixture.homeTeam}</span>
+            <span className="match__goals num">{homeGoals}</span>
+          </span>
+          <span className="match__team">
+            <TeamMark short={fixture.awayShort} badge={fixture.awayBadge} />
+            <span className="match__name">{fixture.awayTeam}</span>
+            <span className="match__goals num">{awayGoals}</span>
+          </span>
         </span>
-      </span>
-      <span className="fixture-score">
-        <small>{actual ? "Final" : "Model score"}</small>
-        {actual ?? fixture.predictedScore}
-      </span>
-      <span className="fixture-favorite">
-        <small>
-          {fixture.status === "Played"
-            ? resultFor(fixture)
-            : fixture.predictedOutcome}
-        </small>
-        {fixture.status === "Played"
-          ? "Result logged"
-          : `${pct(Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb))} strongest signal`}
-      </span>
-      <ArrowUpRight className="row-arrow" size={16} aria-hidden="true" />
-    </button>
+        <SplitBar
+          className="match__bar"
+          sweep={index}
+          home={fixture.homeWinProb}
+          draw={fixture.drawProb}
+          away={fixture.awayWinProb}
+        />
+      </button>
+    </li>
+  );
+};
+
+const FormLine: React.FC<{
+  dataset: EPLDataset;
+  team: string;
+  short: string;
+  badge: string;
+}> = ({ dataset, team, short, badge }) => {
+  const profile = dataset.teams[team];
+  return (
+    <div className="form-line">
+      <TeamMark short={short} badge={badge} />
+      <span className="form-line__name">{team}</span>
+      {profile?.last5Form?.length ? (
+        <span className="form-chips" role="img" aria-label={`Last five: ${profile.last5Form.join(", ")}`}>
+          {profile.last5Form.map((result, index) => (
+            <span key={index} className={`form-chip form-chip--${result}`} aria-hidden="true">
+              {result}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span className="label">Form unavailable</span>
+      )}
+    </div>
   );
 };
 
 const FixtureDetail: React.FC<{
   dataset: EPLDataset;
-  fixture: Fixture | null;
+  fixture: Fixture;
   onSimulate: (home: string, away: string) => void;
 }> = ({ dataset, fixture, onSimulate }) => {
-  if (!fixture)
-    return (
-      <div className="detail-panel empty-state">
-        Choose a fixture to inspect it.
-      </div>
-    );
-  const isPlayed = fixture.status === "Played";
-  const homeProfile = dataset.teams[fixture.homeTeam];
-  const awayProfile = dataset.teams[fixture.awayTeam];
+  const played = fixture.status === "Played";
+  const [homeGoals, awayGoals] = goalsFor(fixture);
   return (
-    <article className="detail-panel">
-      <div className="detail-top">
-        <span
-          className={`status-pill ${isPlayed ? "status-played" : "status-upcoming"}`}
-        >
-          {isPlayed ? "Final result" : "Forecast"}
-        </span>
-        <span>
-          GW{fixture.gameweek} · {displayDate(fixture.date)} ·{" "}
-          {fixture.time === "TBC" ? "Kickoff TBC" : fixture.time}
-        </span>
-      </div>
-      <div className="matchup">
-        <div>
+    <article className="detail" aria-labelledby="detail-title">
+      <p className="label detail__when">
+        {played ? "Final result" : "Forecast"}, gameweek {fixture.gameweek}.{" "}
+        {longDay(fixture.date)}
+        {fixture.time === "TBC" ? ", kickoff to be confirmed" : ` at ${fixture.time}`}.
+      </p>
+      <h2 id="detail-title" className="sr-only">
+        {fixture.homeTeam} v {fixture.awayTeam}
+      </h2>
+      <div className="detail__teams">
+        <div className="detail__team">
           <TeamMark short={fixture.homeShort} badge={fixture.homeBadge} />
           <strong>{fixture.homeTeam}</strong>
-          <small>Home</small>
+          <span className="label">Home</span>
         </div>
-        <div className="matchup-score">
-          <span>{isPlayed ? fixture.actualScore : fixture.predictedScore}</span>
-          <small>{isPlayed ? "official score" : "most likely scoreline"}</small>
-          {isPlayed && <small>Model had {fixture.predictedScore}</small>}
+        <div className="detail__score">
+          <span className={`num detail__goals${played ? "" : " is-predicted"}`}>
+            {homeGoals}
+            <span aria-hidden="true"> - </span>
+            <span className="sr-only"> to </span>
+            {awayGoals}
+          </span>
+          <span className="label">{played ? "Final score" : "Predicted score"}</span>
         </div>
-        <div>
+        <div className="detail__team">
           <TeamMark short={fixture.awayShort} badge={fixture.awayBadge} />
           <strong>{fixture.awayTeam}</strong>
-          <small>Away</small>
+          <span className="label">Away</span>
         </div>
       </div>
-      <ProbabilityStrip fixture={fixture} />
-      <div className="probability-labels">
-        <span>
-          <b>{pct(fixture.homeWinProb)}</b> Home
-        </span>
-        <span>
-          <b>{pct(fixture.drawProb)}</b> Draw
-        </span>
-        <span>
-          <b>{pct(fixture.awayWinProb)}</b> Away
-        </span>
-      </div>
-      <div className="detail-metrics" aria-label="Forecast summary">
+      <SplitBar
+        size="detail"
+        home={fixture.homeWinProb}
+        draw={fixture.drawProb}
+        away={fixture.awayWinProb}
+      />
+      <dl className="facts">
         <div>
-          <span>Expected goals</span>
-          <strong>{fixture.predHomeGoals.toFixed(2)} — {fixture.predAwayGoals.toFixed(2)}</strong>
+          <dt className="label">Model pick</dt>
+          <dd>{pickLabel(fixture)}</dd>
         </div>
         <div>
-          <span>Strongest signal</span>
-          <strong>{pct(confidenceFor(fixture))}</strong>
+          <dt className="label">{played ? "Result" : "Confidence"}</dt>
+          <dd>{played ? resultLabel(fixture) : pct(confidenceFor(fixture))}</dd>
         </div>
+        {played && (
+          <div>
+            <dt className="label">Predicted score</dt>
+            <dd>{fixture.predictedScore}</dd>
+          </div>
+        )}
         <div>
-          <span>Evidence state</span>
-          <strong>{isPlayed ? "Measured" : "Projected"}</strong>
+          <dt className="label">Venue</dt>
+          <dd>{fixture.stadium}</dd>
         </div>
-      </div>
-      <div className="form-strip" aria-label="Team context">
-        <div><span>{fixture.homeTeam} form</span><strong>{homeProfile?.last5Form?.join(" ") ?? "Unavailable"}</strong><small>{homeProfile?.restDaysAvg ?? "—"}d average rest</small></div>
-        <div><span>{fixture.awayTeam} form</span><strong>{awayProfile?.last5Form?.join(" ") ?? "Unavailable"}</strong><small>{awayProfile?.restDaysAvg ?? "—"}d average rest</small></div>
-      </div>
-      <div className="detail-copy">
-        <p>
-          <strong>{isPlayed ? "Model review" : "Model read"}</strong>{" "}
-          {isPlayed
-            ? `The model selected ${fixture.predictedOutcome.toLowerCase()} and the official result was ${fixture.actualScore}.`
-            : `The model leans ${fixture.predictedOutcome.toLowerCase()} with a ${fixture.predictedScore} scoreline.`}
-        </p>
-        <p className="muted">
-          Percentages are rounded to one decimal place and always total 100%.
-          Exact scores are illustrative Poisson modes, not certainties.
-        </p>
+      </dl>
+      <div className="detail__form">
+        <h3 className="label">Last five matches</h3>
+        <FormLine
+          dataset={dataset}
+          team={fixture.homeTeam}
+          short={fixture.homeShort}
+          badge={fixture.homeBadge}
+        />
+        <FormLine
+          dataset={dataset}
+          team={fixture.awayTeam}
+          short={fixture.awayShort}
+          badge={fixture.awayBadge}
+        />
       </div>
       <button
-        className="primary-button"
+        type="button"
+        className="btn btn--block"
         onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}
       >
-        Open in simulator <ArrowUpRight size={16} />
+        Open in simulator
       </button>
+      <p className="label detail__note">
+        Percentages are rounded to one decimal place. The predicted score is the
+        single most likely result, not a certainty.
+      </p>
     </article>
   );
 };
@@ -166,20 +235,26 @@ export const FixturesPage: React.FC<{
       ),
     [dataset.fixtures],
   );
+  const firstGameweek = gameweeks[0] ?? 1;
+  const lastGameweek = gameweeks[gameweeks.length - 1] ?? 38;
   const firstUpcoming =
     dataset.fixtures.find((fixture) => fixture.status !== "Played")?.gameweek ??
     1;
-  const autoFixture = useMemo(
+  const nextFixture = useMemo(
     () => nextFixtureByDate(dataset.fixtures),
     [dataset.fixtures],
   );
   const [gameweek, setGameweek] = useState(
-    autoFixture?.gameweek ?? firstUpcoming,
+    nextFixture?.gameweek ?? firstUpcoming,
   );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [filter, setFilter] = useState<FixtureFilter>("all");
   const [sort, setSort] = useState<FixtureSort>("date");
-  const filtered = useMemo(
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  const inGameweek = useMemo(
     () =>
       dataset.fixtures.filter(
         (fixture) =>
@@ -192,99 +267,123 @@ export const FixturesPage: React.FC<{
     [dataset.fixtures, gameweek, query],
   );
   const visibleFixtures = useMemo(() => {
-    const matchesFilter = filtered.filter((fixture) =>
-      filter === "all" ? true : filter === "played" ? fixture.status === "Played" : fixture.status !== "Played",
+    const matching = inGameweek.filter((fixture) =>
+      filter === "all"
+        ? true
+        : filter === "played"
+          ? fixture.status === "Played"
+          : fixture.status !== "Played",
     );
-    return [...matchesFilter].sort((a, b) =>
+    return [...matching].sort((a, b) =>
       sort === "confidence"
         ? confidenceFor(b) - confidenceFor(a) || a.id - b.id
-        : fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
+        : fixtureDay(a.date) - fixtureDay(b.date) ||
+          a.time.localeCompare(b.time) ||
+          a.id - b.id,
     );
-  }, [filter, filtered, sort]);
+  }, [filter, inGameweek, sort]);
+
   useEffect(() => {
     const upcoming = visibleFixtures
       .filter(
         (fixture) =>
-          fixture.status !== "Played" &&
-          fixtureDay(fixture.date) >= startOfToday(),
+          fixture.status !== "Played" && fixtureDay(fixture.date) >= startOfToday(),
       )
-      .sort(
-        (a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id,
-      )[0];
+      .sort((a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id)[0];
     setSelectedId((upcoming ?? visibleFixtures[0])?.id ?? null);
+    setSheetOpen(false);
   }, [gameweek, query, visibleFixtures]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
-      if (event.key === "ArrowLeft") setGameweek((current) => Math.max(gameweeks[0] ?? 1, current - 1));
-      if (event.key === "ArrowRight") setGameweek((current) => Math.min(gameweeks[gameweeks.length - 1] ?? 38, current + 1));
+      if (
+        target.isContentEditable ||
+        ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)
+      )
+        return;
+      if (event.key === "ArrowLeft")
+        setGameweek((current) => Math.max(firstGameweek, current - 1));
+      if (event.key === "ArrowRight")
+        setGameweek((current) => Math.min(lastGameweek, current + 1));
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [gameweeks]);
+  }, [firstGameweek, lastGameweek]);
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSheetOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      openerRef.current?.focus();
+    };
+  }, [sheetOpen]);
+
   const selected =
     visibleFixtures.find((fixture) => fixture.id === selectedId) ??
     visibleFixtures[0] ??
     null;
-  const played = dataset.fixtures.filter(
-    (fixture) => fixture.status === "Played",
-  ).length;
+  const playedInWeek = inGameweek.filter((fixture) => fixture.status === "Played").length;
   const model =
     dataset.benchmark.models.find((entry) => entry.isProduction) ??
     dataset.benchmark.models[0];
+  const flat = sort !== "date";
+  const days = useMemo(() => {
+    const groups: Array<{ date: string; items: Fixture[] }> = [];
+    for (const fixture of visibleFixtures) {
+      const last = groups[groups.length - 1];
+      if (last && last.date === fixture.date) last.items.push(fixture);
+      else groups.push({ date: fixture.date, items: [fixture] });
+    }
+    return groups;
+  }, [visibleFixtures]);
+
+  const renderRow = (fixture: Fixture, index: number) => (
+    <FixtureRow
+      key={fixture.id}
+      fixture={fixture}
+      index={index}
+      selected={fixture.id === selected?.id}
+      isNext={fixture.id === nextFixture?.id}
+      showDate={flat}
+      onSelect={(target) => {
+        openerRef.current = target;
+        setSelectedId(fixture.id);
+        setSheetOpen(true);
+      }}
+    />
+  );
+  let rowIndex = 0;
+
   return (
-    <MotionSection className="page-stack">
-      <div className="page-intro">
+    <>
+      <header className="page-head">
         <div>
-          <p className="eyebrow">2026/27 season workspace</p>
-          <h1>Fixtures, with the model beside them.</h1>
-          <p className="lede">
-            Browse each gameweek, see the forecast in plain language, and open a
-            matchup when you want to inspect the assumptions.
+          <h1>Gameweek {gameweek}</h1>
+          <p className="label page-head__sub">
+            {inGameweek.length} fixtures, {playedInWeek} played.{" "}
+            {model
+              ? `${dataset.benchmark.productionModel} model, ${model.accuracy}% of held-out outcomes called correctly.`
+              : ""}
           </p>
         </div>
-        <div className="intro-stat">
-          <strong>
-            {played}/{dataset.totalMatches}
-          </strong>
-          <span>results recorded</span>
-        </div>
-      </div>
-      <div className="stat-grid">
-        <div>
-          <span>Production model</span>
-          <strong>{dataset.benchmark.productionModel}</strong>
-        </div>
-        <div>
-          <span>Validation accuracy</span>
-          <strong>{model?.accuracy ?? "—"}%</strong>
-        </div>
-        <div>
-          <span>Average goal error</span>
-          <strong>{model?.avgGoalMae ?? "—"}</strong>
-        </div>
-        <div>
-          <span>Data basis</span>
-          <strong>Time series</strong>
-        </div>
-      </div>
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Schedule</p>
-          <h2>Gameweek {gameweek}</h2>
-        </div>
-        <div className="stepper">
+        <div className="stepper" role="group" aria-label="Choose gameweek">
           <button
-            onClick={() =>
-              setGameweek((current) => Math.max(gameweeks[0] ?? 1, current - 1))
-            }
-            disabled={gameweek <= (gameweeks[0] ?? 1)}
+            type="button"
+            className="stepper__button"
+            onClick={() => setGameweek((current) => Math.max(firstGameweek, current - 1))}
+            disabled={gameweek <= firstGameweek}
             aria-label="Previous gameweek"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={20} aria-hidden="true" />
           </button>
           <select
+            className="select"
             value={gameweek}
             onChange={(event) => setGameweek(Number(event.target.value))}
             aria-label="Select gameweek"
@@ -296,63 +395,117 @@ export const FixturesPage: React.FC<{
             ))}
           </select>
           <button
-            onClick={() =>
-              setGameweek((current) =>
-                Math.min(gameweeks[gameweeks.length - 1] ?? 38, current + 1),
-              )
-            }
-            disabled={gameweek >= (gameweeks[gameweeks.length - 1] ?? 38)}
+            type="button"
+            className="stepper__button"
+            onClick={() => setGameweek((current) => Math.min(lastGameweek, current + 1))}
+            disabled={gameweek >= lastGameweek}
             aria-label="Next gameweek"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={20} aria-hidden="true" />
           </button>
         </div>
-      </div>
-      <div className="fixture-controls" aria-label="Fixture filters">
-        <div className="filter-group" role="group" aria-label="Fixture status">
-          {([['all', 'All'], ['upcoming', 'Upcoming'], ['played', 'Played']] as const).map(([value, label]) => (
-            <button key={value} className={filter === value ? "active" : ""} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
+      </header>
+
+      <div className="toolbar">
+        <div className="segmented" role="group" aria-label="Show fixtures">
+          {filters.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+            >
+              {label}
+            </button>
           ))}
         </div>
-        <label className="sort-control">Sort by
-          <select value={sort} onChange={(event) => setSort(event.target.value as FixtureSort)} aria-label="Sort fixtures">
-            <option value="date">Date</option>
+        <label className="toolbar__sort">
+          <span className="label">Sort by</span>
+          <select
+            className="select"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as FixtureSort)}
+          >
+            <option value="date">Kickoff</option>
             <option value="confidence">Confidence</option>
           </select>
         </label>
-        <span className="muted">{visibleFixtures.length} of {filtered.length} fixtures</span>
-        <div className="fixture-actions">
-          <button className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>Export CSV</button>
-          <button className="text-button" onClick={() => window.print()}>Print</button>
+        <div className="toolbar__actions">
+          <button type="button" className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>
+            Export CSV
+          </button>
+          <button type="button" className="text-button" onClick={() => window.print()}>
+            Print
+          </button>
         </div>
       </div>
-      <div className="fixture-layout">
-        <div
-          className="fixture-list"
-          aria-label={`Gameweek ${gameweek} fixtures`}
-        >
+
+      <div className="fixtures">
+        <section className="fixtures__list" aria-label={`Gameweek ${gameweek} fixtures`}>
           {visibleFixtures.length ? (
-            <MotionList className="fixture-motion-list">
-              {visibleFixtures.map((fixture) => (
-                <MotionItem key={fixture.id} className="fixture-motion-item">
-                  <FixtureRow
-                    fixture={fixture}
-                    selected={fixture.id === selected?.id}
-                    onSelect={() => setSelectedId(fixture.id)}
-                  />
-                </MotionItem>
-              ))}
-            </MotionList>
+            <>
+              <p className="label fixtures__legend">
+                Dark scores are final. Grey scores are the model's predicted score.
+              </p>
+              <div key={`${gameweek}-${filter}`}>
+                {flat ? (
+                  <ul className="match-list">
+                    {visibleFixtures.map((fixture) => renderRow(fixture, rowIndex++))}
+                  </ul>
+                ) : (
+                  days.map((day) => (
+                    <div className="day" key={day.date}>
+                      <h2 className="day__title">{longDay(day.date)}</h2>
+                      <ul className="match-list">
+                        {day.items.map((fixture) => renderRow(fixture, rowIndex++))}
+                      </ul>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           ) : (
-            <div className="empty-state">
-              No fixtures match this gameweek and search.
+            <div className="empty">
+              <strong>No fixtures to show</strong>
+              {query
+                ? `Nothing in gameweek ${gameweek} matches "${query}". Clear the search or pick another gameweek.`
+                : `No ${filter === "all" ? "" : filter + " "}fixtures in gameweek ${gameweek}. Try All, or pick another gameweek.`}
             </div>
           )}
-        </div>
-        <MotionKeyFade fadeKey={selected?.id ?? "empty"} className="fixture-detail-fade">
-          <FixtureDetail dataset={dataset} fixture={selected} onSimulate={onSimulate} />
-        </MotionKeyFade>
+        </section>
+
+        <div
+          className={`sheet-backdrop${sheetOpen ? " is-open" : ""}`}
+          onClick={() => setSheetOpen(false)}
+          aria-hidden="true"
+        />
+        <aside
+          className={`fixtures__detail${sheetOpen ? " is-open" : ""}`}
+          aria-label="Fixture detail"
+        >
+          <button
+            ref={closeRef}
+            type="button"
+            className="sheet-close"
+            onClick={() => setSheetOpen(false)}
+          >
+            <X size={18} aria-hidden="true" /> Close
+          </button>
+          {selected ? (
+            <FixtureDetail
+              key={selected.id}
+              dataset={dataset}
+              fixture={selected}
+              onSimulate={onSimulate}
+            />
+          ) : (
+            <div className="empty">
+              <strong>Choose a fixture</strong>
+              Select a match to see its forecast.
+            </div>
+          )}
+        </aside>
       </div>
-    </MotionSection>
+    </>
   );
 };
