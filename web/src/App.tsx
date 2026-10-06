@@ -531,8 +531,8 @@ const FixturesPage: React.FC<{
         </label>
         <span className="muted">{visibleFixtures.length} of {filtered.length} fixtures</span>
         <div className="fixture-actions">
-          <button className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>Export CSV</button>
-          <button className="text-button" onClick={() => window.print()}>Print</button>
+          <button type="button" className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>Export CSV</button>
+          <button type="button" className="text-button" onClick={() => window.print()}>Print</button>
         </div>
       </div>
       <div className="fixture-layout">
@@ -663,7 +663,7 @@ const SimulatorPage: React.FC<{
               <p className="eyebrow">Adjust assumptions</p>
               <h2>Scenario controls</h2>
             </div>
-            <button className="text-button" onClick={resetScenario}>Reset</button>
+            <button type="button" className="text-button" onClick={resetScenario}>Reset</button>
           </div>
           <label>
             Home club
@@ -699,6 +699,8 @@ const SimulatorPage: React.FC<{
               max="30"
               value={homeBoost}
               onChange={(event) => setHomeBoost(Number(event.target.value))}
+              aria-label={`${homeTeam} form adjustment`}
+              aria-valuetext={`${homeBoost > 0 ? "+" : ""}${homeBoost}%`}
             />
             <span>
               {homeBoost > 0 ? "+" : ""}
@@ -713,6 +715,8 @@ const SimulatorPage: React.FC<{
               max="30"
               value={awayBoost}
               onChange={(event) => setAwayBoost(Number(event.target.value))}
+              aria-label={`${awayTeam} form adjustment`}
+              aria-valuetext={`${awayBoost > 0 ? "+" : ""}${awayBoost}%`}
             />
             <span>
               {awayBoost > 0 ? "+" : ""}
@@ -1029,9 +1033,11 @@ const ClubsPage: React.FC<{
           {upcoming.length ? (
             upcoming.map((fixture) => (
               <button
+                type="button"
                 className="mini-fixture interactive"
                 key={fixture.id}
                 onClick={() => onSimulate(fixture.homeTeam, fixture.awayTeam)}
+                aria-label={`Open simulator for GW${fixture.gameweek} match: ${profile.name} ${fixture.homeTeam === profile.name ? "vs" : "@"} ${fixture.homeTeam === profile.name ? fixture.awayTeam : fixture.homeTeam}`}
               >
                 <span className="muted">GW{fixture.gameweek}</span>
                 <span>
@@ -1337,12 +1343,14 @@ const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
         <div className="diagnostic-grid">
           {dataset.benchmark.diagnostics.map((diagnostic) => (
             <button
+              type="button"
               key={diagnostic.id}
               onClick={() => setSelectedImage(diagnostic)}
             >
               <img
                 src={asset(diagnostic.src)}
-                alt={diagnostic.title}
+                alt=""
+                aria-hidden="true"
                 loading="lazy"
               />
               <span>
