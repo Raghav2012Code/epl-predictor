@@ -1,19 +1,14 @@
-import { useState } from "react";
-import { motion } from "motion/react";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import type { EPLDataset, Fixture, TeamProfile } from "../../types";
-import {
-  MotionBar,
-  MotionButton,
-  MotionItem,
-  MotionList,
-  MotionNumber,
-  MotionSection,
-  useMotionDisabled,
-} from "../Motion";
-import { dashboardRoutes, type AppRoute } from "../../lib/appRoute";
+import React from "react";
+import { ChevronRight } from "lucide-react";
+import type { EPLDataset, Fixture } from "../../types";
+import { useMotionDisabled } from "../Motion";
+import { SplitBar } from "../SplitBar";
+import { TeamMark } from "../TeamMark";
+import { BrandLockup } from "../BrandMark";
+import { dashboardRoutes, pathForAppRoute, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
-import { nextFixtureByDate, upcomingFixtures } from "../../lib/fixtureDates";
+import { kickoff, longDay, scoreParts } from "../../lib/format";
+import { fixtureDay, nextFixtureByDate } from "../../lib/fixtureDates";
 import "../../styles/landing.css";
 
 type LandingPageProps = {
@@ -23,95 +18,63 @@ type LandingPageProps = {
   onToggleMotion?: () => void;
 };
 
-const pct = (value: number) => `${Number(value).toFixed(1)}%`;
-const strongestOf = (fixture: Fixture) =>
-  Math.max(fixture.homeWinProb, fixture.drawProb, fixture.awayWinProb);
-
-const displayDate = (value: string) => {
-  if (!value || value === "TBC") return "Date TBC";
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(`${value}T12:00:00`));
-  } catch {
-    return value;
-  }
-};
-
-const TeamBadge: React.FC<{ team?: TeamProfile; short?: string; badge?: string }> = ({
-  team,
-  short,
-  badge,
-}) => {
-  const src = badge ?? team?.badge ?? "";
-  const [failed, setFailed] = useState(false);
-  if (src && !failed) {
-    return (
-      <img
-        className="team-mark team-badge"
-        src={`${import.meta.env.BASE_URL}${src}`}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        draggable={false}
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-  return (
-    <span
-      className="team-mark"
-      style={{ borderColor: team?.color ?? "#1d6f52" }}
-      aria-hidden="true"
-    >
-      {(short ?? team?.short ?? "FC").slice(0, 3)}
-    </span>
-  );
-};
-
-const ProbabilityStrip: React.FC<{ fixture: Fixture }> = ({ fixture }) => (
-  <div
-    className="probability-strip"
-    role="img"
-    aria-label={`Home ${pct(fixture.homeWinProb)}, draw ${pct(fixture.drawProb)}, away ${pct(fixture.awayWinProb)}`}
-  >
-    <MotionBar className="prob-home" value={1} style={{ width: `${fixture.homeWinProb}%` }} />
-    <MotionBar className="prob-draw" value={1} style={{ width: `${fixture.drawProb}%` }} />
-    <MotionBar className="prob-away" value={1} style={{ width: `${fixture.awayWinProb}%` }} />
-  </div>
-);
-
-const sectionLinks = [
-  { label: "Workspace", href: "#workspace" },
-  { label: "Evidence", href: "#evidence" },
-];
-
-const workspaceCopy: Record<
-  Exclude<AppRoute, "landing">,
-  { title: string; body: string }
-> = {
+const views: Record<Exclude<AppRoute, "landing">, { title: string; body: string }> = {
   fixtures: {
     title: "Fixtures",
-    body: "Gameweeks with the forecast beside each tie. Official results stay separate from projections.",
+    body: "Every gameweek with a forecast beside each match. Official results stay separate from predictions.",
   },
   simulator: {
     title: "Simulator",
-    body: "Pick any pairing, adjust form and venue, and see how the outlook moves.",
+    body: "Pick any two clubs, change form and venue, and watch the probabilities move.",
   },
   standings: {
     title: "Table",
-    body: "Full-season projection built from model scorelines. Click a row for the club.",
+    body: "The full-season projection from the model's predicted scores. Select a club to open it.",
   },
   clubs: {
     title: "Clubs",
-    body: "One page per club: record, goals, rest, recent results and what is next.",
+    body: "Record, goals, rest days, recent results and the next matches for one club.",
   },
   analytics: {
     title: "Analytics",
-    body: "RPS-led model comparison, outcome mix, goals by gameweek and diagnostics.",
+    body: "How the model was measured: ranked probability score, accuracy, goal error and diagnostics.",
   },
+};
+
+const BoardRow: React.FC<{ fixture: Fixture; index: number }> = ({ fixture, index }) => {
+  const [homeGoals, awayGoals] = scoreParts(fixture.predictedScore) ?? [
+    fixture.predHomeGoals,
+    fixture.predAwayGoals,
+  ];
+  return (
+    <li>
+      <div className="match match--static">
+        <span className="match__when">
+          <span className="match__time num">{kickoff(fixture.time)}</span>
+          <span className="label">{fixture.date === "TBC" ? "Date TBC" : fixture.date.slice(5).replace("-", "/")}</span>
+        </span>
+        <span className="match__teams">
+          <span className="match__team">
+            <TeamMark short={fixture.homeShort} badge={fixture.homeBadge} />
+            <span className="match__name">{fixture.homeTeam}</span>
+            <span className="match__goals num">{homeGoals}</span>
+          </span>
+          <span className="match__team">
+            <TeamMark short={fixture.awayShort} badge={fixture.awayBadge} />
+            <span className="match__name">{fixture.awayTeam}</span>
+            <span className="match__goals num">{awayGoals}</span>
+          </span>
+        </span>
+        <SplitBar
+          className="match__bar"
+          sweep={index}
+          home={fixture.homeWinProb}
+          draw={fixture.drawProb}
+          away={fixture.awayWinProb}
+        />
+      </div>
+    </li>
+  );
 };
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -123,409 +86,272 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const reduceMotion = useMotionDisabled();
   const landingData = getLandingData(dataset ?? undefined);
   const fixtures = dataset?.fixtures ?? [];
-  const nextFixture = nextFixtureByDate(fixtures);
+  const next = nextFixtureByDate(fixtures) ?? fixtures[0] ?? null;
+  const boardFixtures = next
+    ? fixtures
+        .filter((fixture) => fixture.gameweek === next.gameweek)
+        .sort(
+          (a, b) =>
+            fixtureDay(a.date) - fixtureDay(b.date) ||
+            a.time.localeCompare(b.time) ||
+            a.id - b.id,
+        )
+    : [];
   const playedCount = fixtures.filter((fixture) => fixture.status === "Played").length;
   const totalCount = dataset?.totalMatches ?? landingData.totalMatches;
-  const models = dataset?.benchmark.models ?? [];
-  const production =
-    models.find((entry) => entry.isProduction) ?? models[0] ?? null;
-  const upcoming = upcomingFixtures(fixtures, 3);
-  const recent = fixtures
-    .filter((fixture) => fixture.status === "Played")
-    .slice(-3)
-    .reverse();
-  const leader = dataset?.standings[0];
   const coverage = totalCount > 0 ? Math.round((playedCount / totalCount) * 100) : 0;
-
-  const workspaceMeta = (route: Exclude<AppRoute, "landing">): string => {
-    switch (route) {
-      case "fixtures":
-        return `${playedCount}/${totalCount} results recorded`;
-      case "simulator":
-        return "Browser estimates · production stays fixed";
-      case "standings":
-        return leader ? `${leader.team} leads on ${leader.points} pts` : "Projection table";
-      case "clubs":
-        return `${Object.keys(dataset?.teams ?? {}).length || 20} club profiles`;
-      case "analytics":
-        return production
-          ? `${production.name} · RPS ${production.rps.toFixed(4)}`
-          : "Time-ordered validation";
-      default:
-        return "";
-    }
-  };
-
-  const scrollTo = (href: string) => {
-    document.querySelector(href)?.scrollIntoView({ behavior: reduceMotion ? "instant" : "smooth", block: "start" });
-  };
-
+  const models = dataset?.benchmark.models ?? [];
+  const production = models.find((entry) => entry.isProduction) ?? models[0] ?? null;
+  const scrollTo = (id: string) =>
+    document
+      .getElementById(id)
+      ?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   return (
-    <div className="landing-page" id="top">
+    <div className="landing" id="top">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <motion.header
-        className="landing-topbar"
-        initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="landing-topbar-inner">
+      <header className="topbar">
+        <div className="wrap topbar__inner">
           <button
-            className="landing-brand"
             type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? "instant" : "smooth" })}
-            aria-label="EPL Predictor home"
+            className="brand"
+            onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })}
+            aria-label="EPL Predictor, back to top"
           >
-            <img
-              className="landing-brand-logo"
-              src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
-              alt="EPL Predictor"
-              draggable={false}
-            />
-            <span className="landing-brand-sub">
-              Match analysis · {dataset?.season ?? "2026/2027"}
-            </span>
+            <BrandLockup season={dataset?.season ?? landingData.season} />
           </button>
-          <nav className="landing-topbar-links" aria-label="Homepage sections">
-            {sectionLinks.map((link) => (
+          <nav className="landing-links" aria-label="Views">
+            {dashboardRoutes.map((route) => (
               <a
-                key={link.href}
-                href={link.href}
+                key={route}
+                href={pathForAppRoute(route)}
                 onClick={(event) => {
                   event.preventDefault();
-                  scrollTo(link.href);
+                  onNavigate(route);
                 }}
               >
-                {link.label}
+                {views[route].title}
               </a>
             ))}
           </nav>
-          <MotionButton
-            className="landing-enter"
-            type="button"
-            onClick={() => onNavigate("fixtures")}
-          >
-            Enter workspace <ArrowRight size={15} aria-hidden="true" />
-          </MotionButton>
+          <button type="button" className="btn" onClick={() => onNavigate("fixtures")}>
+            Open fixtures
+          </button>
         </div>
-      </motion.header>
+      </header>
 
-      <main className="landing-main" id="main-content" tabIndex={-1}>
-        <MotionSection className="landing-hero">
-          <MotionList className="landing-hero-copy">
-            <MotionItem>
-              <p className="eyebrow">Premier League · {dataset?.season ?? "2026/2027"}</p>
-              <h1>Every fixture, read with evidence.</h1>
-            </MotionItem>
-            <MotionItem>
-              <p className="lede">
-                Calibrated Home/Draw/Away probabilities, expected goals and a likely
-                scoreline — always next to the official result, never mixed with it.
-              </p>
-            </MotionItem>
-            <MotionItem>
-              <div className="landing-hero-actions">
-                <MotionButton
-                  className="primary-button landing-hero-primary"
-                  type="button"
-                  onClick={() => onNavigate("fixtures")}
-                >
-                  Open fixtures <ArrowRight size={16} aria-hidden="true" />
-                </MotionButton>
-              </div>
-            </MotionItem>
-          </MotionList>
-
-          <article className="landing-signal" aria-label="Next forecast">
-            <div className="landing-signal-top">
-              <span className="status-pill status-upcoming">Next forecast</span>
-              <span className="landing-signal-meta">
-                {nextFixture ? (
-                  <>
-                    GW{nextFixture.gameweek} · {displayDate(nextFixture.date)} ·{" "}
-                    {nextFixture.time === "TBC" ? "Kickoff TBC" : nextFixture.time}
-                  </>
-                ) : (
-                  "Awaiting dataset"
-                )}
-              </span>
+      <main id="main-content" tabIndex={-1}>
+        <section className="wrap hero" aria-labelledby="hero-title">
+          <div className="hero__copy">
+            <h1 id="hero-title">Every Premier League fixture, forecast.</h1>
+            <p className="hero__lede">
+              Calibrated home, draw and away probabilities and a predicted score
+              for each match, always kept apart from the official result.
+            </p>
+            <div className="hero__actions">
+              <button type="button" className="btn" onClick={() => onNavigate("fixtures")}>
+                Open fixtures
+              </button>
+              <button type="button" className="btn btn--quiet" onClick={() => scrollTo("evidence")}>
+                See the evidence
+              </button>
             </div>
-            {nextFixture ? (
+            <ol className="hero__how" aria-label="What each forecast shows">
+              <li>
+                <strong>Home, draw, away</strong>
+                Calibrated probabilities that sum to 100%.
+              </li>
+              <li>
+                <strong>Predicted score</strong>
+                A separate goal model, shown in grey.
+              </li>
+              <li>
+                <strong>Official result</strong>
+                Recorded after full time, never mixed in.
+              </li>
+            </ol>
+            <dl className="hero__facts">
+              <div>
+                <dt className="label">Fixtures</dt>
+                <dd className="num">{totalCount}</dd>
+              </div>
+              <div>
+                <dt className="label">Results recorded</dt>
+                <dd className="num">{playedCount}</dd>
+              </div>
+              <div>
+                <dt className="label">Clubs</dt>
+                <dd className="num">{Object.keys(dataset?.teams ?? {}).length || 20}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="board" aria-label="Next gameweek forecast">
+            {next && boardFixtures.length ? (
               <>
-                <div className="landing-matchup">
-                  <div>
-                    <TeamBadge
-                      team={dataset?.teams[nextFixture.homeTeam]}
-                      short={nextFixture.homeShort}
-                      badge={nextFixture.homeBadge}
-                    />
-                    <strong>{nextFixture.homeTeam}</strong>
-                    <small>Home</small>
-                  </div>
-                  <div className="landing-matchup-score">
-                    <span>{nextFixture.predictedScore}</span>
-                    <small>most likely scoreline</small>
-                  </div>
-                  <div>
-                    <TeamBadge
-                      team={dataset?.teams[nextFixture.awayTeam]}
-                      short={nextFixture.awayShort}
-                      badge={nextFixture.awayBadge}
-                    />
-                    <strong>{nextFixture.awayTeam}</strong>
-                    <small>Away</small>
-                  </div>
+                <div className="board__head">
+                  <h2>Gameweek {next.gameweek}</h2>
+                  <span className="label">{longDay(boardFixtures[0].date)}</span>
                 </div>
-                <ProbabilityStrip fixture={nextFixture} />
-                <div className="probability-labels">
-                  <span>
-                    <b>{pct(nextFixture.homeWinProb)}</b> Home
+                <ul className="match-list">
+                  {boardFixtures.slice(0, 4).map((fixture, index) => (
+                    <BoardRow key={fixture.id} fixture={fixture} index={index} />
+                  ))}
+                </ul>
+                <div className="board__foot">
+                  <span className="label">
+                    Grey scores are the model's predicted score.
                   </span>
-                  <span>
-                    <b>{pct(nextFixture.drawProb)}</b> Draw
-                  </span>
-                  <span>
-                    <b>{pct(nextFixture.awayWinProb)}</b> Away
-                  </span>
+                  <button type="button" className="text-button" onClick={() => onNavigate("fixtures")}>
+                    All {boardFixtures.length} fixtures
+                  </button>
                 </div>
-                <div className="detail-metrics">
-                  <div>
-                    <span>Expected goals</span>
-                    <strong>
-                      {nextFixture.predHomeGoals.toFixed(2)} —{" "}
-                      {nextFixture.predAwayGoals.toFixed(2)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Strongest signal</span>
-                    <strong>{pct(strongestOf(nextFixture))}</strong>
-                  </div>
-                  <div>
-                    <span>Evidence state</span>
-                    <strong>Projected</strong>
-                  </div>
-                </div>
-                <MotionButton
-                  className="primary-button"
-                  type="button"
-                  onClick={() => onNavigate("fixtures")}
-                >
-                  Inspect this fixture <ArrowUpRight size={16} aria-hidden="true" />
-                </MotionButton>
               </>
             ) : (
-              <div className="empty-state">Dataset is loading. The workspace will appear here.</div>
+              <div className="empty">
+                <strong>Loading the next gameweek</strong>
+                Fixtures appear here as soon as the season file loads.
+              </div>
             )}
-          </article>
-        </MotionSection>
+          </div>
+        </section>
 
-        <MotionSection inView className="stat-grid landing-stats" aria-label="Model snapshot">
-          <div>
-            <span>Production model</span>
-            <strong>{production?.name ?? landingData.productionModel}</strong>
-          </div>
-          <div>
-            <span>Ranked probability score</span>
-            <strong>
-              {production ? (
-                <MotionNumber value={production.rps} decimals={4} />
-              ) : (
-                landingData.productionRps.toFixed(4)
-              )}
-            </strong>
-          </div>
-          <div>
-            <span>Validation accuracy</span>
-            <strong>
-              {production ? <MotionNumber value={production.accuracy} decimals={1} suffix="%" /> : "—"}
-            </strong>
-          </div>
-          <div>
-            <span>Average goal error</span>
-            <strong>
-              {production ? <MotionNumber value={production.avgGoalMae} decimals={2} /> : "—"}
-            </strong>
-          </div>
-        </MotionSection>
-
-        <MotionSection inView className="landing-section" id="workspace" aria-labelledby="workspace-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Workspace index</p>
-              <h2 id="workspace-title">Five views, one dataset.</h2>
-            </div>
-            <span className="muted">
-              {playedCount}/{totalCount} results recorded · {coverage}% of season
-            </span>
-          </div>
-          <MotionList className="landing-workspace-grid">
-            {dashboardRoutes.map((route, index) => (
-              <MotionItem key={route}>
-                <MotionButton
-                  className="landing-workspace-card"
-                  type="button"
-                  onClick={() => onNavigate(route)}
-                  aria-label={`Open ${workspaceCopy[route].title}`}
-                >
-                  <span className="landing-workspace-index">
-                    0{index + 1} · {workspaceCopy[route].title}
-                  </span>
-                  <strong>{workspaceCopy[route].title}</strong>
-                  <p>{workspaceCopy[route].body}</p>
-                  <span className="landing-workspace-meta">
-                    {workspaceMeta(route)}
-                    <ArrowUpRight size={15} aria-hidden="true" />
-                  </span>
-                </MotionButton>
-              </MotionItem>
+        <section className="wrap section" id="views" aria-labelledby="views-title">
+          <h2 id="views-title">Five views of one season</h2>
+          <ul className="views">
+            {dashboardRoutes.map((route) => (
+              <li key={route}>
+                <button type="button" className="view-link" onClick={() => onNavigate(route)}>
+                  <strong>{views[route].title}</strong>
+                  <span className="view-link__body">{views[route].body}</span>
+                  <ChevronRight size={20} aria-hidden="true" />
+                </button>
+              </li>
             ))}
-          </MotionList>
-        </MotionSection>
+          </ul>
+        </section>
 
-        <MotionSection inView className="landing-section" id="evidence" aria-labelledby="evidence-title">
-          <div className="section-heading">
+        <section className="wrap section" id="evidence" aria-labelledby="evidence-title">
+          <h2 id="evidence-title">Measured before it is shown</h2>
+          <p className="label section__sub">
+            Models are validated on a time-ordered holdout with leakage-safe
+            features. The production model is the one with the lowest ranked
+            probability score (RPS), which rewards honest probabilities over a
+            single lucky guess.
+          </p>
+          {production && (
+            <dl className="metrics metrics--4" aria-label="Production model metrics">
+              <div>
+                <dt className="label">Production model</dt>
+                <dd className="num">{production.name}</dd>
+              </div>
+              <div>
+                <dt className="label">RPS, lower is better</dt>
+                <dd className="num">{production.rps.toFixed(4)}</dd>
+              </div>
+              <div>
+                <dt className="label">Accuracy</dt>
+                <dd className="num">{production.accuracy}%</dd>
+              </div>
+              <div>
+                <dt className="label">Goal error</dt>
+                <dd className="num">{production.avgGoalMae}</dd>
+              </div>
+            </dl>
+          )}
+          <div className="landing-evidence">
+            {models.length > 0 && (
+              <table className="league models">
+                <caption className="sr-only">Validation results by model</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className="models__name">Model</th>
+                    <th scope="col">RPS</th>
+                    <th scope="col">Accuracy</th>
+                    <th scope="col" className="is-optional">Log loss</th>
+                    <th scope="col">Goal error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((entry) => (
+                    <tr key={entry.name} className={entry.isProduction ? "is-production" : undefined}>
+                      <th scope="row" className="models__name">
+                        {entry.name}
+                        {entry.isProduction && <span className="tag">Production</span>}
+                      </th>
+                      <td className="num">{entry.rps}</td>
+                      <td className="num">{entry.accuracy}%</td>
+                      <td className="num is-optional">{entry.logLoss}</td>
+                      <td className="num">{entry.avgGoalMae}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <div>
-              <p className="eyebrow">Evidence first</p>
-              <h2 id="evidence-title">Validation before projection.</h2>
-            </div>
-            <span className="muted">Time-ordered holdout · leakage-safe features</span>
-          </div>
-          <div className="two-column">
-            <div className="content-card">
-              <div className="section-heading small">
-                <h2>Model comparison</h2>
-                <span className="muted">Lower RPS is better</span>
+              <p className="coverage__figure num">
+                {playedCount}
+                <span>/{totalCount}</span>
+              </p>
+              <div
+                className="meter"
+                role="progressbar"
+                aria-label="Fixtures with a recorded result"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={coverage}
+              >
+                <span style={{ width: `${coverage}%` }} />
               </div>
-              <div className="model-table">
-                <div className="model-row model-header">
-                  <span>Model</span>
-                  <span>RPS</span>
-                  <span>Accuracy</span>
-                  <span>Log loss</span>
-                  <span>Goal MAE</span>
-                </div>
-                {(models.length ? models.slice(0, 3) : []).map((entry) => (
-                  <div
-                    className={`model-row ${entry.isProduction ? "selected-row" : ""}`}
-                    key={entry.name}
-                  >
-                    <strong>
-                      {entry.name}
-                      {entry.isProduction && <em>Production</em>}
-                    </strong>
-                    <span>{entry.rps.toFixed(4)}</span>
-                    <span>{entry.accuracy}%</span>
-                    <span>{entry.logLoss}</span>
-                    <span>{entry.avgGoalMae}</span>
-                  </div>
-                ))}
-                {!models.length && (
-                  <p className="muted">Benchmark loads with the dataset.</p>
-                )}
-              </div>
-              <p className="landing-model-note">
-                <strong>Why RPS leads.</strong> Ranked Probability Score rewards
-                honest distributions — production is picked by the lowest RPS,
-                with log loss, accuracy and goal error as supporting evidence.
+              <p className="block__note">
+                {coverage}% of the season is on record. The rest is projected and
+                labelled that way everywhere.
               </p>
             </div>
-            <div className="content-card">
-              <div className="section-heading small">
-                <h2>Season coverage</h2>
-                <span className="muted">Official vs projected</span>
-              </div>
-              <div className="coverage-stat">
-                <strong>
-                  <MotionNumber value={playedCount} />
-                  <span>/{totalCount}</span>
-                </strong>
-                <div>
-                  <span>results recorded</span>
-                  <small><MotionNumber value={coverage} suffix="% of the season" /></small>
-                </div>
-              </div>
-              <div
-                className="coverage-meter"
-                role="progressbar"
-                aria-valuemax={100}
-                aria-valuemin={0}
-                aria-valuenow={coverage}
-                aria-label={`${coverage}% of fixtures have recorded results`}
-              >
-                <MotionBar value={coverage / 100} style={{ width: "100%" }} />
-              </div>
-              <div className="landing-mini-list" aria-label="Schedule edges">
-                {upcoming.map((fixture) => (
-                  <div className="mini-fixture" key={fixture.id}>
-                    <span className="muted">GW{fixture.gameweek}</span>
-                    <span>
-                      {fixture.homeTeam} v {fixture.awayTeam}
-                    </span>
-                    <strong>{fixture.predictedScore}</strong>
-                  </div>
-                ))}
-                {recent.map((fixture) => (
-                  <div className="mini-fixture" key={`recent-${fixture.id}`}>
-                    <span className="muted">Final</span>
-                    <span>
-                      {fixture.homeTeam} v {fixture.awayTeam}
-                    </span>
-                    <strong>{fixture.actualScore}</strong>
-                  </div>
-                ))}
-                {!upcoming.length && !recent.length && (
-                  <p className="muted">Fixtures load with the dataset.</p>
-                )}
-              </div>
-            </div>
           </div>
-        </MotionSection>
+        </section>
 
-        <MotionSection inView className="landing-cta content-card" aria-labelledby="cta-title">
-          <div>
-            <p className="eyebrow">Start where the season is</p>
-            <h2 id="cta-title">
-              {nextFixture
-                ? `${nextFixture.homeTeam} v ${nextFixture.awayTeam} is next.`
-                : "Start with the next kickoff."}
-            </h2>
-            <p className="muted">
-              {nextFixture
-                ? `Model leans ${nextFixture.predictedOutcome.toLowerCase()} ${nextFixture.predictedScore}. Open it beside the rest of GW${nextFixture.gameweek}.`
-                : "Open the workspace to browse every gameweek with the model beside it."}
-            </p>
+        <section className="wrap section" aria-labelledby="cta-title">
+          <div className="cta on-ink">
+            <div>
+              <h2 id="cta-title">
+                {next
+                  ? `${next.homeTeam} v ${next.awayTeam} is next.`
+                  : "Start with the next kickoff."}
+              </h2>
+              <p>
+                {next
+                  ? `The model picks ${next.predictedOutcome === "Draw" ? "a draw" : next.predictedOutcome === "Home Win" ? `${next.homeTeam} to win` : `${next.awayTeam} to win`}, predicted score ${next.predictedScore.replace(/ /g, " ")}. See it beside the rest of gameweek ${next.gameweek}.`
+                  : "Open fixtures to browse every gameweek with the model beside it."}
+              </p>
+            </div>
+            <button type="button" className="btn btn--paper" onClick={() => onNavigate("fixtures")}>
+              Open fixtures
+            </button>
           </div>
-          <MotionButton
-            className="primary-button landing-cta-button"
-            type="button"
-            onClick={() => onNavigate("fixtures")}
-          >
-            Enter the workspace <ArrowRight size={16} aria-hidden="true" />
-          </MotionButton>
-        </MotionSection>
+        </section>
       </main>
 
-      <footer className="site-footer landing-footer">
-        <span>Forecasts are probabilities, not guarantees.</span>
-        {onToggleMotion && (
-          <button
-            className="text-button motion-toggle"
-            type="button"
-            onClick={onToggleMotion}
-            aria-pressed={motionDisabled ?? false}
-          >
-            {motionDisabled ? "Motion reduced" : "Motion on"}
-          </button>
-        )}
-        <a
-          href="https://github.com/Raghav2012Code/epl-predictor"
-          target="_blank"
-          rel="noreferrer"
-        >
-          View source <ArrowUpRight size={14} aria-hidden="true" />
-        </a>
+      <footer className="footer">
+        <div className="wrap footer__inner">
+          <span>Forecasts are probabilities, not guarantees.</span>
+          <div className="footer__actions">
+            {onToggleMotion && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={onToggleMotion}
+                aria-pressed={motionDisabled ?? false}
+              >
+                Reduce motion
+              </button>
+            )}
+            <a href="https://github.com/Raghav2012Code/epl-predictor" target="_blank" rel="noreferrer">
+              View source
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );

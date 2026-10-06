@@ -1,0 +1,60 @@
+/*
+ * The split bar (docs/design-system.md, "The split bar").
+ * Segments use flex-basis = exact percentage with flex-shrink 1, so the two
+ * 2px paper gaps are taken proportionally and the ratios stay exact.
+ */
+.split-bar {
+  --split-bar-height: 12px;
+  --split-bar-value-size: var(--fs-14);
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+.split-bar--detail {
+  --split-bar-height: 20px;
+  --split-bar-value-size: var(--fs-20);
+  gap: var(--space-2);
+}
+
+.split-bar__track,
+.split-bar__values {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+.split-bar__track { height: var(--split-bar-height); }
+
+.split-bar__segment {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 2px;
+  height: 100%;
+  border-radius: var(--radius-bar);
+}
+.split-bar__segment--home { background: var(--home); }
+.split-bar__segment--draw { background: var(--draw); }
+.split-bar__segment--away { background: var(--away); }
+
+.split-bar__value {
+  flex: 0 1 auto;
+  min-width: 0;
+  color: var(--ink-soft);
+  font-size: var(--split-bar-value-size);
+  white-space: nowrap;
+}
+.split-bar__value--home { text-align: left; }
+.split-bar__value--draw { text-align: center; }
+.split-bar__value--away { text-align: right; }
+.split-bar__value.is-favoured { color: var(--ink); }
+
+/* The one orchestrated moment: bars sweep in from zero, staggered down a list. */
+@keyframes split-bar-sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.split-bar--sweep .split-bar__segment {
+  transform-origin: left center;
+  animation: split-bar-sweep var(--duration-sweep) var(--ease-out) both;
+  animation-delay: calc(var(--sweep-index, 0) * 40ms);
+}
