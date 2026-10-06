@@ -12,6 +12,9 @@ import {
 import type { EPLDataset } from "../types";
 import { MotionPop, MotionPresence, MotionSection } from "./Motion";
 import { TeamMark } from "./TeamMark";
+import { BrandLockup } from "./BrandMark";
+import { kickoff, shortDay } from "../lib/format";
+import { nextFixtureByDate } from "../lib/fixtures";
 import type { AppRoute } from "../lib/appRoute";
 import { FixturesPage } from "../pages/FixturesPage";
 import { SimulatorPage } from "../pages/SimulatorPage";
@@ -98,6 +101,7 @@ export const AppShell: React.FC<{
     if (next) window.setTimeout(() => inputRef.current?.focus(), 0);
     else closeSearch();
   };
+  const next = nextFixtureByDate(dataset.fixtures);
   const needle = query.trim().toLowerCase();
   const clubHits = needle
     ? Object.values(dataset.teams)
@@ -127,13 +131,7 @@ export const AppShell: React.FC<{
             }}
             aria-label="EPL Predictor, back to fixtures"
           >
-            <img
-              className="brand__logo"
-              src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
-              alt=""
-              draggable={false}
-            />
-            <span className="brand__season">{dataset.season}</span>
+            <BrandLockup season={dataset.season} />
           </button>
           <nav className="tabs" aria-label="Primary">
             {tabs.map(({ id, label, icon: Icon }) => (
@@ -149,6 +147,25 @@ export const AppShell: React.FC<{
               </button>
             ))}
           </nav>
+          {next && (
+            <button
+              type="button"
+              className="next-up"
+              onClick={() => navigateTo("fixtures")}
+              aria-label={`Next kickoff: ${next.homeTeam} v ${next.awayTeam}, ${shortDay(next.date)} ${kickoff(next.time)}. Open fixtures.`}
+            >
+              <span className="next-up__crests" aria-hidden="true">
+                <TeamMark short={next.homeShort} badge={next.homeBadge} />
+                <TeamMark short={next.awayShort} badge={next.awayBadge} />
+              </span>
+              <span className="next-up__text">
+                <span className="next-up__label">Next kickoff</span>
+                <span className="next-up__match">
+                  {next.homeShort} v {next.awayShort}, {shortDay(next.date)} {kickoff(next.time)}
+                </span>
+              </span>
+            </button>
+          )}
           <div className={`search${mobileSearch ? " search--open" : ""}`} ref={searchRef}>
             <button
               type="button"

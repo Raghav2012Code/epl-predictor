@@ -60,8 +60,10 @@ monospace for data.
 ## Layout
 
 - Content is left-aligned. Max width 1240px, 24px gutters (16px under 640px).
-- Desktop shell: a slim top bar (brand, the five views as text tabs, search).
-  No sidebar.
+- Desktop shell: a slim top bar (shield mark and wordmark with the season, the
+  five views as text tabs, a "Next kickoff" link to fixtures from 1260px up,
+  search). No sidebar. The mark is `BrandMark`; `public/favicon.svg` uses the
+  same geometry.
 - Mobile shell (under 760px): top bar with brand and a search button; the five
   views in a fixed bottom tab bar within thumb reach. No horizontal scrolling.
 - Surfaces are separated by spacing and `--concourse` tone, not by cards with

@@ -1,7 +1,8 @@
 /* Landing page (docs/design-system.md). Reuses the shell, match rows and tables. */
 
 .landing { min-height: 100vh; background: var(--paper); }
-.landing-links { display: flex; gap: var(--space-4); margin-left: auto; }
+.landing-links { display: flex; gap: var(--space-5); }
+.topbar__inner .btn { margin-left: auto; }
 .landing-links a {
   display: inline-flex;
   align-items: center;

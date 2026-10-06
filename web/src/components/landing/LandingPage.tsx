@@ -4,7 +4,8 @@ import type { EPLDataset, Fixture } from "../../types";
 import { useMotionDisabled } from "../Motion";
 import { SplitBar } from "../SplitBar";
 import { TeamMark } from "../TeamMark";
-import { dashboardRoutes, type AppRoute } from "../../lib/appRoute";
+import { BrandLockup } from "../BrandMark";
+import { dashboardRoutes, pathForAppRoute, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
 import { fixtureDay, kickoff, longDay, scoreParts } from "../../lib/format";
 import { nextFixtureByDate } from "../../lib/fixtures";
@@ -122,33 +123,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })}
             aria-label="EPL Predictor, back to top"
           >
-            <img
-              className="brand__logo"
-              src={`${import.meta.env.BASE_URL}epl-predictor-header-logo.png`}
-              alt=""
-              draggable={false}
-            />
-            <span className="brand__season">{dataset?.season ?? landingData.season}</span>
+            <BrandLockup season={dataset?.season ?? landingData.season} />
           </button>
-          <nav className="landing-links" aria-label="Page sections">
-            <a
-              href="#views"
-              onClick={(event) => {
-                event.preventDefault();
-                scrollTo("views");
-              }}
-            >
-              Views
-            </a>
-            <a
-              href="#evidence"
-              onClick={(event) => {
-                event.preventDefault();
-                scrollTo("evidence");
-              }}
-            >
-              Evidence
-            </a>
+          <nav className="landing-links" aria-label="Views">
+            {dashboardRoutes.map((route) => (
+              <a
+                key={route}
+                href={pathForAppRoute(route)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onNavigate(route);
+                }}
+              >
+                {views[route].title}
+              </a>
+            ))}
           </nav>
           <button type="button" className="btn" onClick={() => onNavigate("fixtures")}>
             Open fixtures

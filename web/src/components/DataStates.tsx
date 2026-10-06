@@ -1,11 +1,11 @@
 import React from "react";
 
-const logo = `${import.meta.env.BASE_URL}epl-predictor-header-logo.png`;
+import { BrandMark } from "./BrandMark";
 
 export const AppSkeleton: React.FC = () => (
   <div className="state" aria-busy="true">
     <div className="state__body" role="status">
-      <img className="state__logo" src={logo} alt="EPL Predictor" draggable={false} />
+      <BrandMark className="state__logo" />
       <h1>Loading the season</h1>
       <p>Fixtures, form and model forecasts are on the way.</p>
       <div className="split-bar__track state__bar" aria-hidden="true">
@@ -23,7 +23,7 @@ export const DataErrorPanel: React.FC<{ error: string; onRetry: () => void }> = 
 }) => (
   <main className="state">
     <div className="state__body" role="alert">
-      <img className="state__logo" src={logo} alt="EPL Predictor" draggable={false} />
+      <BrandMark className="state__logo" />
       <h1>We could not load the season data</h1>
       <p>{error}</p>
       <p>Check your connection and try again.</p>
