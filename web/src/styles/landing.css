@@ -25,6 +25,30 @@
 .hero h1 { max-width: 16ch; font-size: clamp(var(--fs-39), 4.6vw, 60px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; }
 .hero__lede { max-width: 38ch; margin-top: var(--space-4); color: var(--ink-soft); font-size: var(--fs-20); line-height: 1.45; }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+.hero__how {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 440px;
+  margin: var(--space-6) 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+  counter-reset: how;
+  color: var(--ink-soft);
+}
+.hero__how li {
+  position: relative;
+  padding-left: var(--space-6);
+  counter-increment: how;
+}
+.hero__how li::before {
+  content: counter(how);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 800;
+  color: var(--ink);
+}
+.hero__how strong { display: block; color: var(--ink); }
 .hero__facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

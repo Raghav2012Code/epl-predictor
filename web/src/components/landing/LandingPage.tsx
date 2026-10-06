@@ -161,6 +161,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 See the evidence
               </button>
             </div>
+            <ol className="hero__how" aria-label="What each forecast shows">
+              <li>
+                <strong>Home, draw, away</strong>
+                Calibrated probabilities that sum to 100%.
+              </li>
+              <li>
+                <strong>Predicted score</strong>
+                A separate goal model, shown in grey.
+              </li>
+              <li>
+                <strong>Official result</strong>
+                Recorded after full time, never mixed in.
+              </li>
+            </ol>
             <dl className="hero__facts">
               <div>
                 <dt className="label">Fixtures</dt>
