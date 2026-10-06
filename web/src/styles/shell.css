@@ -109,7 +109,7 @@
   margin-bottom: var(--space-5);
 }
 .page-head h1 { font-size: var(--fs-39); }
-.page-head__sub { margin-top: var(--space-1); }
+.page-head__sub { margin-top: var(--space-1); max-width: 65ch; font-size: var(--fs-16); line-height: 1.5; }
 
 .empty {
   display: grid;

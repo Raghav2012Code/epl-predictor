@@ -356,7 +356,7 @@
 
 .block { margin-bottom: var(--space-7); }
 .block h2 { font-size: var(--fs-25); }
-.block__sub { margin: var(--space-1) 0 var(--space-4); max-width: 65ch; }
+.block__sub { margin: var(--space-1) 0 var(--space-4); max-width: 65ch; font-size: var(--fs-16); line-height: 1.5; }
 .block__note { margin-top: var(--space-3); color: var(--ink-soft); font-size: var(--fs-14); }
 .block-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-7); }
 
