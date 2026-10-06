@@ -60,9 +60,9 @@
   --duration-sweep: 400ms;
 
   /*
-   * Bridge for the vendored chart and shadcn components (src/components/charts,
-   * src/components/ui). They read these names directly; alias them to the
-   * split-board palette instead of carrying a second theme.
+   * Bridge for the vendored chart components (src/components/charts). They
+   * read these names directly; alias them to the split-board palette instead
+   * of carrying a second theme.
    */
   --foreground: var(--ink);
   --muted-foreground: var(--ink-soft);
