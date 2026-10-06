@@ -40,12 +40,13 @@ so colour is never the only signal.
 ## Type
 
 One family: **Archivo** (variable, `wdth` 62-125, `wght` 100-900), bundled via
-`@fontsource-variable/archivo`. Width is the personality:
+`@fontsource-variable/archivo`. Headings and text use the normal width; only
+scoreboard numerals are condensed:
 
 | Role | Settings |
 | --- | --- |
-| Scores and big numbers | `wdth` 62, `wght` 800, `tabular-nums`, tight tracking |
-| Headings | `wdth` 78, `wght` 700, sentence case |
+| Scores and big numbers | `wdth` 75, `wght` 800, `tabular-nums`, tight tracking |
+| Headings | `wdth` 100, `wght` 700, tracking -0.02em, sentence case |
 | Body and UI | `wdth` 100, `wght` 400 / 600 |
 | Small data labels | `wdth` 100, `wght` 500, `--ink-soft`, sentence case |
 

@@ -117,8 +117,9 @@
 .detail__team { display: grid; justify-items: center; gap: var(--space-1); min-width: 0; }
 .detail__team .team-mark { width: 56px; height: 56px; font-size: var(--fs-14); }
 .detail__team strong {
-  font-variation-settings: "wdth" 78;
-  font-stretch: 78%;
+  font-variation-settings: "wdth" 100;
+  font-stretch: 100%;
+  letter-spacing: -0.01em;
   font-size: var(--fs-16);
   font-weight: 700;
   line-height: 1.2;

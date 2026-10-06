@@ -172,9 +172,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 See the evidence
               </button>
             </div>
-            <p className="label hero__record">
-              {playedCount} of {totalCount} results recorded for {dataset?.season ?? landingData.season}.
-            </p>
+            <dl className="hero__facts">
+              <div>
+                <dt className="label">Fixtures</dt>
+                <dd className="num">{totalCount}</dd>
+              </div>
+              <div>
+                <dt className="label">Results recorded</dt>
+                <dd className="num">{playedCount}</dd>
+              </div>
+              <div>
+                <dt className="label">Clubs</dt>
+                <dd className="num">{Object.keys(dataset?.teams ?? {}).length || 20}</dd>
+              </div>
+            </dl>
           </div>
 
           <div className="board" aria-label="Next gameweek forecast">
@@ -185,7 +196,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="label">{longDay(boardFixtures[0].date)}</span>
                 </div>
                 <ul className="match-list">
-                  {boardFixtures.slice(0, 5).map((fixture, index) => (
+                  {boardFixtures.slice(0, 4).map((fixture, index) => (
                     <BoardRow key={fixture.id} fixture={fixture} index={index} />
                   ))}
                 </ul>

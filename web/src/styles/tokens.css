@@ -50,8 +50,8 @@
   --fs-39: 39px;
   --fs-49: 49px;
   --fs-display: clamp(64px, 9vw, 88px);
-  --wdth-score: 62;
-  --wdth-heading: 78;
+  --wdth-score: 75;
+  --wdth-heading: 100;
   --wdth-body: 100;
 
   /* Motion */
@@ -95,8 +95,8 @@
 
 /* Type roles (sentence case everywhere; never uppercase or tracked-out). */
 .num {
-  font-variation-settings: "wdth" 62;
-  font-stretch: 62%;
+  font-variation-settings: "wdth" 75;
+  font-stretch: 75%;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -104,8 +104,8 @@
 }
 .num-display { font-size: var(--fs-display); }
 .heading {
-  font-variation-settings: "wdth" 78;
-  font-stretch: 78%;
+  font-variation-settings: "wdth" 100;
+  font-stretch: 100%;
   font-weight: 700;
   letter-spacing: -0.005em;
   line-height: 1.15;

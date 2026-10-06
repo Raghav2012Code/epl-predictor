@@ -32,10 +32,10 @@
   h1, h2, h3, h4 {
     margin: 0;
     color: var(--ink);
-    font-variation-settings: "wdth" 78;
-    font-stretch: 78%;
+    font-variation-settings: "wdth" 100;
+    font-stretch: 100%;
     font-weight: 700;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.02em;
     line-height: 1.15;
     text-wrap: balance;
   }
