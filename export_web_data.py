@@ -275,12 +275,9 @@ def build_web_dataset() -> str:
     pipeline = PremierLeaguePredictionPipeline()
     pipeline.prepare_data()
     pipeline.train_and_evaluate()
-    if not os.path.exists(CSV_PREDICTIONS):
-        pipeline.forecast_2026_2027_season()
-    else:
-        # Re-forecast on the freshly fitted best model so predictions,
-        # standings, and benchmark can never drift out of sync.
-        pipeline.forecast_2026_2027_season()
+    # Re-forecast on the freshly fitted best model so predictions,
+    # standings, and benchmark can never drift out of sync.
+    pipeline.forecast_2026_2027_season()
 
     _copy_visuals()
 

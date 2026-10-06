@@ -68,15 +68,19 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
       firstKickoffByGameweek.set(fixture.gameweek, fixture.date);
     }
   }
-  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => ({
-    date: new Date(
-      firstKickoffByGameweek.get(entry.gw) ??
-        Date.UTC(2026, 7, 14 + (entry.gw - 1) * 7),
-    ),
-    goals: entry.goals,
-    average: entry.avgPerMatch,
-    gameweek: entry.gw,
-  }));
+  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => {
+    const kickoff = firstKickoffByGameweek.get(entry.gw);
+    return {
+      // Pin local noon: `new Date("2026-08-21")` parses as UTC midnight and
+      // labelled every gameweek a day early in UTC-negative timezones.
+      date: kickoff
+        ? new Date(`${kickoff}T12:00:00`)
+        : new Date(2026, 7, 14 + (entry.gw - 1) * 7, 12),
+      goals: entry.goals,
+      average: entry.avgPerMatch,
+      gameweek: entry.gw,
+    };
+  });
   const outcome = dataset.analytics.outcomeDistribution;
   const metrics: Array<{ label: string; value: string; note: string }> = [
     { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },

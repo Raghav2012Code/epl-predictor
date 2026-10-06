@@ -30,6 +30,28 @@ def test_vercel_configuration_does_not_publish_backend_functions_accidentally():
     assert "api" not in config
 
 
+def test_render_build_warms_the_gitignored_context_cache_before_training():
+    """A fresh clone cannot populate the openfootball cache offline.
+
+    The cache is gitignored, so `run_pipeline.py --offline` skipped every cup
+    file and trained on plain league history while reporting success.
+    """
+    config = (REPOSITORY_ROOT / "render.yaml").read_text(encoding="utf-8")
+
+    warm = config.index("--warm-cache")
+    train = config.index("--offline", warm)
+    assert warm < train, "the cache must be warmed before the offline pipeline run"
+    # Runtime must read the warmed cache, not re-download inside the lifespan.
+    assert "EPL_OFFLINE" in config
+
+
+def test_production_requires_both_host_and_c_origin_env_vars():
+    config = (REPOSITORY_ROOT / "render.yaml").read_text(encoding="utf-8")
+
+    assert "EPL_ALLOWED_HOSTS" in config
+    assert "EPL_CORS_ORIGINS" in config
+
+
 def test_vercel_configuration_caches_hashed_assets_and_refreshes_the_service_worker():
     config = json.loads((REPOSITORY_ROOT / "vercel.json").read_text(encoding="utf-8"))
     headers = {

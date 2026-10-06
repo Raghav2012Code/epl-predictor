@@ -1,5 +1,5 @@
 import type { Fixture, TeamProfile } from "../types";
-import { confidenceFor, fixtureDay, pct, scoreParts, startOfToday } from "./format";
+import { confidenceFor, pct, scoreParts } from "./format";
 
 export const downloadFixturesCsv = (fixtures: Fixture[]) => {
   const rows = [
@@ -61,20 +61,6 @@ export const calculateScenario = (
   const awayProb = Math.round((100 - homeProb - drawProb) * 10) / 10;
   return { homeExpected, awayExpected, homeProb, drawProb, awayProb, homeScore: Math.round(homeExpected), awayScore: Math.round(awayExpected) };
 };
-
-export const nextFixtureByDate = (fixtures: Fixture[]) =>
-  [...fixtures]
-    .filter(
-      (fixture) =>
-        fixture.status !== "Played" &&
-        fixtureDay(fixture.date) >= startOfToday(),
-    )
-    .sort(
-      (a, b) =>
-        fixtureDay(a.date) - fixtureDay(b.date) ||
-        a.gameweek - b.gameweek ||
-        a.id - b.id,
-    )[0] ?? null;
 
 export const resultFor = (fixture: Fixture) => {
   const score = scoreParts(fixture.actualScore);

@@ -14,7 +14,7 @@ import { MotionPop, MotionPresence, MotionSection } from "./Motion";
 import { TeamMark } from "./TeamMark";
 import { BrandLockup } from "./BrandMark";
 import { kickoff, shortDay } from "../lib/format";
-import { nextFixtureByDate } from "../lib/fixtures";
+import { nextFixtureByDate } from "../lib/fixtureDates";
 import type { AppRoute } from "../lib/appRoute";
 import { FixturesPage } from "../pages/FixturesPage";
 import { SimulatorPage } from "../pages/SimulatorPage";
@@ -187,8 +187,20 @@ export const AppShell: React.FC<{
                   setSearchOpen(true);
                 }}
                 onFocus={() => setSearchOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Escape") return;
+                  event.stopPropagation();
+                  if (query) {
+                    setQuery("");
+                  } else {
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                }}
                 placeholder="Search clubs and fixtures"
                 aria-label="Search clubs and fixtures"
+                aria-expanded={Boolean(searchOpen && needle)}
+                aria-autocomplete="list"
                 autoComplete="off"
               />
               <kbd className="search__hint" aria-hidden="true">/</kbd>

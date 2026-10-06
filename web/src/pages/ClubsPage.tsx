@@ -1,6 +1,8 @@
 import React, { useMemo } from "react";
 import type { EPLDataset, VenueSplit } from "../types";
 import { TeamMark } from "../components/TeamMark";
+import { scoreForClub } from "../lib/format";
+import { upcomingFixtures } from "../lib/fixtureDates";
 import { clubResultFor } from "../lib/fixtures";
 
 const chipFor = (result: string | null) =>
@@ -42,9 +44,7 @@ export const ClubsPage: React.FC<{
         fixture.homeTeam === profile.name || fixture.awayTeam === profile.name,
     )
     .sort((a, b) => a.gameweek - b.gameweek);
-  const upcoming = clubFixtures
-    .filter((fixture) => fixture.status !== "Played")
-    .slice(0, 5);
+  const upcoming = upcomingFixtures(clubFixtures, 5);
   const recent = clubFixtures
     .filter((fixture) => fixture.status === "Played")
     .slice(-5)
@@ -149,7 +149,7 @@ export const ClubsPage: React.FC<{
                       {letter}
                     </span>
                     <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
-                    <span className="rows__score num">{fixture.actualScore}</span>
+                    <span className="rows__score num">{scoreForClub(fixture.actualScore, fixture, profile.name)}</span>
                   </li>
                 );
               })}
@@ -175,7 +175,7 @@ export const ClubsPage: React.FC<{
                   >
                     <span className="label rows__gw">GW{fixture.gameweek}</span>
                     <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
-                    <span className="rows__score rows__score--predicted num">{fixture.predictedScore}</span>
+                    <span className="rows__score rows__score--predicted num">{scoreForClub(fixture.predictedScore, fixture, profile.name)}</span>
                   </button>
                 </li>
               ))}

@@ -201,7 +201,10 @@ def plot_metrics_comparison(
     fig.patch.set_facecolor("#fbfaf7")
     ax.set_facecolor("#fbfaf7")
 
-    colors = ["#1d6f52", "#9ab8aa"]
+    # One distinct colour per model. Indexing a 2-colour list by `i % 2` gave
+    # Random Forest and Stacked the same fill, so the production series was
+    # indistinguishable from the benchmark in a shipped diagnostic.
+    colors = ["#1d6f52", "#9ab8aa", "#d59a45", "#4c6b8a", "#8a5a6b", "#5f7a4a"]
 
     for i, model_name in enumerate(models):
         vals = [metrics[model_name][k[1]] for k in higher_keys]
@@ -227,7 +230,7 @@ def plot_metrics_comparison(
     ax.tick_params(colors="#68716c")
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("Accuracy / F1 (higher is better)", color="#68716c", fontsize=11)
-    ax.set_title("Random Forest vs XGBoost Performance Benchmark", color="#173c32", fontsize=15, fontweight="bold", pad=15)
+    ax.set_title(" vs ".join(models) + " Performance Benchmark", color="#173c32", fontsize=15, fontweight="bold", pad=15)
     ax.legend(facecolor="#fbfaf7", edgecolor="#cfcdc5", labelcolor="#173c32", fontsize=11, loc="upper left")
     ax.grid(axis="y", linestyle="--", alpha=0.2, color="#d7ddd7")
     for spine in ax.spines.values():

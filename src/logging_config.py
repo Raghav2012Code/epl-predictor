@@ -16,14 +16,16 @@ import os
 import sys
 
 _CONFIGURED = False
+_CONFIGURED_LEVEL = logging.INFO
 
 
 def configure_logging(level: str | None = None) -> logging.Logger:
     """Configures the root ``epl`` logger once and returns it."""
-    global _CONFIGURED
+    global _CONFIGURED, _CONFIGURED_LEVEL
     root = logging.getLogger("epl")
     chosen = (level or os.environ.get("LOG_LEVEL", "INFO")).upper()
-    root.setLevel(getattr(logging, chosen, logging.INFO))
+    _CONFIGURED_LEVEL = getattr(logging, chosen, logging.INFO)
+    root.setLevel(_CONFIGURED_LEVEL)
     if not _CONFIGURED:
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(
@@ -40,6 +42,14 @@ def configure_logging(level: str | None = None) -> logging.Logger:
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Returns a child logger under ``epl``, configuring once on first use."""
+    """Returns a child logger under ``epl``, configuring once on first use.
+
+    The configured level is applied to each logger as it is created. The CLI
+    scripts import modules lazily after configure_logging() runs, so a child
+    logger created later would otherwise inherit whatever the root level
+    happened to be at that moment and silently ignore --verbose/--quiet.
+    """
     configure_logging()
-    return logging.getLogger(f"epl.{name}")
+    logger = logging.getLogger(f"epl.{name}")
+    logger.setLevel(_CONFIGURED_LEVEL)
+    return logger

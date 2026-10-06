@@ -64,23 +64,6 @@ def suggest_xgb(trial) -> Dict[str, Any]:
     }
 
 
-def _slice_frames(
-    train_df: pd.DataFrame, val_df: pd.DataFrame, feature_cols: List[str]
-):
-    """Splits frames into train / calibration / evaluation views."""
-    cal_slice, eval_slice = split_calibration_evaluation(len(val_df))
-    return {
-        "X_train": train_df[feature_cols],
-        "y_outcome": train_df["target_outcome"],
-        "y_hg": train_df["target_home_goals"],
-        "y_ag": train_df["target_away_goals"],
-        "X_cal": val_df[feature_cols].iloc[cal_slice] if cal_slice.stop else val_df[feature_cols].iloc[0:0],
-        "y_cal": val_df["target_outcome"].iloc[cal_slice] if cal_slice.stop else val_df["target_outcome"].iloc[0:0],
-        "X_eval": val_df[feature_cols].iloc[eval_slice],
-        "y_eval": val_df["target_outcome"].iloc[eval_slice],
-    }
-
-
 def evaluate_params(
     model_type: str,
     params: Dict[str, Any],
@@ -94,8 +77,14 @@ def evaluate_params(
     Lower is better for both supported metrics (rps, log_loss).
     Returns inf when the evaluation slice is empty.
     """
-    parts = _slice_frames(train_df, val_df, feature_cols)
-    if len(parts["X_eval"]) == 0:
+    cal_slice, eval_slice = split_calibration_evaluation(len(val_df))
+    X_train, y_outcome = train_df[feature_cols], train_df["target_outcome"]
+    y_hg, y_ag = train_df["target_home_goals"], train_df["target_away_goals"]
+    X_cal = val_df[feature_cols].iloc[cal_slice] if cal_slice.stop else val_df[feature_cols].iloc[0:0]
+    y_cal = val_df["target_outcome"].iloc[cal_slice] if cal_slice.stop else val_df["target_outcome"].iloc[0:0]
+    X_eval = val_df[feature_cols].iloc[eval_slice]
+    y_eval = val_df["target_outcome"].iloc[eval_slice]
+    if len(X_eval) == 0:
         return float("inf")
     from src.config import get_config as _get_cfg_tune
     from src.feature_engineering import recency_weights as _recency_weights_tune
@@ -105,22 +94,21 @@ def evaluate_params(
         half_life_days=float(_get_cfg_tune()["model"].get("recency_half_life_days", 730)),
     )
     model = MatchPredictorModel(model_type).apply_params(params)
-    model.fit(parts["X_train"], parts["y_outcome"], parts["y_hg"], parts["y_ag"],
-              sample_weight=_sw)
-    if len(parts["X_cal"]) > 0:
+    model.fit(X_train, y_outcome, y_hg, y_ag, sample_weight=_sw)
+    if len(X_cal) > 0:
         try:
-            model.calibrate_temperature(parts["X_cal"], parts["y_cal"])
+            model.calibrate_temperature(X_cal, y_cal)
         except Exception:
             model.calibration_temperature = 1.0
-    probas = model.predict_outcome_proba(parts["X_eval"])
+    probas = model.predict_outcome_proba(X_eval)
     if metric == "log_loss":
         eps = 1e-15
         clipped = np.clip(probas, eps, 1 - eps)
-        y = np.asarray(parts["y_eval"].values, dtype=int)
+        y = np.asarray(y_eval.values, dtype=int)
         return float(-np.mean(np.log(clipped[np.arange(len(y)), y])))
     if metric != "rps":
         raise ValueError(f"Unknown tuning metric {metric!r}; use 'rps' or 'log_loss'.")
-    return float(ranked_probability_score(parts["y_eval"], probas))
+    return float(ranked_probability_score(y_eval, probas))
 
 
 def tune_model(

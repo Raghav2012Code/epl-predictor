@@ -4,7 +4,15 @@
 # (see vercel.json); point its VITE_DATA_URL at this service's /dataset.
 #
 # The production checkpoint is intentionally gitignored, so the build trains
-# it from cached data: `run_pipeline.py --offline` needs no network.
+# it. The multi-competition openfootball cache is gitignored too, so
+# --warm-cache populates it first (online) and the pipeline itself then runs
+# --offline, keeping training deterministic and network-independent.
+#
+# EPL_OFFLINE is set so api.py reads the warmed cache at startup. Without it
+# the lifespan calls load_data(offline=False) and issues ~33 sequential
+# downloads inside the async startup path, which blocks the socket that
+# healthCheckPath: /ready depends on.
+#
 # PYTHON_VERSION is pinned to 3.11 because requirements.txt pins
 # numpy/scikit-learn builds that predate newer interpreters.
 services:
@@ -12,7 +20,7 @@ services:
     name: epl-predictor-api
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && python run_pipeline.py --offline"
+    buildCommand: "pip install -r requirements.txt && python run_pipeline.py --warm-cache && python run_pipeline.py --offline"
     startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /ready
     envVars:
@@ -20,10 +28,20 @@ services:
         value: 3.11.11
       - key: EPL_ENV
         value: production
+      - key: EPL_OFFLINE
+        value: "true"
       - key: EPL_MODEL_PATH
         value: models/production_model.joblib
+      # Both of these are REQUIRED in production. api.py refuses to start
+      # without them: an unset EPL_ALLOWED_HOSTS would otherwise install
+      # TrustedHostMiddleware with an empty pattern list and answer 400 to
+      # every request including /ready, and an unset EPL_CORS_ORIGINS would
+      # silently disable CORS and render the dashboard blank.
+      # Render's hostname only exists after the first deploy, so set these
+      # under Dashboard -> Environment, then Save:
+      #   EPL_CORS_ORIGINS=https://<your-dashboard>.vercel.app
+      #   EPL_ALLOWED_HOSTS=<your-service>.onrender.com
       - key: EPL_CORS_ORIGINS
         sync: false
-      # EPL_ALLOWED_HOSTS is set after first deploy (the hostname only
-      # exists once Render creates the service): Dashboard -> Environment
-      # -> add EPL_ALLOWED_HOSTS=<your-service>.onrender.com, then Save.
+      - key: EPL_ALLOWED_HOSTS
+        sync: false

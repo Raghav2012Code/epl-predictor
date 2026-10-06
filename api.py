@@ -9,9 +9,12 @@ Endpoints:
 Run:
     uvicorn api:app --host 0.0.0.0 --port 8000
 
-The service loads the cached checkpoint (offline data) at startup and
-refuses to serve predictions when the checkpoint is missing or has
-drifted from the current feature set.
+At startup the service loads the checkpoint from EPL_MODEL_PATH (default
+models/production_model.joblib) and the cached historical and fixture data
+under data/raw. A missing cache file is downloaded unless EPL_OFFLINE is
+set (1/true/yes), which forbids network access. The service refuses to
+serve predictions when the checkpoint is missing or has drifted from the
+current feature set.
 """
 
 from __future__ import annotations
@@ -45,24 +48,31 @@ _environment = os.environ.get("EPL_ENV", "development").strip().lower()
 _is_production = _environment == "production"
 
 
-def _configured_origins() -> List[str]:
-    raw = os.environ.get("EPL_CORS_ORIGINS")
+def _split_env_list(name: str) -> List[str]:
+    raw = os.environ.get(name)
     if raw is None:
-        return [] if _is_production else ["http://localhost:5173"]
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-    if _is_production and "*" in origins:
-        raise RuntimeError("EPL_CORS_ORIGINS must list explicit origins in production.")
-    return origins
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _require_explicit_env(name: str, noun: str) -> List[str]:
+    values = _split_env_list(name)
+    if _is_production:
+        # An unset variable must fail as loudly as an empty or wildcard one.
+        if not values:
+            raise RuntimeError(f"{name} must list explicit {noun} in production.")
+        if "*" in values:
+            raise RuntimeError(f"{name} must not contain '*' in production.")
+        return values
+    return values
+
+
+def _configured_origins() -> List[str]:
+    return _require_explicit_env("EPL_CORS_ORIGINS", "origins") or ["http://localhost:5173"]
 
 
 def _configured_hosts() -> List[str]:
-    raw = os.environ.get("EPL_ALLOWED_HOSTS")
-    if raw is None:
-        return [] if _is_production else ["localhost", "127.0.0.1", "testserver"]
-    hosts = [host.strip() for host in raw.split(",") if host.strip()]
-    if _is_production and (not hosts or "*" in hosts):
-        raise RuntimeError("EPL_ALLOWED_HOSTS must list explicit hosts in production.")
-    return hosts
+    return _require_explicit_env("EPL_ALLOWED_HOSTS", "hosts") or ["localhost", "127.0.0.1", "testserver"]
 
 
 class OutcomePrediction(BaseModel):
@@ -138,6 +148,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_configured_hosts())
@@ -161,22 +172,24 @@ def _require_pipeline() -> PremierLeaguePredictionPipeline:
 
 def _checkpoint_sha() -> Optional[str]:
     try:
-        h = hashlib.sha256()
         with open(_model_path, "rb") as f:
-            for chunk in iter(lambda: f.read(65536), b""):
-                h.update(chunk)
-        return h.hexdigest()[:16]
+            return hashlib.file_digest(f, "sha256").hexdigest()[:16]
     except Exception:
         return None
 
 
-@app.get("/health")
-def health() -> Dict[str, Any]:
-    payload = {
-        "status": "ok" if _pipeline is not None else "degraded",
-        "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
+def _service_status(status_ok: str, status_bad: str) -> Dict[str, Any]:
+    loaded = _pipeline is not None and _pipeline.best_model is not None
+    return {
+        "status": status_ok if loaded else status_bad,
+        "model_loaded": loaded,
         "model_error": _model_error,
     }
+
+
+@app.get("/health")
+def health() -> Dict[str, Any]:
+    payload = _service_status("ok", "degraded")
     if _pipeline is None:
         return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
     return payload
@@ -185,11 +198,7 @@ def health() -> Dict[str, Any]:
 @app.get("/ready")
 def ready() -> Dict[str, Any]:
     """Readiness probe: returns success only when a compatible model is loaded."""
-    payload = {
-        "status": "ready" if _pipeline is not None and _pipeline.best_model is not None else "not_ready",
-        "model_loaded": _pipeline is not None and _pipeline.best_model is not None,
-        "model_error": _model_error,
-    }
+    payload = _service_status("ready", "not_ready")
     if not payload["model_loaded"]:
         return JSONResponse(status_code=503, content=payload)  # type: ignore[return-value]
     return payload
@@ -290,8 +299,11 @@ def gameweek(gameweek: int) -> List[Dict[str, Any]]:
     return out
 
 
-@app.exception_handler(HTTPException)
-async def _http_error_handler(request, exc: HTTPException):  # type: ignore[no-untyped-def]
+# Register on StarletteHTTPException, not fastapi.HTTPException: the router
+# raises the Starlette parent for 404 (unmatched route) and 405 (wrong
+# method), so a handler bound to the subclass never sees those.
+@app.exception_handler(StarletteHTTPException)
+async def _http_error_handler(request, exc: StarletteHTTPException):  # type: ignore[no-untyped-def]
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
 
 

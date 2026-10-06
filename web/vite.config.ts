@@ -6,7 +6,14 @@ const rootDir = import.meta.dirname;
 
 export default defineConfig({
   root: rootDir,
-  base: './',
+  // Absolute base: the app is served from the domain root and supports
+  // trailing-slash routes (/fixtures/), which the router resolves via
+  // pathname.replace(/\/$/, ""). A relative base emits document-relative
+  // asset URLs, so on /fixtures/ the browser requests
+  // /fixtures/assets/index-*.js, which matches the SPA rewrite in
+  // vercel.json, is served back as index.html with Content-Type text/html,
+  // and the module script is rejected, leaving a blank page.
+  base: '/',
   resolve: {
     alias: { '@': `${rootDir}/src` },
   },

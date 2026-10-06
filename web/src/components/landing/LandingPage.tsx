@@ -7,8 +7,8 @@ import { TeamMark } from "../TeamMark";
 import { BrandLockup } from "../BrandMark";
 import { dashboardRoutes, pathForAppRoute, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
-import { fixtureDay, kickoff, longDay, scoreParts } from "../../lib/format";
-import { nextFixtureByDate } from "../../lib/fixtures";
+import { kickoff, longDay, scoreParts } from "../../lib/format";
+import { fixtureDay, nextFixtureByDate } from "../../lib/fixtureDates";
 import "../../styles/landing.css";
 
 type LandingPageProps = {
@@ -86,11 +86,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const reduceMotion = useMotionDisabled();
   const landingData = getLandingData(dataset ?? undefined);
   const fixtures = dataset?.fixtures ?? [];
-  const next =
-    nextFixtureByDate(fixtures) ??
-    fixtures.find((fixture) => fixture.status !== "Played") ??
-    fixtures[0] ??
-    null;
+  const next = nextFixtureByDate(fixtures) ?? fixtures[0] ?? null;
   const boardFixtures = next
     ? fixtures
         .filter((fixture) => fixture.gameweek === next.gameweek)

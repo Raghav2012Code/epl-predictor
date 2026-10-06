@@ -5,15 +5,14 @@ import { TeamMark } from "../components/TeamMark";
 import { SplitBar } from "../components/SplitBar";
 import {
   confidenceFor,
-  fixtureDay,
   kickoff,
   longDay,
   pct,
   scoreParts,
   shortDay,
-  startOfToday,
 } from "../lib/format";
-import { downloadFixturesCsv, nextFixtureByDate, resultFor } from "../lib/fixtures";
+import { fixtureDay, nextFixtureByDate } from "../lib/fixtureDates";
+import { downloadFixturesCsv, resultFor } from "../lib/fixtures";
 
 type FixtureFilter = "all" | "upcoming" | "played";
 type FixtureSort = "date" | "confidence";
@@ -283,16 +282,14 @@ export const FixturesPage: React.FC<{
     );
   }, [filter, inGameweek, sort]);
 
+  // Keyed on inGameweek, not visibleFixtures: the latter also changes with the
+  // sort and status filter, which silently discarded the fixture the user had
+  // opened. `selected` already falls back gracefully when it is filtered out.
   useEffect(() => {
-    const upcoming = visibleFixtures
-      .filter(
-        (fixture) =>
-          fixture.status !== "Played" && fixtureDay(fixture.date) >= startOfToday(),
-      )
-      .sort((a, b) => fixtureDay(a.date) - fixtureDay(b.date) || a.id - b.id)[0];
-    setSelectedId((upcoming ?? visibleFixtures[0])?.id ?? null);
+    const upcoming = nextFixtureByDate(inGameweek);
+    setSelectedId((upcoming ?? inGameweek[0])?.id ?? null);
     setSheetOpen(false);
-  }, [gameweek, query, visibleFixtures]);
+  }, [gameweek, query, inGameweek]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -379,6 +376,7 @@ export const FixturesPage: React.FC<{
             onClick={() => setGameweek((current) => Math.max(firstGameweek, current - 1))}
             disabled={gameweek <= firstGameweek}
             aria-label="Previous gameweek"
+            title="Previous gameweek (←)"
           >
             <ChevronLeft size={20} aria-hidden="true" />
           </button>
@@ -400,6 +398,7 @@ export const FixturesPage: React.FC<{
             onClick={() => setGameweek((current) => Math.min(lastGameweek, current + 1))}
             disabled={gameweek >= lastGameweek}
             aria-label="Next gameweek"
+            title="Next gameweek (→)"
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>

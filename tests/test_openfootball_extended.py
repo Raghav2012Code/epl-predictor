@@ -8,6 +8,8 @@ import pytest
 
 from src.data_loader import (
     TEAM_ALIASES,
+    COMPETITION_FILE_MAP,
+    season_label_start_year,
     standardize_team_name,
     parse_openfootball_fixtures,
     load_openfootball_competition_data,
@@ -21,6 +23,55 @@ from src.feature_engineering import (
     BASE_ELO,
     STADIUM_COORDS,
 )
+
+
+def test_competition_file_map_matches_upstream_published_filenames():
+    """openfootball/england publishes unhyphenated cup filenames.
+
+    Requesting fa-cup.txt / efl-cup.txt / league-cup.txt 404s, so every cup
+    fetch failed and the whole multi-competition context layer silently
+    collapsed to plain Premier League history while load_data() reported
+    success. Pin the exact upstream names so this cannot regress silently.
+    """
+    assert COMPETITION_FILE_MAP["facup"] == ["facup.txt"]
+    assert COMPETITION_FILE_MAP["eflcup"] == ["eflcup.txt"]
+    assert COMPETITION_FILE_MAP["premierleague"] == ["1-premierleague.txt"]
+    assert COMPETITION_FILE_MAP["championship"] == ["2-championship.txt"]
+    # Historical hyphenated variants and the non-existent lower-division
+    # suffixes must not reappear; each miss costs a retried download.
+    assert not any("fa-cup" in n or "efl-cup" in n or "league-cup" in n for n in COMPETITION_FILE_MAP["facup"] + COMPETITION_FILE_MAP["eflcup"])
+    assert not any(n.endswith(("-i.txt", "-ii.txt")) for n in COMPETITION_FILE_MAP["premierleague"])
+
+
+def test_regular_season_header_yields_distinct_gameweeks(tmp_path):
+    """2025-26 renamed the Premier League header to "Regular Season - N".
+
+    The old pattern matched only Matchday/Round/Stage/Week, so every row in
+    that season kept the initialiser gameweek of 1. 380 rows all labelled
+    gameweek 1 still pass validate_web_dataset, which only range-checks 1..38.
+    """
+    body = []
+    for week in range(1, 39):
+        body.append(f"▪ Regular Season - {week}")
+        body.append("  Sat Aug 16")
+        body.append("    15:00  Arsenal FC v Chelsea FC")
+    test_file = tmp_path / "1-premierleague.txt"
+    test_file.write_text("\n".join(body), encoding="utf-8")
+
+    df = parse_openfootball_fixtures(str(test_file), season="2025-26", is_url=False)
+
+    assert len(df) == 38
+    assert sorted(df["gameweek"].unique()) == list(range(1, 39))
+
+
+def test_season_label_start_year_handles_both_label_shapes():
+    """4-character codes start in 2000 + code[:2]; "2021" is 2020/21, not 2021."""
+    assert season_label_start_year("2026-27") == 2026
+    assert season_label_start_year("2015-16") == 2015
+    assert season_label_start_year("2021") == 2020
+    assert season_label_start_year("2425") == 2024
+    assert season_label_start_year("2627") == 2026
+    assert season_label_start_year("1819") == 2018
 
 
 def test_openfootball_cup_and_knockout_parsing(tmp_path):

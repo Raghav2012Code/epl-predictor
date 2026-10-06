@@ -27,11 +27,29 @@ def main():
     parser.add_argument("--quiet", "-q", action="store_true", help="Suppress info logs.")
     parser.add_argument("--offline", action="store_true", help="Use only cached data in data/raw.")
     parser.add_argument("--force-download", action="store_true", help="Re-download all datasets.")
+    parser.add_argument(
+        "--warm-cache",
+        action="store_true",
+        help="Download the openfootball multi-competition context, then exit.",
+    )
     args = parser.parse_args()
     if args.verbose:
         configure_logging("DEBUG")
     elif args.quiet:
         configure_logging("WARNING")
+
+    if args.warm_cache:
+        # The multi-competition cache is not committed to the repository, so a
+        # fresh clone cannot populate it in --offline mode. CI and Render runs
+        # this first, then the pipeline itself stays offline and reproducible.
+        from src.data_loader import load_multi_competition_history
+
+        context = load_multi_competition_history(offline=False)
+        competitions = (
+            context["competition"].value_counts().to_dict() if "competition" in context.columns else {}
+        )
+        print(f"Warmed multi-competition cache: {len(context)} matches {competitions}")
+        return
 
     start_time = time.time()
     print("=" * 80)

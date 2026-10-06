@@ -34,9 +34,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Warm Multi-Competition Cache
+        # The openfootball context cache is gitignored, so a fresh checkout
+        # cannot populate it offline. Warm it here so CI exercises the same
+        # context layer Render trains against.
+        run: python run_pipeline.py --warm-cache
+
       - name: Run Pytest Suite
         run: |
           pytest tests/ -v --durations=10
+
+  web-test:
+    name: Web Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: web
+        run: npm test
 
   web-build:
     name: Web App Typecheck & Build

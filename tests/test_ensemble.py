@@ -108,6 +108,84 @@ def test_calibration_upgrade_compares_methods_and_persists_winner():
     assert np.allclose(model.predict_outcome_proba(val[cols]).sum(axis=1), 1.0)
 
 
+def test_all_three_calibration_candidates_are_actually_evaluated():
+    """Guards against a candidate silently dying and narrowing the choice.
+
+    CalibratedClassifierCV(cv="prefit") was removed in scikit-learn 1.9 and
+    raises InvalidParameterError, which subclasses ValueError. The former
+    broad `except` turned that into an `inf` score, so sigmoid and isotonic
+    were unreachable and "compares three strategies" was never true. Asserting
+    only that the winner is one of three names passes even when two are dead.
+    """
+    train, val, cols = _frames()
+    model = MatchPredictorModel("rf").fit(
+        train[cols], train["target_outcome"], train["target_home_goals"], train["target_away_goals"]
+    )
+
+    scores = model.calibrate_outcome(val[cols], val["target_outcome"])["scores"]
+
+    for method in ("sigmoid", "isotonic"):
+        assert np.isfinite(scores[method]), f"{method} calibration was not evaluated"
+        assert scores[method] > 0.0
+
+
+def test_market_blend_calibration_does_not_compound_a_previous_weight():
+    """The blend grid must search a clean base, not a re-blended one.
+
+    predict_outcome_proba applies the market blend unconditionally, so
+    grid-searching over its own output compounded the weight as
+    1-(1-w_old)(1-w_new) and could exceed market_blend_max_weight.
+    """
+    train, val, cols = _frames()
+    model = MatchPredictorModel("rf").fit(
+        train[cols], train["target_outcome"], train["target_home_goals"], train["target_away_goals"]
+    )
+
+    model.market_blend_weight = 0.30
+    weight, _ = model.calibrate_market_blend(val[cols], val["target_outcome"])
+
+    assert 0.0 <= weight <= 0.50
+    assert model.market_blend_weight == weight
+
+
+def test_stacked_goal_corrections_are_applied_not_just_recorded():
+    """The stacked override must apply the corrections calibrate_goals fits.
+
+    calibrate_goals fits from this method's own output and persists the result
+    to the checkpoint, models/metrics.json and /model-info. Because the
+    override shadowed the base implementation, the corrections were computed,
+    reported, and never used.
+    """
+    train, val, cols = _frames()
+    stacked = train_stacked_ensemble(train, val, cols, n_oof_splits=3)
+
+    before_home, before_away = stacked.predict_expected_goals(val[cols])
+    stacked.calibrate_goals(
+        val[cols].iloc[:20], val["target_home_goals"].iloc[:20], val["target_away_goals"].iloc[:20]
+    )
+    after_home, after_away = stacked.predict_expected_goals(val[cols])
+
+    assert not np.allclose(before_home, after_home) or not np.allclose(before_away, after_away), (
+        "calibrate_goals had no effect on the stacked ensemble"
+    )
+
+
+def test_stacked_calibration_score_is_measured_not_a_sentinel():
+    """Member-only models must report a real score, not a fabricated 0.0.
+
+    StackedEnsembleModel.classifier is None, so calibrate_outcome takes the
+    no-classifier branch. That branch used to store a literal 0.0, which reads
+    as a perfect calibration score once persisted and served.
+    """
+    train, val, cols = _frames()
+    stacked = train_stacked_ensemble(train, val, cols, n_oof_splits=3)
+
+    result = stacked.calibrate_outcome(val[cols], val["target_outcome"])
+
+    assert result["scores"]["temperature"] != 0.0
+    assert result["scores"]["temperature"] > 0.0
+
+
 def test_calibration_method_round_trips_in_checkpoint(tmp_path):
     train, val, cols = _frames()
     model = MatchPredictorModel("rf").fit(
