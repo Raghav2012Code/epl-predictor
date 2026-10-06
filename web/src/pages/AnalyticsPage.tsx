@@ -203,7 +203,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
       <section className="block" aria-labelledby="goals-title">
         <h2 id="goals-title">Goals by gameweek</h2>
         <p className="label block__sub">
-          Recorded and projected goal totals across the schedule.
+          Recorded weeks use real goals. Projected weeks add up each match's single most likely score, which reads lower than real totals.
         </p>
         <div className="chart">
           <LineChart data={goalChartData} xDataKey="date" xPadding={10} aspectRatio="2.4 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>

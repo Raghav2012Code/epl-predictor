@@ -71,7 +71,7 @@
 
 .section { padding-block: var(--space-7); }
 .section h2 { font-size: var(--fs-31); }
-.section__sub { max-width: 70ch; margin: var(--space-2) 0 var(--space-5); }
+.section__sub { max-width: 70ch; margin: var(--space-2) 0 var(--space-5); font-size: var(--fs-16); line-height: 1.5; }
 
 .views { margin: var(--space-5) 0 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
 .view-link {

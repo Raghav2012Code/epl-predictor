@@ -326,7 +326,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h2>
               <p>
                 {next
-                  ? `The model picks ${next.predictedOutcome === "Draw" ? "a draw" : next.predictedOutcome === "Home Win" ? `${next.homeTeam} to win` : `${next.awayTeam} to win`}, predicted score ${next.predictedScore}. See it beside the rest of gameweek ${next.gameweek}.`
+                  ? `The model picks ${next.predictedOutcome === "Draw" ? "a draw" : next.predictedOutcome === "Home Win" ? `${next.homeTeam} to win` : `${next.awayTeam} to win`}, predicted score ${next.predictedScore.replace(/ /g, " ")}. See it beside the rest of gameweek ${next.gameweek}.`
                   : "Open fixtures to browse every gameweek with the model beside it."}
               </p>
             </div>
