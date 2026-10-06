@@ -8,13 +8,6 @@ export const confidenceFor = (fixture: Fixture) =>
 export const deltaLabel = (value: number) =>
   `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 
-export const displayDate = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
-
 const dayOf = (value: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : null;
 
@@ -49,10 +42,3 @@ export const startOfToday = () => {
 
 export const fixtureDay = (value: string) =>
   new Date(`${value}T00:00:00`).getTime();
-
-export const resultTone = (result: string | null) =>
-  result === "Home win" || result === "Win"
-    ? "tone-win"
-    : result === "Away win" || result === "Loss"
-      ? "tone-loss"
-      : "tone-draw";
