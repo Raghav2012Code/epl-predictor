@@ -2,6 +2,20 @@ import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { EPLDataset } from "../types";
 import { TeamMark } from "../components/TeamMark";
+import { FormChips } from "../components/FormChips";
+import { recentForm } from "../lib/fixtures";
+
+type Zone = "cl" | "europe" | "relegation";
+
+/** Usual end-of-season places: top four to the Champions League, next two to Europe, bottom three down. */
+const zoneFor = (rank: number, clubs: number): Zone | null =>
+  rank <= 4 ? "cl" : rank <= 6 ? "europe" : rank > clubs - 3 ? "relegation" : null;
+
+const zoneNames: Record<Zone, string> = {
+  cl: "Champions League places",
+  europe: "Europa League and Conference League places",
+  relegation: "Relegation",
+};
 
 type SortKey =
   "rank" | "team" | "played" | "won" | "drawn" | "lost" | "gd" | "points";
@@ -88,14 +102,23 @@ export const StandingsPage: React.FC<{
                 </th>
               ))}
               <th scope="col" className="league__form is-optional">
-                <span className="label">Last five</span>
+                <span className="label">Form</span>
               </th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((row) => (
-              <tr key={row.team} onClick={() => onClub(row.team)}>
-                <td className="league__rank num">{row.rank}</td>
+              <tr
+                key={row.team}
+                className={zoneFor(row.rank, sorted.length) ? `zone zone--${zoneFor(row.rank, sorted.length)}` : undefined}
+                onClick={() => onClub(row.team)}
+              >
+                <td className="league__rank num">
+                  {row.rank}
+                  {zoneFor(row.rank, sorted.length) && (
+                    <span className="sr-only">, {zoneNames[zoneFor(row.rank, sorted.length) as Zone]}</span>
+                  )}
+                </td>
                 <td className="league__team">
                   <button
                     type="button"
@@ -117,19 +140,22 @@ export const StandingsPage: React.FC<{
                 <td className="num">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
                 <td className="league__points num">{row.points}</td>
                 <td className="league__form is-optional">
-                  <span className="form-chips" role="img" aria-label={`Last five: ${row.last5.join(", ")}`}>
-                    {row.last5.map((result, index) => (
-                      <span key={index} className={`form-chip form-chip--${result}`} aria-hidden="true">
-                        {result}
-                      </span>
-                    ))}
-                  </span>
+                  <FormChips form={recentForm(dataset.fixtures, row.team)} empty="No results" />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <ul className="zone-key label" aria-label="Table key">
+        {(Object.keys(zoneNames) as Zone[]).map((zone) => (
+          <li key={zone}>
+            <i className={`zone-key__swatch zone--${zone}`} aria-hidden="true" />
+            {zoneNames[zone]}
+          </li>
+        ))}
+        <li>Form is official results only, oldest first.</li>
+      </ul>
     </>
   );
 };

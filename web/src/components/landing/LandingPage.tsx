@@ -1,15 +1,16 @@
 import React from "react";
+import { ThemeToggle } from "../ThemeToggle";
 import { ChevronRight } from "lucide-react";
 import type { EPLDataset, Fixture } from "../../types";
 import { useMotionDisabled } from "../Motion";
 import { SplitBar } from "../SplitBar";
 import { TeamMark } from "../TeamMark";
+import { RouteLink } from "../RouteLink";
 import { BrandLockup } from "../BrandMark";
-import { dashboardRoutes, pathForAppRoute, type AppRoute } from "../../lib/appRoute";
+import { dashboardRoutes, type AppRoute } from "../../lib/appRoute";
 import { getLandingData } from "../../lib/landingData";
-import { kickoff, longDay, scoreParts } from "../../lib/format";
-import { fixtureDay, nextFixtureByDate } from "../../lib/fixtureDates";
-import "../../styles/landing.css";
+import { dayMonth, kickoff, longDay, scoreParts } from "../../lib/format";
+import { compareDay, nextFixtureByDate } from "../../lib/fixtureDates";
 
 type LandingPageProps = {
   dataset?: EPLDataset | null;
@@ -25,7 +26,7 @@ const views: Record<Exclude<AppRoute, "landing">, { title: string; body: string 
   },
   simulator: {
     title: "Simulator",
-    body: "Pick any two clubs, change form and venue, and watch the probabilities move.",
+    body: "Pick any two clubs, change attack and venue, and watch the probabilities move.",
   },
   standings: {
     title: "Table",
@@ -51,7 +52,7 @@ const BoardRow: React.FC<{ fixture: Fixture; index: number }> = ({ fixture, inde
       <div className="match match--static">
         <span className="match__when">
           <span className="match__time num">{kickoff(fixture.time)}</span>
-          <span className="label">{fixture.date === "TBC" ? "Date TBC" : fixture.date.slice(5).replace("-", "/")}</span>
+          <span className="label">{dayMonth(fixture.date)}</span>
         </span>
         <span className="match__teams">
           <span className="match__team">
@@ -92,7 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         .filter((fixture) => fixture.gameweek === next.gameweek)
         .sort(
           (a, b) =>
-            fixtureDay(a.date) - fixtureDay(b.date) ||
+            compareDay(a.date, b.date) ||
             a.time.localeCompare(b.time) ||
             a.id - b.id,
         )
@@ -113,31 +114,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </a>
       <header className="topbar">
         <div className="wrap topbar__inner">
-          <button
-            type="button"
+          <a
             className="brand"
-            onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })}
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+            }}
             aria-label="EPL Predictor, back to top"
           >
             <BrandLockup season={dataset?.season ?? landingData.season} />
-          </button>
+          </a>
           <nav className="landing-links" aria-label="Views">
             {dashboardRoutes.map((route) => (
-              <a
-                key={route}
-                href={pathForAppRoute(route)}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onNavigate(route);
-                }}
-              >
+              <RouteLink key={route} route={route} onNavigate={onNavigate}>
                 {views[route].title}
-              </a>
+              </RouteLink>
             ))}
           </nav>
-          <button type="button" className="btn" onClick={() => onNavigate("fixtures")}>
+          <RouteLink route="fixtures" className="btn" onNavigate={onNavigate}>
             Open fixtures
-          </button>
+          </RouteLink>
         </div>
       </header>
 
@@ -150,9 +147,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               for each match, always kept apart from the official result.
             </p>
             <div className="hero__actions">
-              <button type="button" className="btn" onClick={() => onNavigate("fixtures")}>
+              <RouteLink route="fixtures" className="btn" onNavigate={onNavigate}>
                 Open fixtures
-              </button>
+              </RouteLink>
               <button type="button" className="btn btn--quiet" onClick={() => scrollTo("evidence")}>
                 See the evidence
               </button>
@@ -203,9 +200,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="label">
                     Grey scores are the model's predicted score.
                   </span>
-                  <button type="button" className="text-button" onClick={() => onNavigate("fixtures")}>
+                  <RouteLink route="fixtures" className="text-button" onNavigate={onNavigate}>
                     All {boardFixtures.length} fixtures
-                  </button>
+                  </RouteLink>
                 </div>
               </>
             ) : (
@@ -222,11 +219,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <ul className="views">
             {dashboardRoutes.map((route) => (
               <li key={route}>
-                <button type="button" className="view-link" onClick={() => onNavigate(route)}>
+                <RouteLink route={route} className="view-link" onNavigate={onNavigate}>
                   <strong>{views[route].title}</strong>
                   <span className="view-link__body">{views[route].body}</span>
                   <ChevronRight size={20} aria-hidden="true" />
-                </button>
+                </RouteLink>
               </li>
             ))}
           </ul>
@@ -262,32 +259,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           )}
           <div className="landing-evidence">
             {models.length > 0 && (
-              <table className="league models">
-                <caption className="sr-only">Validation results by model</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className="models__name">Model</th>
-                    <th scope="col">RPS</th>
-                    <th scope="col">Accuracy</th>
-                    <th scope="col" className="is-optional">Log loss</th>
-                    <th scope="col">Goal error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {models.map((entry) => (
-                    <tr key={entry.name} className={entry.isProduction ? "is-production" : undefined}>
-                      <th scope="row" className="models__name">
-                        {entry.name}
-                        {entry.isProduction && <span className="tag">Production</span>}
-                      </th>
-                      <td className="num">{entry.rps}</td>
-                      <td className="num">{entry.accuracy}%</td>
-                      <td className="num is-optional">{entry.logLoss}</td>
-                      <td className="num">{entry.avgGoalMae}</td>
+              <div className="table-scroll" role="region" aria-label="Validation results by model" tabIndex={0}>
+                <table className="league models">
+                  <caption className="sr-only">Validation results by model</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="models__name">Model</th>
+                      <th scope="col">RPS</th>
+                      <th scope="col">Accuracy</th>
+                      <th scope="col" className="is-optional">Log loss</th>
+                      <th scope="col">Goal error</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {models.map((entry) => (
+                      <tr key={entry.name} className={entry.isProduction ? "is-production" : undefined}>
+                        <th scope="row" className="models__name">
+                          {entry.name}
+                          {entry.isProduction && <span className="tag">Production</span>}
+                        </th>
+                        <td className="num">{entry.rps}</td>
+                        <td className="num">{entry.accuracy}%</td>
+                        <td className="num is-optional">{entry.logLoss}</td>
+                        <td className="num">{entry.avgGoalMae}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
             <div>
               <p className="coverage__figure num">
@@ -326,9 +325,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   : "Open fixtures to browse every gameweek with the model beside it."}
               </p>
             </div>
-            <button type="button" className="btn btn--paper" onClick={() => onNavigate("fixtures")}>
+            <RouteLink route="fixtures" className="btn btn--paper" onNavigate={onNavigate}>
               Open fixtures
-            </button>
+            </RouteLink>
           </div>
         </section>
       </main>
@@ -337,6 +336,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="wrap footer__inner">
           <span>Forecasts are probabilities, not guarantees.</span>
           <div className="footer__actions">
+            <ThemeToggle />
             {onToggleMotion && (
               <button
                 type="button"

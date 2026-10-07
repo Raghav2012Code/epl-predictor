@@ -27,6 +27,14 @@ Defined once as CSS custom properties in `web/src/styles/tokens.css`.
 | `--draw` | `#AEB7C2` | Chalk: draw share |
 | `--away` | `#2D5BD0` | Away-kit blue: away-win share |
 | `--signal` | `#F2B705` | Scoreboard bulb: only the "next match" marker, always paired with the text "Next" |
+| `--danger` | `#C2362B` | A miss or a loss of place: "Missed" verdicts, the relegation zone |
+| `--zone-cl` | `#4B3FB5` | Table edge for the Champions League places (1-4) |
+| `--zone-europe` | `#D0661A` | Table edge for the Europa and Conference League places (5-6) |
+
+Dark theme: the same roles with dark values (`tokens.css`), following the OS
+unless the footer "Dark mode" toggle stored a choice (`html[data-theme]`, set
+before first paint by the inline script in `index.html`). Backdrops use
+`--scrim`, never a tint of `--ink`, because ink turns light in the dark theme.
 
 Focus: every interactive element shows a 2px `--ink` outline with 2px offset
 on `:focus-visible` (on navy surfaces, a 2px `--paper` outline). Amber is never
@@ -63,7 +71,8 @@ monospace for data.
 - Desktop shell: a slim top bar (shield mark and wordmark with the season, the
   five views as text tabs, a "Next kickoff" link to fixtures from 1260px up,
   search). No sidebar. The mark is `BrandMark`; `public/favicon.svg` uses the
-  same geometry.
+  same geometry. The wordmark links home; tabs, the kickoff link and landing
+  calls to action are real links (`RouteLink`), so they open in a new tab.
 - Mobile shell (under 760px): top bar with brand and a search button; the five
   views in a fixed bottom tab bar within thumb reach. No horizontal scrolling.
 - Surfaces are separated by spacing and `--concourse` tone, not by cards with
@@ -75,18 +84,40 @@ monospace for data.
 
 - Height 12px in lists, 20px in detail views; 2px paper gaps between segments;
   segment widths are the exact percentages.
-- Numbers sit directly under their segment, left / centre / right aligned,
-  in the scoreboard numerals. The favoured outcome's number is `--ink`; the
+- Numbers sit under their segment, left / centre / right aligned, in the
+  scoreboard numerals. Each keeps at least its own width and shares the rest in
+  proportion to its value, so a thin segment never makes labels overlap. The favoured outcome's number is `--ink`; the
   others are `--ink-soft`.
 - The accessible label always reads the three percentages in words.
+
+## Charts
+
+- Simple bars (goals by gameweek, feature importance, RPS strip) are plain
+  HTML and CSS. Charts that need real axes (reliability curves, goal error)
+  use visx, coloured from the tokens through `var(--…)`.
+- Outcome colours keep their meaning in charts: `--home`, `--draw`, `--away`.
+  Models read as a ramp: the production model is `--ink`, benchmarks are
+  `--ink-soft` and `--draw`.
+- Every chart has a text alternative (`aria-label` or a caption table) and a
+  one-line note on how to read it. Diagnostic PNGs from `src/evaluate.py` use
+  the same palette and are only a fallback.
 
 ## Motion
 
 One orchestrated moment: when a gameweek loads or changes, the split bars sweep
 in from zero, staggered down the list (about 400ms total). Everything else
-responds only to user action: opening detail, the mobile sheet, the dialog.
+responds only to user action:
+
+- Active indicators (top tabs, fixture filter, selected fixture, club picker)
+  glide to the new choice with one shared spring (`SPRING` in `Motion.tsx`,
+  about 300ms, no overshoot) through Motion `layoutId`.
+- Split bars glide to new values when they change in place (simulator).
+- Swapped content (fixture detail, club profile) and route changes fade in
+  with a short rise.
+- Opening detail, the mobile sheet and the dialog.
+
 All motion is disabled by `prefers-reduced-motion` and by the in-app motion
-toggle.
+toggle, through one `MotionConfig` plus the CSS overrides in `base.css`.
 
 ## Copy
 

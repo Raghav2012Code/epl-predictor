@@ -14,6 +14,13 @@
   --draw: #aeb7c2;
   --away: #2d5bd0;
   --signal: #f2b705;
+  --danger: #c2362b;
+
+  /* Table zones: own hues, so outcome colours keep their single meaning. */
+  --zone-cl: #4b3fb5;
+  --zone-europe: #d0661a;
+  --zone-relegation: var(--danger);
+  --confusion-cap: 50;
 
   /* Spacing scale (px): 4, 8, 12, 16, 24, 32, 48, 64 */
   --space-1: 4px;
@@ -29,6 +36,9 @@
   --radius-control: 6px;
   --radius-overlay: 10px;
   --radius-bar: 3px;
+
+  /* Backdrop behind the dialog and the mobile sheet. */
+  --scrim: rgb(19 35 58 / 0.5);
 
   /* The one elevation, reserved for overlays (dialog, search results, sheet). */
   --elevation-overlay: 0 12px 32px rgb(19 35 58 / 0.16), 0 2px 6px rgb(19 35 58 / 0.08);
@@ -59,34 +69,50 @@
   --duration-quick: 160ms;
   --duration-sweep: 400ms;
 
-  /*
-   * Bridge for the vendored chart components (src/components/charts). They
-   * read these names directly; alias them to the split-board palette instead
-   * of carrying a second theme.
-   */
-  --foreground: var(--ink);
-  --muted-foreground: var(--ink-soft);
-  --border: var(--line);
-  --chart-1: var(--home);
-  --chart-2: var(--away);
-  --chart-3: var(--draw);
-  --chart-4: var(--ink-soft);
-  --chart-5: var(--ink);
-  --chart-background: var(--paper);
-  --chart-foreground: var(--ink);
-  --chart-foreground-muted: var(--ink-soft);
-  --chart-label: var(--ink-soft);
-  --chart-grid: var(--line);
-  --chart-brush-border: var(--line);
-  --chart-crosshair: var(--ink);
-  --chart-line-primary: var(--home);
-  --chart-line-secondary: var(--away);
-  --chart-tooltip-background: var(--ink);
-  --chart-tooltip-foreground: var(--paper);
-  --chart-tooltip-muted: var(--line);
-  --chart-marker-background: var(--paper);
-  --chart-marker-border: var(--line);
-  --chart-marker-foreground: var(--ink);
+}
+
+/*
+ * Dark theme: follows the OS unless the footer toggle picked one
+ * (html[data-theme], set before first paint by the script in index.html).
+ */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  --paper: #0f1a2a;
+  --concourse: #18263a;
+  --line: #2a3a52;
+  --ink: #e7edf5;
+  --ink-soft: #9fb0c4;
+  --home: #3daa6e;
+  --draw: #5f6f84;
+  --away: #6b93f5;
+  --danger: #f0675c;
+  --zone-cl: #9d8cff;
+  --zone-europe: #f0954e;
+  --confusion-cap: 36;
+  --scrim: rgb(0 0 0 / 0.6);
+  --elevation-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+  --badge-halo: drop-shadow(0 0 1px rgb(255 255 255 / 0.7));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1a2a;
+    --concourse: #18263a;
+    --line: #2a3a52;
+    --ink: #e7edf5;
+    --ink-soft: #9fb0c4;
+    --home: #3daa6e;
+    --draw: #5f6f84;
+    --away: #6b93f5;
+    --danger: #f0675c;
+    --zone-cl: #9d8cff;
+    --zone-europe: #f0954e;
+    --confusion-cap: 36;
+    --scrim: rgb(0 0 0 / 0.6);
+    --elevation-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+    color-scheme: dark;
+    --badge-halo: drop-shadow(0 0 1px rgb(255 255 255 / 0.7));
+  }
 }
 
 @media (max-width: 639px) {

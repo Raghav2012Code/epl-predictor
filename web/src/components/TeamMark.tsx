@@ -7,8 +7,8 @@ export const TeamMark: React.FC<{
   badge?: string;
 }> = ({ team, short, badge }) => {
   const src = badge ?? team?.badge ?? "";
-  const [failed, setFailed] = useState(false);
-  if (src && !failed)
+  const [failedSrc, setFailedSrc] = useState("");
+  if (src && failedSrc !== src)
     return (
       <img
         className="team-mark team-badge"
@@ -17,13 +17,13 @@ export const TeamMark: React.FC<{
         aria-hidden="true"
         loading="lazy"
         draggable={false}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
       />
     );
   return (
     <span
       className="team-mark"
-      style={{ borderColor: team?.color ?? "#1d6f52" }}
+      style={{ borderColor: team?.color ?? "var(--line)" }}
       aria-hidden="true"
     >
       {(short ?? team?.short ?? "FC").slice(0, 3)}

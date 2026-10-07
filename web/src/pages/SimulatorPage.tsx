@@ -2,7 +2,7 @@ import React, { useEffect, useId, useMemo, useState } from "react";
 import type { EPLDataset } from "../types";
 import { TeamMark } from "../components/TeamMark";
 import { SplitBar } from "../components/SplitBar";
-import { deltaLabel, scoreParts } from "../lib/format";
+import { scoreParts } from "../lib/format";
 import { calculateScenario } from "../lib/fixtures";
 
 export const SimulatorPage: React.FC<{
@@ -92,7 +92,7 @@ export const SimulatorPage: React.FC<{
         <div>
           <h1>Simulator</h1>
           <p className="label page-head__sub">
-            Change form and venue to see how a matchup moves. Scenario numbers
+            Change attack and venue to see how a matchup moves. Scenario numbers
             are estimates made in your browser; the scheduled forecast stays the
             reference.
           </p>
@@ -138,7 +138,7 @@ export const SimulatorPage: React.FC<{
           </div>
           <div className="field">
             <div className="field__row">
-              <label htmlFor={`${uid}-hf`}>{homeTeam} form</label>
+              <label htmlFor={`${uid}-hf`}>{homeTeam} attack</label>
               <output htmlFor={`${uid}-hf`} className="num">{formatBoost(homeBoost)}</output>
             </div>
             <input
@@ -148,13 +148,19 @@ export const SimulatorPage: React.FC<{
               min="-30"
               max="30"
               value={homeBoost}
+              aria-valuetext={`${formatBoost(homeBoost)} goals scored`}
               onChange={(event) => setHomeBoost(Number(event.target.value))}
               aria-valuetext={formatBoost(homeBoost)}
             />
+            <div className="range-scale label" aria-hidden="true">
+              <span>-30%</span>
+              <span>No change</span>
+              <span>+30%</span>
+            </div>
           </div>
           <div className="field">
             <div className="field__row">
-              <label htmlFor={`${uid}-af`}>{awayTeam} form</label>
+              <label htmlFor={`${uid}-af`}>{awayTeam} attack</label>
               <output htmlFor={`${uid}-af`} className="num">{formatBoost(awayBoost)}</output>
             </div>
             <input
@@ -164,9 +170,15 @@ export const SimulatorPage: React.FC<{
               min="-30"
               max="30"
               value={awayBoost}
+              aria-valuetext={`${formatBoost(awayBoost)} goals scored`}
               onChange={(event) => setAwayBoost(Number(event.target.value))}
               aria-valuetext={formatBoost(awayBoost)}
             />
+            <div className="range-scale label" aria-hidden="true">
+              <span>-30%</span>
+              <span>No change</span>
+              <span>+30%</span>
+            </div>
           </div>
           <label className="check">
             <input
@@ -206,12 +218,18 @@ export const SimulatorPage: React.FC<{
             draw={scenario.drawProb}
             away={scenario.awayProb}
           />
+          {changed && baseline && (
+            <div className="sim__baseline">
+              <span className="label">Before your changes</span>
+              <SplitBar home={baseline.homeProb} draw={baseline.drawProb} away={baseline.awayProb} />
+            </div>
+          )}
           <p className="sim__delta" aria-live="polite">
             {changed
               ? `Compared with the unadjusted baseline, ${homeTeam}'s win chance ${
-                  homeMove === 0 ? "does not change" : `${homeMove > 0 ? "rises" : "falls"} by ${deltaLabel(Math.abs(homeMove)).replace("+", "")}`
+                  homeMove === 0 ? "does not change" : `${homeMove > 0 ? "rises" : "falls"} by ${Math.abs(homeMove).toFixed(1)} percentage points`
                 }.`
-              : "Move a control to compare your scenario with the unadjusted baseline."}
+              : "Move a control to see the scenario change. The bar shows your scenario; the model's forecast is below."}
           </p>
           <dl className="facts facts--grid">
             <div>
@@ -222,15 +240,23 @@ export const SimulatorPage: React.FC<{
               <dt className="label">Expected {awayTeam} goals</dt>
               <dd className="num">{scenario.awayExpected.toFixed(2)}</dd>
             </div>
-            <div>
-              <dt className="label">Scheduled forecast</dt>
-              <dd className="num">{production?.predictedScore ?? "Not scheduled"}</dd>
-            </div>
-            <div>
-              <dt className="label">Forecast model</dt>
-              <dd>{dataset.benchmark.productionModel}</dd>
-            </div>
           </dl>
+          <div className="sim__model">
+            <h2>The model's forecast</h2>
+            {production ? (
+              <>
+                <p className="label">
+                  {dataset.benchmark.productionModel} model, gameweek {production.gameweek}. Predicted score{" "}
+                  <strong className="num">{production.predictedScore}</strong>. Your controls do not change it.
+                </p>
+                <SplitBar home={production.homeWinProb} draw={production.drawProb} away={production.awayWinProb} />
+              </>
+            ) : (
+              <p className="label">
+                {homeTeam} and {awayTeam} do not meet this season, so there is no model forecast to compare.
+              </p>
+            )}
+          </div>
         </section>
       </div>
     </>

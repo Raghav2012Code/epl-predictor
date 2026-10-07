@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appRouteForPath,
+  canonicalPath,
   dashboardRoutes,
   pathForAppRoute,
   type AppRoute,
@@ -43,5 +44,13 @@ describe("app routes", () => {
       productionModel: "Stacked",
       productionRps: 0.2044,
     });
+  });
+});
+
+describe("canonicalPath", () => {
+  it("resolves aliases, trailing slashes and unknown paths", () => {
+    expect(canonicalPath("/standings")).toBe("/table");
+    expect(canonicalPath("/fixtures/")).toBe("/fixtures");
+    expect(canonicalPath("/nope")).toBe("/");
   });
 });

@@ -86,6 +86,7 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
+  text-decoration: none;
   transition: background-color var(--duration-quick) var(--ease-out);
 }
 .view-link:hover { background: var(--concourse); }

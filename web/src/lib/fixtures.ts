@@ -1,5 +1,6 @@
 import type { Fixture, TeamProfile } from "../types";
 import { confidenceFor, pct, scoreParts } from "./format";
+import { compareDay } from "./fixtureDates";
 
 export const downloadFixturesCsv = (fixtures: Fixture[]) => {
   const rows = [
@@ -79,4 +80,47 @@ export const clubResultFor = (fixture: Fixture, club: string) => {
   const clubWasHome = fixture.homeTeam === club;
   const clubWon = result === "Home win" ? clubWasHome : !clubWasHome;
   return clubWon ? "Win" : "Loss";
+};
+
+export type FormResult = "W" | "D" | "L";
+
+const byKickoff = (a: Fixture, b: Fixture) =>
+  compareDay(a.date, b.date) || a.time.localeCompare(b.time) || a.id - b.id;
+
+/**
+ * A club's real form: its last `limit` official results, oldest first.
+ * With `before`, only matches that kicked off before that fixture count.
+ * (The dataset's `last5Form` is the end of the projected season, not form.)
+ */
+export const recentForm = (
+  fixtures: Fixture[],
+  club: string,
+  limit = 5,
+  before?: Fixture,
+): FormResult[] =>
+  fixtures
+    .filter(
+      (fixture) =>
+        fixture.status === "Played" &&
+        (fixture.homeTeam === club || fixture.awayTeam === club) &&
+        (!before || byKickoff(fixture, before) < 0),
+    )
+    .sort(byKickoff)
+    .slice(-limit)
+    .map((fixture) => {
+      const result = clubResultFor(fixture, club);
+      return result === "Win" ? "W" : result === "Loss" ? "L" : "D";
+    });
+
+/** Whether the published pick matched the official result; null before full time. */
+export const pickWasRight = (fixture: Fixture): boolean | null => {
+  const result = resultFor(fixture);
+  if (!result) return null;
+  const published =
+    fixture.predictedOutcome === "Home Win"
+      ? "Home win"
+      : fixture.predictedOutcome === "Away Win"
+        ? "Away win"
+        : "Draw";
+  return published === result;
 };

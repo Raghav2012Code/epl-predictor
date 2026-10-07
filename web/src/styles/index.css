@@ -1,55 +1,15 @@
 /*
- * Global stylesheet entry.
- *
- * Tailwind stays because the vendored charts (src/components/charts) and the
- * shadcn primitives are written in Tailwind utilities. Its preflight
- * lives in the `base` layer; base.css adds the split-board defaults to that
- * same layer after it, so ours win there and Tailwind utilities still win over
- * both. shell.css, pages.css and split-bar.css are unlayered component styles.
+ * Global stylesheet entry. Only Tailwind's preflight reset is used; it lives
+ * in the `base` layer, and base.css adds the split-board defaults to that same
+ * layer after it. Everything else is plain, unlayered component CSS, and this
+ * file is the single place that sets its order (landing.css must load after
+ * tokens.css so its type sizes win over the shared `.label` role).
  */
-@import "tailwindcss";
+@import "tailwindcss/preflight.css" layer(base);
 @import "@fontsource-variable/archivo/wdth.css";
 @import "./tokens.css";
 @import "./base.css";
 @import "./split-bar.css";
 @import "./shell.css";
 @import "./pages.css";
-
-/*
- * Vendored components carry `dark:` classes. The dashboard has no dark theme,
- * so bind the variant to a `.dark` class that is never set; Tailwind v4's
- * default would otherwise follow the OS colour scheme.
- */
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Map the Tailwind theme names the vendored components use onto the tokens. */
-@theme inline {
-  --font-sans: var(--font-family);
-  --font-heading: var(--font-family);
-  --color-background: var(--paper);
-  --color-foreground: var(--ink);
-  --color-card: var(--paper);
-  --color-card-foreground: var(--ink);
-  --color-muted: var(--concourse);
-  --color-muted-foreground: var(--ink-soft);
-  --color-primary: var(--ink);
-  --color-primary-foreground: var(--paper);
-  --color-secondary: var(--concourse);
-  --color-secondary-foreground: var(--ink);
-  --color-border: var(--line);
-  --color-ring: var(--ink);
-  --color-chart-label: var(--chart-label);
-  --color-chart-grid: var(--chart-grid);
-  --color-chart-background: var(--chart-background);
-  --color-chart-foreground: var(--chart-foreground);
-  --color-chart-foreground-muted: var(--chart-foreground-muted);
-  --color-chart-line-primary: var(--chart-line-primary);
-  --color-chart-line-secondary: var(--chart-line-secondary);
-  --color-chart-crosshair: var(--chart-crosshair);
-  --color-chart-tooltip-background: var(--chart-tooltip-background);
-  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
-  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
-  --color-chart-marker-background: var(--chart-marker-background);
-  --color-chart-marker-border: var(--chart-marker-border);
-  --color-chart-marker-foreground: var(--chart-marker-foreground);
-}
+@import "./landing.css";

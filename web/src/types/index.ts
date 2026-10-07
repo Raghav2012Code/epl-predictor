@@ -147,6 +147,29 @@ export interface DatasetMeta {
   generatedBy: string;
 }
 
+export interface ReliabilityPoint {
+  predicted: number;
+  observed: number;
+  matches: number;
+}
+
+/** Held-out evaluation slice. Outcome order everywhere is Away, Draw, Home. */
+export interface ModelEvaluation {
+  matches: number;
+  /** Per model: rows are the actual outcome, columns the predicted outcome. */
+  confusion: Record<string, number[][]>;
+  /** Per model: one list of binned points per outcome. */
+  reliability: Record<string, ReliabilityPoint[][]>;
+  goalError: {
+    residuals: number[];
+    home: number[];
+    away: number[];
+    goals: number[];
+    actual: number[];
+    predicted: number[];
+  };
+}
+
 export interface EPLDataset {
   season: string;
   totalMatches: number;
@@ -158,6 +181,8 @@ export interface EPLDataset {
     models: ModelMetric[];
     topFeatures: FeatureImportance[];
     diagnostics: DiagnosticImage[];
+    /** Held-out evaluation summaries; absent in datasets exported before it existed. */
+    evaluation?: ModelEvaluation;
   };
   teams: Record<string, TeamProfile>;
   analytics: LeagueAnalytics;

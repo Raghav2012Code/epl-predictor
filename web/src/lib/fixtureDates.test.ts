@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareDay,
   fixtureDay,
   isUpcomingFixture,
   nextFixtureByDate,
@@ -88,5 +89,12 @@ describe("fixture date helpers", () => {
     const today = new Date(startOfToday());
     expect(today.getHours()).toBe(0);
     expect(today.getMinutes()).toBe(0);
+  });
+});
+describe("compareDay", () => {
+  it("orders dated fixtures and sorts TBC last without NaN", () => {
+    const days = ["TBC", "2026-10-11", "TBC", "2026-10-10"];
+    expect([...days].sort(compareDay)).toEqual(["2026-10-10", "2026-10-11", "TBC", "TBC"]);
+    expect(compareDay("TBC", "TBC")).toBe(0);
   });
 });

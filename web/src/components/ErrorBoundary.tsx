@@ -5,7 +5,20 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error('Unhandled dashboard error', error, info); }
   render() {
-    if (this.state.error) return <main className="error-shell"><div className="content-card error-card" role="alert"><p className="eyebrow">Unexpected error</p><h1>The dashboard needs a reload.</h1><p className="muted">{this.state.error.message}</p><button className="primary-button" onClick={() => window.location.reload()}>Reload dashboard</button></div></main>;
-    return this.props.children;
+    if (!this.state.error) return this.props.children;
+    return (
+      <main className="state">
+        <div className="state__body" role="alert">
+          <h1>Something went wrong</h1>
+          <p>{this.state.error.message}</p>
+          <p>Reload the page to start again.</p>
+          <div>
+            <button type="button" className="btn" onClick={() => window.location.reload()}>
+              Reload the page
+            </button>
+          </div>
+        </div>
+      </main>
+    );
   }
 }

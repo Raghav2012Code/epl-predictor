@@ -17,13 +17,13 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | Benchmark |
-| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | Benchmark |
-| Stacked | 48.9% | 0.447 | 1.006 | 0.2043 | 0.89 | 58.5% | Production |
+| Random Forest | 47.5% | 0.435 | 1.009 | 0.2048 | 0.91 | 61.7% | Benchmark |
+| XGBoost | 48.7% | 0.431 | 1.012 | 0.2053 | 0.92 | 62.9% | Benchmark |
+| Stacked | 48.5% | 0.445 | 1.006 | 0.2043 | 0.91 | 62.5% | Production |
 
 These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale.
 
-Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on RPS, log loss, macro F1 and goal MAE. Its accuracy is level with XGBoost at 48.9%, not ahead of it.
+Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on RPS, log loss and macro F1. It is not ahead everywhere: XGBoost has higher accuracy (48.7% against 48.5%) and Random Forest a slightly lower goal MAE (0.910 against 0.915).
 
 These are validation measurements, not a promise of future accuracy. Exact scorelines are especially uncertain; probabilities should be read as distributions.
 
@@ -31,13 +31,13 @@ These are validation measurements, not a promise of future accuracy. Exact score
 
 The default `/` entry point is a premium landing page that introduces the model, explains the evidence chain, and directs visitors into the dashboard. It uses the same quiet football-analysis visual language as the workspace: readable typography, restrained club accents, factual metrics, and motion that respects reduced-motion preferences.
 
-The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata.
+The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata. A light and a dark theme follow the OS, with a footer toggle to choose one.
 
-- **Fixtures** shows each gameweek with the selected match, probability strip, scoreline, and a plain-language model read.
-- **Simulator** provides a browser scenario estimate and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
-- **Table** provides an accessible sortable projected table with explicit official/projected data notes.
+- **Fixtures** shows each gameweek with the selected match, probability strip, scoreline, and a plain-language model read. Played matches say whether the model called the result; form comes from official results only.
+- **Simulator** provides a browser scenario estimate, shows it against the unadjusted baseline, and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
+- **Table** provides an accessible sortable projected table with Champions League, European and relegation zones, and form from official results.
 - **Clubs** provides controlled club selection, recent results, and next fixtures.
-- **Analytics** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
+- **Analytics** separates validation metrics, outcome mix, season goals, feature importance, and held-out evaluation charts (confusion matrices, reliability curves, goal error) drawn with visx from `benchmark.evaluation` in the exported dataset. Datasets without that block fall back to the diagnostic PNGs.
 
 Client routes are available without a router dependency: `/` (landing), `/fixtures`, `/simulator`, `/table`, `/clubs`, and `/analytics`. The Vercel configuration rewrites these routes to the SPA entry point while leaving hashed assets and diagnostics cacheable.
 
@@ -51,7 +51,7 @@ npm run dev
 
 Open `http://localhost:5173`. The landing page is the default entry point; use **Explore forecasts** or `/fixtures` to enter the dashboard. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
 
-The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
+The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` as a fallback and for the API; they use the dashboard palette (`src/evaluate.py`) and the same summaries as the dashboard charts.
 
 ### Vercel deployment
 
@@ -151,7 +151,7 @@ data/                      Cached inputs, odds archive, and generated season for
 models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
 web/public/visuals/        Dashboard copies of generated diagnostic PNGs
-web/                       React 19 + TypeScript + Vite 8 + Tailwind CSS 4 dashboard
+web/                       React 19 + TypeScript + Vite 8 dashboard (plain CSS on design tokens, visx for charts; only Tailwind preflight is used)
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
 config.yaml                Central pipeline/model/training configuration

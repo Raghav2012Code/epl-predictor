@@ -28,6 +28,14 @@ export const startOfToday = (): number => {
 export const fixtureDay = (value: string): number =>
   new Date(`${value}T00:00:00`).getTime();
 
+/** Orders by calendar day; fixtures with no date ("TBC") sort last and tie with each other. */
+export const compareDay = (a: string, b: string): number => {
+  const x = fixtureDay(a);
+  const y = fixtureDay(b);
+  if (Number.isNaN(x) || Number.isNaN(y)) return Number.isNaN(x) === Number.isNaN(y) ? 0 : Number.isNaN(x) ? 1 : -1;
+  return x - y;
+};
+
 /** True when the fixture has no recorded result *and* has not kicked off yet. */
 export const isUpcomingFixture = (fixture: Fixture): boolean =>
   fixture.status !== "Played" && fixtureDay(fixture.date) >= startOfToday();
