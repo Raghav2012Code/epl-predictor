@@ -135,7 +135,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
             small gaps look large. The models are close.
           </p>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="Validation results by model" tabIndex={0}>
           <table className="league models">
             <caption className="sr-only">Validation results by model</caption>
             <thead>

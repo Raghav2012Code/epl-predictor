@@ -165,7 +165,7 @@ export const ClubsPage: React.FC<{
           {(profile.homeSplit || profile.awaySplit) && (
             <section className="club-venue" aria-labelledby="club-venue">
               <h3 id="club-venue">Projected home and away</h3>
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="Projected home and away record" tabIndex={0}>
                 <table className="venue">
                   <thead>
                     <tr>

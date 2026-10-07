@@ -258,7 +258,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           )}
           <div className="landing-evidence">
             {models.length > 0 && (
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="Validation results by model" tabIndex={0}>
                 <table className="league models">
                   <caption className="sr-only">Validation results by model</caption>
                   <thead>
