@@ -417,13 +417,13 @@
 .eval-legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; border-radius: 2px; }
 
 .confusion table { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
-.confusion th { padding: var(--space-1); font-weight: 600; text-align: center; }
+.confusion th { padding: var(--space-1) var(--space-1) var(--space-2); font-weight: 600; text-align: center; }
 .confusion tbody th { width: 48px; padding-left: 0; text-align: left; }
 .confusion thead td { width: 48px; }
-.confusion td { height: 64px; padding: var(--space-1); color: var(--ink); text-align: center; vertical-align: middle; }
-.confusion td.is-dark { color: var(--paper); }
-.confusion td strong { display: block; font-size: var(--fs-20); }
-.confusion td span { font-size: var(--fs-12); opacity: 0.8; }
+.confusion tbody td { height: 64px; padding: var(--space-1); color: var(--ink); text-align: center; vertical-align: middle; }
+.confusion tbody td.is-dark { color: var(--paper); }
+.confusion tbody td strong { display: block; font-size: var(--fs-20); }
+.confusion tbody td span { font-size: var(--fs-12); opacity: 0.8; }
 
 .diagnostics { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
 .diagnostics__item {
@@ -440,7 +440,6 @@
 .diagnostics__item img {
   display: block;
   width: 100%;
-  max-width: 1000px;
   height: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);

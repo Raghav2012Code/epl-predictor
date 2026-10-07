@@ -22,7 +22,8 @@ const axisLabel = () => ({
 });
 const axisLabelLeft = () => ({ ...axisLabel(), textAnchor: "end" as const, dx: -4, dy: 4 });
 
-const margin = { top: 8, right: 8, bottom: 28, left: 36 };
+// Right margin leaves room for the centred "100%" tick at the axis end.
+const margin = { top: 8, right: 18, bottom: 28, left: 36 };
 
 const Legend: React.FC<{ items: Array<{ label: string; color: string }> }> = ({ items }) => (
   <p className="eval-legend label">
