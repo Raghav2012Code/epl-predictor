@@ -418,10 +418,13 @@
 .confusion th { padding: var(--space-1) var(--space-1) var(--space-2); font-weight: 600; text-align: center; }
 .confusion tbody th { width: 48px; padding-left: 0; text-align: left; }
 .confusion thead td { width: 48px; }
+/* Shade capped (--confusion-cap) so the ink text keeps 4.5:1 on every cell. */
+.confusion tbody td {
+  background: color-mix(in srgb, var(--ink) calc(var(--share) * var(--confusion-cap) * 1%), var(--paper));
+}
 .confusion tbody td { height: 64px; padding: var(--space-1); color: var(--ink); text-align: center; vertical-align: middle; }
-.confusion tbody td.is-dark { color: var(--paper); }
 .confusion tbody td strong { display: block; font-size: var(--fs-20); }
-.confusion tbody td span { font-size: var(--fs-12); opacity: 0.8; }
+.confusion tbody td span { font-size: var(--fs-12); }
 
 .diagnostics { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
 .diagnostics__item {

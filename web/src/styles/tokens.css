@@ -20,6 +20,7 @@
   --zone-cl: #4b3fb5;
   --zone-europe: #d0661a;
   --zone-relegation: var(--danger);
+  --confusion-cap: 50;
 
   /* Spacing scale (px): 4, 8, 12, 16, 24, 32, 48, 64 */
   --space-1: 4px;
@@ -87,6 +88,7 @@
   --danger: #f0675c;
   --zone-cl: #9d8cff;
   --zone-europe: #f0954e;
+  --confusion-cap: 36;
   --scrim: rgb(0 0 0 / 0.6);
   --elevation-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
   color-scheme: dark;
@@ -105,6 +107,7 @@
     --danger: #f0675c;
     --zone-cl: #9d8cff;
     --zone-europe: #f0954e;
+    --confusion-cap: 36;
     --scrim: rgb(0 0 0 / 0.6);
     --elevation-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
     color-scheme: dark;

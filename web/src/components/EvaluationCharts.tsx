@@ -74,8 +74,7 @@ export const ConfusionMatrices: React.FC<{ evaluation: ModelEvaluation; producti
                     return (
                       <td
                         key={OUTCOMES[predicted]}
-                        className={share > 50 ? "is-dark" : undefined}
-                        style={{ background: `color-mix(in srgb, var(--ink) ${share}%, var(--paper))` }}
+                        style={{ "--share": share / 100 } as React.CSSProperties}
                       >
                         <strong className="num">{share}%</strong>
                         <span>{count}</span>
