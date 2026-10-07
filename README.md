@@ -31,11 +31,11 @@ These are validation measurements, not a promise of future accuracy. Exact score
 
 The default `/` entry point is a premium landing page that introduces the model, explains the evidence chain, and directs visitors into the dashboard. It uses the same quiet football-analysis visual language as the workspace: readable typography, restrained club accents, factual metrics, and motion that respects reduced-motion preferences.
 
-The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata.
+The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata. A light and a dark theme follow the OS, with a footer toggle to choose one.
 
-- **Fixtures** shows each gameweek with the selected match, probability strip, scoreline, and a plain-language model read.
-- **Simulator** provides a browser scenario estimate and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
-- **Table** provides an accessible sortable projected table with explicit official/projected data notes.
+- **Fixtures** shows each gameweek with the selected match, probability strip, scoreline, and a plain-language model read. Played matches say whether the model called the result; form comes from official results only.
+- **Simulator** provides a browser scenario estimate, shows it against the unadjusted baseline, and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
+- **Table** provides an accessible sortable projected table with Champions League, European and relegation zones, and form from official results.
 - **Clubs** provides controlled club selection, recent results, and next fixtures.
 - **Analytics** separates validation metrics, outcome mix, season goals, feature importance, and held-out evaluation charts (confusion matrices, reliability curves, goal error) drawn with visx from `benchmark.evaluation` in the exported dataset. Datasets without that block fall back to the diagnostic PNGs.
 

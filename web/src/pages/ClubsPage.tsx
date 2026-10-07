@@ -4,7 +4,8 @@ import { TeamMark } from "../components/TeamMark";
 import { ActiveIndicator, SwapFade } from "../components/Motion";
 import { scoreForClub } from "../lib/format";
 import { upcomingFixtures } from "../lib/fixtureDates";
-import { clubResultFor } from "../lib/fixtures";
+import { clubResultFor, recentForm } from "../lib/fixtures";
+import { FormChips } from "../components/FormChips";
 
 const chipFor = (result: string | null) =>
   result === "Win" ? "W" : result === "Loss" ? "L" : result === "Draw" ? "D" : "-";
@@ -120,22 +121,14 @@ export const ClubsPage: React.FC<{
               <dd className="num">{profile.winRate}%</dd>
             </div>
             <div>
-              <dt className="label">Average rest</dt>
-              <dd className="num">{profile.restDaysAvg} days</dd>
+              <dt className="label">Projected points per game</dt>
+              <dd className="num">{(profile.points / Math.max(1, profile.played ?? 38)).toFixed(2)}</dd>
             </div>
           </dl>
-          {profile.last5Form?.length > 0 && (
-            <div className="club-hero__form">
-              <span className="label">Last five</span>
-              <span className="form-chips" role="img" aria-label={`Last five: ${profile.last5Form.join(", ")}`}>
-                {profile.last5Form.map((result, index) => (
-                  <span key={index} className={`form-chip form-chip--${result}`} aria-hidden="true">
-                    {result}
-                  </span>
-                ))}
-              </span>
-            </div>
-          )}
+          <div className="club-hero__form">
+            <span className="label">Form, oldest first</span>
+            <FormChips form={recentForm(dataset.fixtures, profile.name)} />
+          </div>
         </article>
 
         <div className="club-grid">

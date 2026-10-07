@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { EPLDataset, Fixture } from "../types";
 import { TeamMark } from "../components/TeamMark";
 import { ActiveIndicator, SwapFade } from "../components/Motion";
@@ -13,7 +13,8 @@ import {
   shortDay,
 } from "../lib/format";
 import { compareDay, nextFixtureByDate } from "../lib/fixtureDates";
-import { downloadFixturesCsv, resultFor } from "../lib/fixtures";
+import { downloadFixturesCsv, pickWasRight, recentForm, resultFor } from "../lib/fixtures";
+import { FormChips } from "../components/FormChips";
 
 type FixtureFilter = "all" | "upcoming" | "played";
 type FixtureSort = "date" | "confidence";
@@ -59,6 +60,7 @@ const FixtureRow: React.FC<{
 }> = ({ fixture, index, selected, isNext, showDate, onSelect }) => {
   const played = fixture.status === "Played";
   const [homeGoals, awayGoals] = goalsFor(fixture);
+  const called = pickWasRight(fixture);
   return (
     <li>
       <button
@@ -68,7 +70,7 @@ const FixtureRow: React.FC<{
         aria-pressed={selected}
         aria-label={`${fixture.homeTeam} v ${fixture.awayTeam}, ${showDate ? `${shortDay(fixture.date)}, ` : ""}${
           fixture.time === "TBC" ? "kickoff to be confirmed" : `kickoff ${fixture.time}`
-        }. ${played ? "Final" : "Predicted"} score ${homeGoals} to ${awayGoals}. Forecast: home win ${fixture.homeWinProb.toFixed(1)} percent, draw ${fixture.drawProb.toFixed(1)}, away win ${fixture.awayWinProb.toFixed(1)}.${isNext ? " Next match." : ""}`}
+        }. ${played ? "Final" : "Predicted"} score ${homeGoals} to ${awayGoals}.${called === null ? "" : called ? " The model called it." : " The model missed it."} Forecast: home win ${fixture.homeWinProb.toFixed(1)} percent, draw ${fixture.drawProb.toFixed(1)}, away win ${fixture.awayWinProb.toFixed(1)}.${isNext ? " Next match." : ""}`}
       >
         {selected && <ActiveIndicator id="fixture-selected" className="match__indicator" />}
         <span className="match__when" aria-hidden="true">
@@ -79,6 +81,12 @@ const FixtureRow: React.FC<{
             </span>
           )}
           {showDate && <span className="label">{shortDay(fixture.date)}</span>}
+          {called !== null && (
+            <span className={`verdict${called ? " is-called" : ""}`}>
+              {called ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
+              {called ? "Called it" : "Missed"}
+            </span>
+          )}
         </span>
         <span className="match__teams" aria-hidden="true">
           <span className="match__team">
@@ -106,29 +114,17 @@ const FixtureRow: React.FC<{
 
 const FormLine: React.FC<{
   dataset: EPLDataset;
+  fixture: Fixture;
   team: string;
   short: string;
   badge: string;
-}> = ({ dataset, team, short, badge }) => {
-  const profile = dataset.teams[team];
-  return (
-    <div className="form-line">
-      <TeamMark short={short} badge={badge} />
-      <span className="form-line__name">{team}</span>
-      {profile?.last5Form?.length ? (
-        <span className="form-chips" role="img" aria-label={`Last five: ${profile.last5Form.join(", ")}`}>
-          {profile.last5Form.map((result, index) => (
-            <span key={index} className={`form-chip form-chip--${result}`} aria-hidden="true">
-              {result}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <span className="label">Form unavailable</span>
-      )}
-    </div>
-  );
-};
+}> = ({ dataset, fixture, team, short, badge }) => (
+  <div className="form-line">
+    <TeamMark short={short} badge={badge} />
+    <span className="form-line__name">{team}</span>
+    <FormChips form={recentForm(dataset.fixtures, team, 5, fixture)} empty="No earlier results" />
+  </div>
+);
 
 const FixtureDetail: React.FC<{
   dataset: EPLDataset;
@@ -185,6 +181,12 @@ const FixtureDetail: React.FC<{
         </div>
         {played && (
           <div>
+            <dt className="label">Model pick was</dt>
+            <dd>{pickWasRight(fixture) ? "Right" : "Wrong"}</dd>
+          </div>
+        )}
+        {played && (
+          <div>
             <dt className="label">Predicted score</dt>
             <dd>{fixture.predictedScore}</dd>
           </div>
@@ -195,15 +197,17 @@ const FixtureDetail: React.FC<{
         </div>
       </dl>
       <div className="detail__form">
-        <h3 className="label">Last five matches</h3>
+        <h3 className="label">Form before this match, oldest first</h3>
         <FormLine
           dataset={dataset}
+          fixture={fixture}
           team={fixture.homeTeam}
           short={fixture.homeShort}
           badge={fixture.homeBadge}
         />
         <FormLine
           dataset={dataset}
+          fixture={fixture}
           team={fixture.awayTeam}
           short={fixture.awayShort}
           badge={fixture.awayBadge}
@@ -369,7 +373,7 @@ export const FixturesPage: React.FC<{
           <p className="label page-head__sub">
             {inGameweek.length} fixtures, {playedInWeek} played.{" "}
             {model
-              ? `${dataset.benchmark.productionModel} model, ${model.accuracy}% of held-out outcomes called correctly.`
+              ? `In testing, the model picked the right result ${model.accuracy}% of the time.`
               : ""}
           </p>
         </div>
@@ -424,7 +428,7 @@ export const FixturesPage: React.FC<{
           ))}
         </div>
         <label className="toolbar__sort">
-          <span className="label">Sort by</span>
+          <span className="label toolbar__sort-label">Sort by</span>
           <select
             className="select"
             value={sort}
@@ -438,13 +442,13 @@ export const FixturesPage: React.FC<{
           <button type="button" className="text-button" onClick={() => downloadFixturesCsv(visibleFixtures)}>
             Export CSV
           </button>
-          <button type="button" className="text-button" onClick={() => window.print()}>
+          <button type="button" className="text-button toolbar__print" onClick={() => window.print()}>
             Print
           </button>
         </div>
       </div>
 
-      <div className="fixtures">
+      <div className={`fixtures${sheetOpen ? " is-sheet-open" : ""}`}>
         <section className="fixtures__list" aria-label={`Gameweek ${gameweek} fixtures`}>
           {visibleFixtures.length ? (
             <>

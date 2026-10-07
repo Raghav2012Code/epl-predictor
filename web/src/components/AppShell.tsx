@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   CalendarDays,
   ChartColumn,
@@ -161,7 +162,8 @@ export const AppShell: React.FC<{
               <span className="next-up__text">
                 <span className="next-up__label">Next kickoff</span>
                 <span className="next-up__match">
-                  {next.homeShort} v {next.awayShort}, {shortDay(next.date)} {kickoff(next.time)}
+                  {next.homeShort} v {next.awayShort}
+                  <span className="next-up__when">, {shortDay(next.date)} {kickoff(next.time)}</span>
                 </span>
               </span>
             </RouteLink>
@@ -281,6 +283,7 @@ export const AppShell: React.FC<{
         <div className="wrap footer__inner">
           <span>Forecasts are probabilities, not guarantees.</span>
           <div className="footer__actions">
+            <ThemeToggle />
             <button
               type="button"
               className="text-button"

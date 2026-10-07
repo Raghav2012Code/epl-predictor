@@ -78,6 +78,21 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
     ? []
     : dataset.benchmark.diagnostics.filter((diagnostic) => !NATIVE_DIAGNOSTICS.has(diagnostic.id));
   const outcome = dataset.analytics.outcomeDistribution;
+  const sections = [
+    { id: "models-title", label: "Models" },
+    { id: "mix-title", label: "Outcome mix" },
+    { id: "goals-title", label: "Goals" },
+    ...(dataset.benchmark.topFeatures.length ? [{ id: "features-title", label: "Drivers" }] : []),
+    ...(evaluation
+      ? [
+          { id: "confusion-title", label: "Calls" },
+          { id: "calibration-title", label: "Calibration" },
+          { id: "goal-error-title", label: "Goal error" },
+        ]
+      : plots.length
+        ? [{ id: "diag-title", label: "Diagnostics" }]
+        : []),
+  ];
   const metrics: Array<{ label: string; value: string; note: string }> = [
     { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },
     { label: "Accuracy", value: `${model?.accuracy ?? "n/a"}%`, note: "Share of outcomes called correctly." },
@@ -91,11 +106,19 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
         <div>
           <h1>Analytics</h1>
           <p className="label page-head__sub">
-            Evidence for the {dataset.benchmark.productionModel} model, measured
-            on a time-ordered holdout. Projections are never counted as results.
+            Evidence for the {dataset.benchmark.productionModel} model, tested on
+            recent matches it never trained on. Projections are never counted as results.
           </p>
         </div>
       </header>
+
+      <nav className="page-nav" aria-label="On this page">
+        {sections.map((section) => (
+          <a key={section.id} href={`#${section.id}`}>
+            {section.label}
+          </a>
+        ))}
+      </nav>
 
       <dl className="metrics" aria-label={`${dataset.benchmark.productionModel} model metrics`}>
         {metrics.map((metric) => (
@@ -237,7 +260,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
           <section className="block" aria-labelledby="confusion-title">
             <h2 id="confusion-title">Where the calls land</h2>
             <p className="label block__sub">
-              Every held-out match ({evaluation.matches}), split by the actual result and the outcome each model
+              All {evaluation.matches} test matches, split by the actual result and the outcome each model
               picked.
             </p>
             <ConfusionMatrices evaluation={evaluation} production={dataset.benchmark.productionModel} />
@@ -245,7 +268,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
           <section className="block" aria-labelledby="calibration-title">
             <h2 id="calibration-title">Are the probabilities honest?</h2>
             <p className="label block__sub">
-              Held-out matches grouped by the probability each model gave an outcome.
+              Test matches grouped by the probability each model gave an outcome.
             </p>
             <ReliabilityCurves evaluation={evaluation} production={dataset.benchmark.productionModel} />
           </section>
@@ -253,7 +276,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
             <h2 id="goal-error-title">Goal error</h2>
             <p className="label block__sub">
               The {dataset.benchmark.productionModel} model's predicted scores against the real ones, on the same
-              held-out matches.
+              test matches.
             </p>
             <GoalErrorCharts evaluation={evaluation} />
           </section>

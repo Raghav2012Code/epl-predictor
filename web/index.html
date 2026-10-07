@@ -6,7 +6,7 @@
     <title>EPL Predictor 2026/27 — Premier League Match & Score Intelligence</title>
     <meta name="description" content="Premier League 2026/27 fixtures, model forecasts, club profiles, projected table, and validation evidence." />
     <meta name="theme-color" content="#13233a" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="application-name" content="EPL Predictor" />
     <meta name="apple-mobile-web-app-title" content="EPL Predictor" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -29,6 +29,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      // Apply a saved theme before first paint so a dark choice never flashes light.
+      try {
+        var theme = localStorage.getItem("epl-theme");
+        if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
+      } catch (error) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -454,7 +454,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-5);
-  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  background: var(--scrim);
 }
 .dialog {
   display: grid;
@@ -472,6 +472,31 @@
 .dialog__head h2 { font-size: var(--fs-25); }
 .dialog__image { display: block; width: 100%; max-height: 65vh; object-fit: contain; }
 
+/* Table zones (StandingsPage): a coloured edge on the position cell, and a key. */
+.league tr.zone td:first-child { box-shadow: inset 3px 0 0 var(--zone-color); }
+.zone--cl { --zone-color: var(--zone-cl); }
+.zone--europe { --zone-color: var(--zone-europe); }
+.zone--relegation { --zone-color: var(--zone-relegation); }
+.zone-key { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-4) 0 0; padding: 0; list-style: none; font-size: var(--fs-14); }
+.zone-key li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.zone-key__swatch { display: inline-block; width: 4px; height: 16px; background: var(--zone-color); }
+
+/* Played fixtures: did the published pick come true? */
+.verdict { display: inline-flex; align-items: center; gap: 2px; margin-top: var(--space-1); color: var(--danger); font-size: var(--fs-12); font-weight: 600; white-space: nowrap; }
+.verdict.is-called { color: var(--ink); }
+
+/* Simulator */
+.range-scale { display: flex; justify-content: space-between; margin-top: calc(-1 * var(--space-2)); }
+.sim__baseline { display: grid; gap: var(--space-1); opacity: 0.75; }
+.sim__model { display: grid; gap: var(--space-3); padding-top: var(--space-5); border-top: 1px solid var(--line); }
+.sim__model h2 { font-size: var(--fs-20); }
+.sim__model strong { color: var(--ink); font-size: var(--fs-16); }
+
+/* Analytics: jump links */
+.page-nav { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: calc(-1 * var(--space-2)) 0 var(--space-6); }
+.page-nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-soft); font-size: var(--fs-14); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+.page-nav a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+
 /* Responsive ------------------------------------------------------------- */
 
 @media (max-width: 979px) {
@@ -483,7 +508,7 @@
     inset: 0;
     z-index: 50;
     display: block;
-    background: color-mix(in srgb, var(--ink) 40%, transparent);
+    background: var(--scrim);
     opacity: 0;
     visibility: hidden;
     transition: opacity var(--duration-quick) var(--ease-out), visibility 0s linear var(--duration-quick);
@@ -504,6 +529,7 @@
     transition: transform var(--duration-sweep) var(--ease-out), visibility 0s linear var(--duration-sweep);
   }
   .fixtures__detail.is-open { transform: none; visibility: visible; transition-delay: 0s; }
+  .fixtures:not(.is-sheet-open) .match__indicator { display: none; }
   .sheet-close {
     display: flex;
     align-items: center;
@@ -525,7 +551,9 @@
 }
 
 @media (max-width: 759px) {
+  /* A scroll container makes sticky headers stick inside it, 60px down over row 1. */
   .table-scroll { overflow-x: auto; }
+  .table-scroll .league th { position: static; }
   .club-select { display: block; width: 100%; }
   .club-picker { display: none; }
   .club-hero { padding: var(--space-5) var(--gutter); margin-inline: calc(-1 * var(--gutter)); }
@@ -542,6 +570,8 @@
   .models tbody th { padding-inline: var(--space-2); font-size: var(--fs-14); }
   .models .tag { display: table; margin: 2px 0 0; }
   .toolbar { gap: var(--space-3); }
+  .toolbar__sort-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .toolbar__print { display: none; }
   .toolbar__actions { margin-left: 0; }
   .stepper { width: 100%; }
   .stepper .select { flex: 1; min-width: 0; }

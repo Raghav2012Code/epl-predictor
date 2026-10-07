@@ -154,6 +154,7 @@
   letter-spacing: 0;
 }
 img.team-mark {
+  filter: var(--badge-halo, none);
   display: block;
   padding: 0;
   border: 0;
@@ -221,7 +222,13 @@ img.team-mark {
 .next-up__text { display: grid; gap: 2px; min-width: 0; }
 .next-up__label { color: var(--ink-soft); font-size: var(--fs-12); font-weight: 500; line-height: 1; }
 .next-up__match { overflow: hidden; font-size: var(--fs-14); font-weight: 600; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 1259px) { .next-up { display: none; } }
+/* 1000-1259px: crests and teams only; under 1000px it would crowd the tabs. */
+@media (width < 1260px) {
+  .next-up__label,
+  .next-up__when { display: none; }
+  .search { flex-basis: 220px; }
+}
+@media (width < 1000px) { .next-up { display: none; } }
 
 .tabs {
   display: flex;

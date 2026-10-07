@@ -69,7 +69,7 @@ export const SplitBar: React.FC<SplitBarProps> = ({
           <span
             key={key}
             className={`split-bar__value split-bar__value--${key} num${key === favoured ? " is-favoured" : ""}`}
-            style={{ flexBasis: `${values[key]}%` }}
+            style={{ flexGrow: values[key] }}
           >
             {shown(values[key])}
           </span>
