@@ -2,7 +2,7 @@
   "production_model": "Stacked",
   "calibration_temperature": 1.0,
   "calibration_method": "temperature",
-  "home_goal_correction": 0.9999999999999998,
+  "home_goal_correction": 0.9999999999999999,
   "away_goal_correction": 1.0000000000000002,
   "market_blend_weight": 0.5,
   "no_market_blend_weight": 0.0,

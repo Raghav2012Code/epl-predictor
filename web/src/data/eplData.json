@@ -9659,6 +9659,402 @@
         "desc": "Rolling differential possession 3 (zero-leakage rolling average)"
       }
     ],
+    "evaluation": {
+      "matches": 472,
+      "confusion": {
+        "Random Forest": [
+          [
+            59,
+            34,
+            51
+          ],
+          [
+            39,
+            30,
+            56
+          ],
+          [
+            27,
+            41,
+            135
+          ]
+        ],
+        "XGBoost": [
+          [
+            62,
+            29,
+            53
+          ],
+          [
+            44,
+            22,
+            59
+          ],
+          [
+            29,
+            28,
+            146
+          ]
+        ],
+        "Stacked": [
+          [
+            62,
+            29,
+            53
+          ],
+          [
+            36,
+            29,
+            60
+          ],
+          [
+            23,
+            42,
+            138
+          ]
+        ]
+      },
+      "reliability": {
+        "Random Forest": [
+          [
+            {
+              "predicted": 0.1041,
+              "observed": 0.0,
+              "matches": 22
+            },
+            {
+              "predicted": 0.1849,
+              "observed": 0.2081,
+              "matches": 149
+            },
+            {
+              "predicted": 0.3108,
+              "observed": 0.3,
+              "matches": 130
+            },
+            {
+              "predicted": 0.4303,
+              "observed": 0.3366,
+              "matches": 101
+            },
+            {
+              "predicted": 0.5529,
+              "observed": 0.5385,
+              "matches": 52
+            },
+            {
+              "predicted": 0.6739,
+              "observed": 0.6471,
+              "matches": 17
+            },
+            {
+              "predicted": 0.7584,
+              "observed": 1.0,
+              "matches": 1
+            }
+          ],
+          [
+            {
+              "predicted": 0.1144,
+              "observed": 0.0,
+              "matches": 2
+            },
+            {
+              "predicted": 0.214,
+              "observed": 0.254,
+              "matches": 252
+            },
+            {
+              "predicted": 0.2718,
+              "observed": 0.2798,
+              "matches": 218
+            }
+          ],
+          [
+            {
+              "predicted": 0.1075,
+              "observed": 0.0,
+              "matches": 5
+            },
+            {
+              "predicted": 0.1975,
+              "observed": 0.1587,
+              "matches": 63
+            },
+            {
+              "predicted": 0.3136,
+              "observed": 0.2903,
+              "matches": 124
+            },
+            {
+              "predicted": 0.4368,
+              "observed": 0.5044,
+              "matches": 113
+            },
+            {
+              "predicted": 0.5614,
+              "observed": 0.5484,
+              "matches": 93
+            },
+            {
+              "predicted": 0.6734,
+              "observed": 0.6471,
+              "matches": 68
+            },
+            {
+              "predicted": 0.7781,
+              "observed": 0.8333,
+              "matches": 6
+            }
+          ]
+        ],
+        "XGBoost": [
+          [
+            {
+              "predicted": 0.1042,
+              "observed": 0.0588,
+              "matches": 34
+            },
+            {
+              "predicted": 0.1832,
+              "observed": 0.2153,
+              "matches": 144
+            },
+            {
+              "predicted": 0.3149,
+              "observed": 0.2698,
+              "matches": 126
+            },
+            {
+              "predicted": 0.4398,
+              "observed": 0.375,
+              "matches": 96
+            },
+            {
+              "predicted": 0.556,
+              "observed": 0.5102,
+              "matches": 49
+            },
+            {
+              "predicted": 0.6755,
+              "observed": 0.7273,
+              "matches": 22
+            },
+            {
+              "predicted": 0.763,
+              "observed": 0.0,
+              "matches": 1
+            }
+          ],
+          [
+            {
+              "predicted": 0.1167,
+              "observed": 0.0,
+              "matches": 1
+            },
+            {
+              "predicted": 0.2092,
+              "observed": 0.2586,
+              "matches": 348
+            },
+            {
+              "predicted": 0.2655,
+              "observed": 0.2846,
+              "matches": 123
+            }
+          ],
+          [
+            {
+              "predicted": 0.1107,
+              "observed": 0.0,
+              "matches": 5
+            },
+            {
+              "predicted": 0.1963,
+              "observed": 0.1803,
+              "matches": 61
+            },
+            {
+              "predicted": 0.3102,
+              "observed": 0.2857,
+              "matches": 105
+            },
+            {
+              "predicted": 0.4361,
+              "observed": 0.4741,
+              "matches": 116
+            },
+            {
+              "predicted": 0.5658,
+              "observed": 0.5217,
+              "matches": 92
+            },
+            {
+              "predicted": 0.6786,
+              "observed": 0.631,
+              "matches": 84
+            },
+            {
+              "predicted": 0.7774,
+              "observed": 0.6667,
+              "matches": 9
+            }
+          ]
+        ],
+        "Stacked": [
+          [
+            {
+              "predicted": 0.0997,
+              "observed": 0.0294,
+              "matches": 34
+            },
+            {
+              "predicted": 0.1837,
+              "observed": 0.1987,
+              "matches": 151
+            },
+            {
+              "predicted": 0.3103,
+              "observed": 0.3145,
+              "matches": 124
+            },
+            {
+              "predicted": 0.4313,
+              "observed": 0.3913,
+              "matches": 92
+            },
+            {
+              "predicted": 0.5576,
+              "observed": 0.5094,
+              "matches": 53
+            },
+            {
+              "predicted": 0.678,
+              "observed": 0.5882,
+              "matches": 17
+            },
+            {
+              "predicted": 0.7693,
+              "observed": 1.0,
+              "matches": 1
+            }
+          ],
+          [
+            {
+              "predicted": 0.1194,
+              "observed": 0.0,
+              "matches": 2
+            },
+            {
+              "predicted": 0.2167,
+              "observed": 0.2509,
+              "matches": 279
+            },
+            {
+              "predicted": 0.263,
+              "observed": 0.288,
+              "matches": 191
+            }
+          ],
+          [
+            {
+              "predicted": 0.0986,
+              "observed": 0.0,
+              "matches": 7
+            },
+            {
+              "predicted": 0.193,
+              "observed": 0.1311,
+              "matches": 61
+            },
+            {
+              "predicted": 0.3149,
+              "observed": 0.3578,
+              "matches": 109
+            },
+            {
+              "predicted": 0.4361,
+              "observed": 0.4112,
+              "matches": 107
+            },
+            {
+              "predicted": 0.5597,
+              "observed": 0.56,
+              "matches": 100
+            },
+            {
+              "predicted": 0.6717,
+              "observed": 0.6081,
+              "matches": 74
+            },
+            {
+              "predicted": 0.7725,
+              "observed": 0.7857,
+              "matches": 14
+            }
+          ]
+        ]
+      },
+      "goalError": {
+        "residuals": [
+          -4,
+          -3,
+          -2,
+          -1,
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "home": [
+          1,
+          29,
+          68,
+          112,
+          149,
+          103,
+          10,
+          0,
+          0
+        ],
+        "away": [
+          4,
+          21,
+          56,
+          130,
+          160,
+          92,
+          9,
+          0,
+          0
+        ],
+        "goals": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "actual": [
+          241,
+          312,
+          236,
+          113,
+          33,
+          9
+        ],
+        "predicted": [
+          239,
+          539,
+          164,
+          2,
+          0,
+          0
+        ]
+      }
+    },
     "diagnostics": [
       {
         "id": "confusion_matrix",
