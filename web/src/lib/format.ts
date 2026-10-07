@@ -21,9 +21,6 @@ export const confidenceFor = (fixture: Fixture) => {
   }
 };
 
-export const deltaLabel = (value: number) =>
-  `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-
 const dayOf = (value: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : null;
 
@@ -41,6 +38,12 @@ export const shortDay = (value: string) => {
   return day
     ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" }).format(day)
     : "Date TBC";
+};
+
+/** "10 Oct". */
+export const dayMonth = (value: string) => {
+  const day = dayOf(value);
+  return day ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(day) : "Date TBC";
 };
 
 export const kickoff = (time: string) => (time === "TBC" ? "TBC" : time);

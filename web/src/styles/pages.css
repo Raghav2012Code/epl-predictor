@@ -170,13 +170,16 @@
 .field .select { background: var(--paper); }
 .field__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
 .field__row output { font-size: var(--fs-20); }
-.range { width: 100%; height: 32px; margin: 0; accent-color: var(--ink); }
+.range { width: 100%; height: 44px; margin: 0; accent-color: var(--ink); }
 .check { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-size: var(--fs-14); font-weight: 600; }
 .check input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
 .sim__result { display: grid; gap: var(--space-5); min-width: 0; }
 .sim__delta { color: var(--ink-soft); }
 
 /* Tables ----------------------------------------------------------------- */
+
+/* Scrolls sideways only where a table cannot fit; sticky headers need it off on desktop. */
+.table-scroll { max-width: 100%; }
 
 .league { width: 100%; border-collapse: collapse; font-size: var(--fs-16); }
 .league th {
@@ -382,7 +385,39 @@
 .meter { height: 12px; overflow: hidden; border-radius: var(--radius-bar); background: var(--concourse); }
 .meter span { display: block; height: 100%; min-width: 2px; background: var(--ink); }
 
-.chart { min-width: 0; overflow-x: clip; color: var(--ink-soft); }
+/* Goals by gameweek: plain bars, recorded weeks dark, projected weeks grey. */
+.gw-chart { margin: 0; min-width: 0; }
+.gw-chart__plot { position: relative; height: 240px; margin: var(--space-5) 0 0 32px; border-bottom: 1px solid var(--ink-soft); }
+.gw-chart__grid span {
+  position: absolute;
+  left: -32px;
+  right: 0;
+  padding-left: 0;
+  border-top: 0;
+  background: linear-gradient(var(--line), var(--line)) right center / calc(100% - 28px) 1px no-repeat;
+  color: var(--ink-soft);
+  font-size: var(--fs-12);
+  line-height: 1;
+  transform: translateY(-50%);
+}
+.gw-chart__grid { position: absolute; inset: 0; }
+.gw-chart__bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gw-chart__bars li { flex: 1 1 0; min-width: 0; min-height: 1px; background: var(--draw); }
+.gw-chart__bars li.is-recorded { background: var(--ink); }
+.gw-chart__axis { display: flex; gap: 2px; margin: var(--space-2) 0 0 32px; color: var(--ink-soft); font-size: var(--fs-12); }
+.gw-chart__axis span { flex: 1 1 0; min-width: 0; overflow: visible; text-align: center; white-space: nowrap; }
+.gw-chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-3) 0 0 32px; }
+.gw-chart__legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; background: var(--draw); }
+.gw-chart__legend i.is-recorded { background: var(--ink); }
 
 .diagnostics {
   display: grid;
@@ -403,7 +438,7 @@
   color: var(--ink);
   text-align: left;
 }
-.diagnostics__item img { display: block; width: 100%; aspect-ratio: 1.25; object-fit: cover; background: var(--concourse); }
+.diagnostics__item img { display: block; width: 100%; aspect-ratio: 1.6; object-fit: contain; background: var(--concourse); }
 .diagnostics__title { font-size: var(--fs-16); font-weight: 600; }
 .diagnostics__item:hover .diagnostics__title { text-decoration: underline; text-underline-offset: 4px; }
 
@@ -484,6 +519,7 @@
 }
 
 @media (max-width: 759px) {
+  .table-scroll { overflow-x: auto; }
   .club-select { display: block; width: 100%; }
   .club-picker { display: none; }
   .club-hero { padding: var(--space-5) var(--gutter); margin-inline: calc(-1 * var(--gutter)); }

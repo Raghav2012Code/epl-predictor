@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { EPLDataset } from "../types";
+import { RouteLink } from "./RouteLink";
 import { MotionPop, MotionPresence, MotionSection } from "./Motion";
 import { TeamMark } from "./TeamMark";
 import { BrandLockup } from "./BrandMark";
@@ -47,8 +48,8 @@ export const AppShell: React.FC<{
     away: "Chelsea",
   });
   useEffect(() => setActiveTab(initialTab), [initialTab]);
-  const navigateTo = (tab: Tab) => {
-    setActiveTab(tab);
+  const navigateTo = (tab: AppRoute) => {
+    if (tab !== "landing") setActiveTab(tab);
     onNavigate(tab);
   };
   const searchRef = useRef<HTMLDivElement>(null);
@@ -122,36 +123,34 @@ export const AppShell: React.FC<{
       </a>
       <header className="topbar">
         <div className="wrap topbar__inner">
-          <button
-            type="button"
+          <RouteLink
+            route="landing"
             className="brand"
-            onClick={() => {
-              closeSearch();
-              navigateTo("fixtures");
-            }}
-            aria-label="EPL Predictor, back to fixtures"
+            onNavigate={onNavigate}
+            onFollow={closeSearch}
+            aria-label="EPL Predictor home"
           >
             <BrandLockup season={dataset.season} />
-          </button>
+          </RouteLink>
           <nav className="tabs" aria-label="Primary">
             {tabs.map(({ id, label, icon: Icon }) => (
-              <button
+              <RouteLink
                 key={id}
-                type="button"
+                route={id}
                 className="tabs__item"
-                onClick={() => navigateTo(id)}
+                onNavigate={navigateTo}
                 aria-current={activeTab === id ? "page" : undefined}
               >
                 <Icon className="tabs__icon" size={22} strokeWidth={2} aria-hidden="true" />
                 {label}
-              </button>
+              </RouteLink>
             ))}
           </nav>
           {next && (
-            <button
-              type="button"
+            <RouteLink
+              route="fixtures"
               className="next-up"
-              onClick={() => navigateTo("fixtures")}
+              onNavigate={navigateTo}
               aria-label={`Next kickoff: ${next.homeTeam} v ${next.awayTeam}, ${shortDay(next.date)} ${kickoff(next.time)}. Open fixtures.`}
             >
               <span className="next-up__crests" aria-hidden="true">
@@ -164,7 +163,7 @@ export const AppShell: React.FC<{
                   {next.homeShort} v {next.awayShort}, {shortDay(next.date)} {kickoff(next.time)}
                 </span>
               </span>
-            </button>
+            </RouteLink>
           )}
           <div className={`search${mobileSearch ? " search--open" : ""}`} ref={searchRef}>
             <button
@@ -199,15 +198,13 @@ export const AppShell: React.FC<{
                 }}
                 placeholder="Search clubs and fixtures"
                 aria-label="Search clubs and fixtures"
-                aria-expanded={Boolean(searchOpen && needle)}
-                aria-autocomplete="list"
                 autoComplete="off"
               />
               <kbd className="search__hint" aria-hidden="true">/</kbd>
             </div>
             <MotionPresence>
               {searchOpen && needle && (
-                <MotionPop popKey="search-results" className="search__results" role="listbox">
+                <MotionPop popKey="search-results" className="search__results">
                   {clubHits.length > 0 && <p className="label search__group">Clubs</p>}
                   {clubHits.map((team) => (
                     <button
@@ -215,8 +212,6 @@ export const AppShell: React.FC<{
                       type="button"
                       className="search__option"
                       onClick={() => selectClub(team.name)}
-                      role="option"
-                      aria-selected="false"
                     >
                       <TeamMark team={team} />
                       {team.name}
@@ -230,8 +225,6 @@ export const AppShell: React.FC<{
                       type="button"
                       className="search__option"
                       onClick={() => openSimulator(fixture.homeTeam, fixture.awayTeam)}
-                      role="option"
-                      aria-selected="false"
                     >
                       {fixture.homeTeam} v {fixture.awayTeam}
                       <span className="search__option-hint">GW{fixture.gameweek}, open in simulator</span>

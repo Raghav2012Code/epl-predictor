@@ -2,7 +2,7 @@ import React, { useEffect, useId, useMemo, useState } from "react";
 import type { EPLDataset } from "../types";
 import { TeamMark } from "../components/TeamMark";
 import { SplitBar } from "../components/SplitBar";
-import { deltaLabel, scoreParts } from "../lib/format";
+import { scoreParts } from "../lib/format";
 import { calculateScenario } from "../lib/fixtures";
 
 export const SimulatorPage: React.FC<{
@@ -207,7 +207,7 @@ export const SimulatorPage: React.FC<{
           <p className="sim__delta" aria-live="polite">
             {changed
               ? `Compared with the unadjusted baseline, ${homeTeam}'s win chance ${
-                  homeMove === 0 ? "does not change" : `${homeMove > 0 ? "rises" : "falls"} by ${deltaLabel(Math.abs(homeMove)).replace("+", "")}`
+                  homeMove === 0 ? "does not change" : `${homeMove > 0 ? "rises" : "falls"} by ${Math.abs(homeMove).toFixed(1)} percentage points`
                 }.`
               : "Move a control to compare your scenario with the unadjusted baseline."}
           </p>

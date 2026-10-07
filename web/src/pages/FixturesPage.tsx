@@ -11,7 +11,7 @@ import {
   scoreParts,
   shortDay,
 } from "../lib/format";
-import { fixtureDay, nextFixtureByDate } from "../lib/fixtureDates";
+import { compareDay, nextFixtureByDate } from "../lib/fixtureDates";
 import { downloadFixturesCsv, resultFor } from "../lib/fixtures";
 
 type FixtureFilter = "all" | "upcoming" | "played";
@@ -276,7 +276,7 @@ export const FixturesPage: React.FC<{
     return [...matching].sort((a, b) =>
       sort === "confidence"
         ? confidenceFor(b) - confidenceFor(a) || a.id - b.id
-        : fixtureDay(a.date) - fixtureDay(b.date) ||
+        : compareDay(a.date, b.date) ||
           a.time.localeCompare(b.time) ||
           a.id - b.id,
     );
@@ -294,6 +294,8 @@ export const FixturesPage: React.FC<{
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (
         target.isContentEditable ||
         ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)

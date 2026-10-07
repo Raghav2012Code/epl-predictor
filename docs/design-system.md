@@ -63,7 +63,8 @@ monospace for data.
 - Desktop shell: a slim top bar (shield mark and wordmark with the season, the
   five views as text tabs, a "Next kickoff" link to fixtures from 1260px up,
   search). No sidebar. The mark is `BrandMark`; `public/favicon.svg` uses the
-  same geometry.
+  same geometry. The wordmark links home; tabs, the kickoff link and landing
+  calls to action are real links (`RouteLink`), so they open in a new tab.
 - Mobile shell (under 760px): top bar with brand and a search button; the five
   views in a fixed bottom tab bar within thumb reach. No horizontal scrolling.
 - Surfaces are separated by spacing and `--concourse` tone, not by cards with

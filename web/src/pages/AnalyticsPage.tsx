@@ -2,10 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { EPLDataset } from "../types";
 import { SplitBar } from "../components/SplitBar";
-import { Grid } from "../components/charts/grid";
-import { ChartTooltip } from "../components/charts/tooltip";
-import { LineChart, Line } from "../components/charts/line-chart";
-import { XAxis } from "../components/charts/x-axis";
+import { GoalsChart } from "../components/GoalsChart";
 
 export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [selectedImage, setSelectedImage] = useState<{
@@ -62,25 +59,14 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
   const coveragePercent = dataset.fixtures.length > 0
     ? Math.round((playedFixtures / dataset.fixtures.length) * 100)
     : 0;
-  const firstKickoffByGameweek = new Map<number, string>();
-  for (const fixture of dataset.fixtures) {
-    if (fixture.date !== "TBC" && !firstKickoffByGameweek.has(fixture.gameweek)) {
-      firstKickoffByGameweek.set(fixture.gameweek, fixture.date);
-    }
-  }
-  const goalChartData = dataset.analytics.goalsPerGameweek.map((entry) => {
-    const kickoff = firstKickoffByGameweek.get(entry.gw);
-    return {
-      // Pin local noon: `new Date("2026-08-21")` parses as UTC midnight and
-      // labelled every gameweek a day early in UTC-negative timezones.
-      date: kickoff
-        ? new Date(`${kickoff}T12:00:00`)
-        : new Date(2026, 7, 14 + (entry.gw - 1) * 7, 12),
-      goals: entry.goals,
-      average: entry.avgPerMatch,
-      gameweek: entry.gw,
-    };
-  });
+  const recordedWeeks = new Set(
+    dataset.analytics.goalsPerGameweek
+      .map((entry) => entry.gw)
+      .filter((gw) => {
+        const week = dataset.fixtures.filter((fixture) => fixture.gameweek === gw);
+        return week.length > 0 && week.every((fixture) => fixture.status === "Played");
+      }),
+  );
   const outcome = dataset.analytics.outcomeDistribution;
   const metrics: Array<{ label: string; value: string; note: string }> = [
     { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },
@@ -209,14 +195,7 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
         <p className="label block__sub">
           Recorded weeks use real goals. Projected weeks add up each match's single most likely score, which reads lower than real totals.
         </p>
-        <div className="chart">
-          <LineChart data={goalChartData} xDataKey="date" xPadding={10} aspectRatio="2.4 / 1" margin={{ top: 20, right: 16, bottom: 42, left: 16 }}>
-            <Grid horizontal stroke="var(--line)" strokeDasharray="2,4" />
-            <Line dataKey="goals" stroke="var(--home)" strokeWidth={3} showMarkers />
-            <XAxis numTicks={7} />
-            <ChartTooltip rows={(point) => [{ label: `GW${point.gameweek}`, value: `${point.goals} goals`, color: "var(--home)" }]} />
-          </LineChart>
-        </div>
+        <GoalsChart weeks={dataset.analytics.goalsPerGameweek} recorded={recordedWeeks} />
       </section>
 
       <section className="block" aria-labelledby="diag-title">

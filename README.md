@@ -151,7 +151,7 @@ data/                      Cached inputs, odds archive, and generated season for
 models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
 web/public/visuals/        Dashboard copies of generated diagnostic PNGs
-web/                       React 19 + TypeScript + Vite 8 + Tailwind CSS 4 dashboard
+web/                       React 19 + TypeScript + Vite 8 dashboard (plain CSS on design tokens; only Tailwind preflight is used)
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
 config.yaml                Central pipeline/model/training configuration

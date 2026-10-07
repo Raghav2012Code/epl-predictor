@@ -84,7 +84,7 @@
   background: var(--concourse);
 }
 .segmented button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-bar);
@@ -441,3 +441,11 @@ img.team-mark {
 @media print {
   .topbar, .tabs, .footer { display: none !important; }
 }
+
+/* Links that look like the buttons they replaced ------------------------- */
+.brand,
+.tabs__item,
+.next-up,
+.footer a { text-decoration: none; }
+.brand { min-height: 44px; }
+.footer a { display: inline-flex; align-items: center; min-height: 44px; }

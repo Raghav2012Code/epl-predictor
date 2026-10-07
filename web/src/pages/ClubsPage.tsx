@@ -101,19 +101,19 @@ export const ClubsPage: React.FC<{
         </div>
         <dl className="club-hero__kpis">
           <div>
-            <dt className="label">Record</dt>
+            <dt className="label">Projected record</dt>
             <dd className="num">
               {profile.won}-{profile.drawn}-{profile.lost}
             </dd>
           </div>
           <div>
-            <dt className="label">Goals for and against</dt>
+            <dt className="label">Projected goals for and against</dt>
             <dd className="num">
               {profile.gf}-{profile.ga}
             </dd>
           </div>
           <div>
-            <dt className="label">Win rate</dt>
+            <dt className="label">Projected win rate</dt>
             <dd className="num">{profile.winRate}%</dd>
           </div>
           <div>
@@ -192,7 +192,7 @@ export const ClubsPage: React.FC<{
 
       {(profile.homeSplit || profile.awaySplit) && (
         <section className="club-venue" aria-labelledby="club-venue">
-          <h3 id="club-venue">Home and away</h3>
+          <h3 id="club-venue">Projected home and away</h3>
           <div className="table-scroll">
             <table className="venue">
               <thead>

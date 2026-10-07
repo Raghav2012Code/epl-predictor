@@ -5,7 +5,7 @@ import { useEPLData } from "./hooks/useEPLData";
 import { MotionPreferenceProvider, MotionPresence, RouteFade } from "./components/Motion";
 import { AppShell } from "./components/AppShell";
 import { LandingPage } from "./components/landing/LandingPage";
-import { appRouteForPath, pathForAppRoute, type AppRoute } from "./lib/appRoute";
+import { appRouteForPath, canonicalPath, pathForAppRoute, type AppRoute } from "./lib/appRoute";
 
 const routeTitles: Record<AppRoute, string> = {
   landing: "EPL Predictor 2026/27 — Premier League Match & Score Intelligence",
@@ -22,6 +22,10 @@ export const App: React.FC = () => {
     appRouteForPath(window.location.pathname),
   );
   useEffect(() => {
+    const { pathname } = window.location;
+    if (canonicalPath(pathname) !== pathname) {
+      window.history.replaceState({}, "", canonicalPath(pathname) + window.location.search + window.location.hash);
+    }
     const onPopState = () => setRoute(appRouteForPath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);

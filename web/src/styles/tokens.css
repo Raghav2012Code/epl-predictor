@@ -59,34 +59,6 @@
   --duration-quick: 160ms;
   --duration-sweep: 400ms;
 
-  /*
-   * Bridge for the vendored chart components (src/components/charts). They
-   * read these names directly; alias them to the split-board palette instead
-   * of carrying a second theme.
-   */
-  --foreground: var(--ink);
-  --muted-foreground: var(--ink-soft);
-  --border: var(--line);
-  --chart-1: var(--home);
-  --chart-2: var(--away);
-  --chart-3: var(--draw);
-  --chart-4: var(--ink-soft);
-  --chart-5: var(--ink);
-  --chart-background: var(--paper);
-  --chart-foreground: var(--ink);
-  --chart-foreground-muted: var(--ink-soft);
-  --chart-label: var(--ink-soft);
-  --chart-grid: var(--line);
-  --chart-brush-border: var(--line);
-  --chart-crosshair: var(--ink);
-  --chart-line-primary: var(--home);
-  --chart-line-secondary: var(--away);
-  --chart-tooltip-background: var(--ink);
-  --chart-tooltip-foreground: var(--paper);
-  --chart-tooltip-muted: var(--line);
-  --chart-marker-background: var(--paper);
-  --chart-marker-border: var(--line);
-  --chart-marker-foreground: var(--ink);
 }
 
 @media (max-width: 639px) {
