@@ -5,7 +5,7 @@
  */
 
 /* Form chips: W is ink, D is mid-tone, L is outlined. The letter always shows. */
-.form-chip { background: color-mix(in srgb, var(--ink) 12%, var(--paper)); }
+.form-chip { background: color-mix(in srgb, var(--ink) 16%, var(--paper)); color: var(--ink); }
 .form-chip--W { background: var(--ink); color: var(--paper); }
 .form-chip--L { background: var(--paper); color: var(--ink-soft); box-shadow: inset 0 0 0 1px var(--line); }
 
@@ -332,7 +332,7 @@
 .rows__score { font-size: var(--fs-25); }
 .rows__score--predicted { color: var(--ink-soft); }
 .rows__note { margin-top: var(--space-3); }
-.club-venue { max-width: 560px; margin-top: var(--space-7); }
+.club-grid__col { display: grid; align-content: start; gap: var(--space-7); min-width: 0; }
 .venue { width: 100%; border-collapse: collapse; }
 .venue th { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); color: var(--ink-soft); font-size: var(--fs-14); font-weight: 600; text-align: right; }
 .venue td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--concourse); font-size: var(--fs-20); text-align: right; }

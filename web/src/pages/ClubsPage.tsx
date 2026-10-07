@@ -136,31 +136,56 @@ export const ClubsPage: React.FC<{
       </article>
 
       <div className="club-grid">
-        <section aria-labelledby="club-recent">
-          <h3 id="club-recent">Recent results</h3>
-          {recent.length ? (
-            <ul className="rows">
-              {recent.map((fixture) => {
-                const result = clubResultFor(fixture, profile.name);
-                const letter = chipFor(result);
-                return (
-                  <li className="rows__item" key={fixture.id}>
-                    <span className={`form-chip form-chip--${letter}`} aria-label={result ?? "No result"}>
-                      {letter}
-                    </span>
-                    <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
-                    <span className="rows__score num">{scoreForClub(fixture.actualScore, fixture, profile.name)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="empty">
-              <strong>No results yet</strong>
-              {profile.name} have not played a match in this dataset.
-            </div>
+        <div className="club-grid__col">
+          <section aria-labelledby="club-recent">
+            <h3 id="club-recent">Recent results</h3>
+            {recent.length ? (
+              <ul className="rows">
+                {recent.map((fixture) => {
+                  const result = clubResultFor(fixture, profile.name);
+                  const letter = chipFor(result);
+                  return (
+                    <li className="rows__item" key={fixture.id}>
+                      <span className={`form-chip form-chip--${letter}`} aria-label={result ?? "No result"}>
+                        {letter}
+                      </span>
+                      <span className="rows__name">{opponent(fixture.homeTeam, fixture.awayTeam)}</span>
+                      <span className="rows__score num">{scoreForClub(fixture.actualScore, fixture, profile.name)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="empty">
+                <strong>No results yet</strong>
+                {profile.name} have not played a match in this dataset.
+              </div>
+            )}
+          </section>
+          {(profile.homeSplit || profile.awaySplit) && (
+            <section className="club-venue" aria-labelledby="club-venue">
+              <h3 id="club-venue">Projected home and away</h3>
+              <div className="table-scroll">
+                <table className="venue">
+                  <thead>
+                    <tr>
+                      <th scope="col"><span className="sr-only">Venue</span></th>
+                      <th scope="col">W</th>
+                      <th scope="col">D</th>
+                      <th scope="col">L</th>
+                      <th scope="col">GF</th>
+                      <th scope="col">GA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <SplitRow label="Home" split={profile.homeSplit} />
+                    <SplitRow label="Away" split={profile.awaySplit} />
+                  </tbody>
+                </table>
+              </div>
+            </section>
           )}
-        </section>
+        </div>
         <section aria-labelledby="club-next">
           <h3 id="club-next">Next matches</h3>
           {upcoming.length ? (
@@ -189,30 +214,6 @@ export const ClubsPage: React.FC<{
           <p className="label rows__note">Grey scores are predicted. Select a match to open it in the simulator.</p>
         </section>
       </div>
-
-      {(profile.homeSplit || profile.awaySplit) && (
-        <section className="club-venue" aria-labelledby="club-venue">
-          <h3 id="club-venue">Projected home and away</h3>
-          <div className="table-scroll">
-            <table className="venue">
-              <thead>
-                <tr>
-                  <th scope="col"><span className="sr-only">Venue</span></th>
-                  <th scope="col">W</th>
-                  <th scope="col">D</th>
-                  <th scope="col">L</th>
-                  <th scope="col">GF</th>
-                  <th scope="col">GA</th>
-                </tr>
-              </thead>
-              <tbody>
-                <SplitRow label="Home" split={profile.homeSplit} />
-                <SplitRow label="Away" split={profile.awaySplit} />
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
     </>
   );
 };
