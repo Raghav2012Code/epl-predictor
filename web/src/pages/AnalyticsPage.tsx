@@ -4,6 +4,9 @@ import type { EPLDataset } from "../types";
 import { SplitBar } from "../components/SplitBar";
 import { GoalsChart } from "../components/GoalsChart";
 
+/** Plots whose numbers the page already draws natively (table, RPS strip, feature bars). */
+const NATIVE_DIAGNOSTICS = new Set(["feature_importance", "rps_comparison", "model_metrics_comparison"]);
+
 export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [selectedImage, setSelectedImage] = useState<{
     src: string;
@@ -67,6 +70,8 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
         return week.length > 0 && week.every((fixture) => fixture.status === "Played");
       }),
   );
+  const topImportance = Math.max(0.0001, ...dataset.benchmark.topFeatures.map((feature) => feature.importance));
+  const plots = dataset.benchmark.diagnostics.filter((diagnostic) => !NATIVE_DIAGNOSTICS.has(diagnostic.id));
   const outcome = dataset.analytics.outcomeDistribution;
   const metrics: Array<{ label: string; value: string; note: string }> = [
     { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },
@@ -198,13 +203,37 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
         <GoalsChart weeks={dataset.analytics.goalsPerGameweek} recorded={recordedWeeks} />
       </section>
 
+      {dataset.benchmark.topFeatures.length > 0 && (
+        <section className="block" aria-labelledby="features-title">
+          <h2 id="features-title">What drives the forecast</h2>
+          <p className="label block__sub">
+            The {dataset.benchmark.topFeatures.length} inputs the {dataset.benchmark.productionModel} model
+            weighs most, from pre-match data only.
+          </p>
+          <ol className="features">
+            {dataset.benchmark.topFeatures.map((feature) => (
+              <li key={feature.name}>
+                <span className="features__name">
+                  {feature.desc}
+                  <span className="label">{feature.category}</span>
+                </span>
+                <span className="features__track" aria-hidden="true">
+                  <span style={{ width: `${(feature.importance / topImportance) * 100}%` }} />
+                </span>
+                <span className="features__value num">{feature.importance.toFixed(3)}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       <section className="block" aria-labelledby="diag-title">
         <h2 id="diag-title">Training diagnostics</h2>
         <p className="label block__sub">
-          Charts generated from the current benchmark. Select one to enlarge it.
+          Plots from the current training run. Select one to enlarge it.
         </p>
         <ul className="diagnostics">
-          {dataset.benchmark.diagnostics.map((diagnostic) => (
+          {plots.map((diagnostic) => (
             <li key={diagnostic.id}>
               <button
                 type="button"

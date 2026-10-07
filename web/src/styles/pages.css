@@ -419,18 +419,25 @@
 .gw-chart__legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; background: var(--draw); }
 .gw-chart__legend i.is-recorded { background: var(--ink); }
 
-.diagnostics {
+.features { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.features li {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-5);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 56px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--concourse);
 }
+.features__name { display: grid; gap: 2px; font-size: var(--fs-14); font-weight: 600; line-height: 1.3; }
+.features__track { height: 12px; border-radius: var(--radius-bar); background: var(--concourse); }
+.features__track span { display: block; height: 100%; border-radius: var(--radius-bar); background: var(--ink); }
+.features__value { font-size: var(--fs-20); text-align: right; }
+
+.diagnostics { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
 .diagnostics__item {
   display: grid;
   align-content: start;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
   padding: 0;
   border: 0;
@@ -438,9 +445,18 @@
   color: var(--ink);
   text-align: left;
 }
-.diagnostics__item img { display: block; width: 100%; aspect-ratio: 1.6; object-fit: contain; background: var(--concourse); }
-.diagnostics__title { font-size: var(--fs-16); font-weight: 600; }
+.diagnostics__item img {
+  display: block;
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+}
+.diagnostics__title { font-size: var(--fs-20); font-weight: 700; }
 .diagnostics__item:hover .diagnostics__title { text-decoration: underline; text-underline-offset: 4px; }
+.diagnostics__item .label { max-width: 70ch; font-size: var(--fs-14); }
 
 .dialog-backdrop {
   position: fixed;
@@ -515,7 +531,6 @@
   .club-grid,
   .block-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
   .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .diagnostics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 759px) {
@@ -546,7 +561,8 @@
 }
 
 @media (max-width: 559px) {
-  .diagnostics { grid-template-columns: minmax(0, 1fr); }
+  .features li { grid-template-columns: minmax(0, 1fr) 48px; gap: var(--space-1) var(--space-3); }
+  .features__track { grid-column: 1 / -1; grid-row: 2; }
 }
 
 @media print {
