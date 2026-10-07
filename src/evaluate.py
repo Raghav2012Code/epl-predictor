@@ -62,6 +62,47 @@ def ranked_probability_score(y_true, probas) -> float:
     return float(np.mean(np.sum((cum_pred - cum_true) ** 2, axis=1)) / (n_classes - 1))
 
 
+# Shared by the plots and the dashboard export so both show identical numbers.
+RESIDUAL_BINS = np.arange(-4.5, 5.5, 1)  # integer residuals -4..4
+GOAL_BINS = np.arange(-0.5, 6.5, 1)  # goals per team 0..5
+RELIABILITY_BINS = 8
+
+
+def confusion_counts(y_true, preds) -> np.ndarray:
+    """3x3 counts, rows actual and columns predicted, in Away/Draw/Home order."""
+    cm = np.zeros((3, 3), dtype=int)
+    for t, p in zip(y_true, preds):
+        cm[int(t), int(p)] += 1
+    return cm
+
+
+def reliability_points(y_true, probas, cls: int, bins: int = RELIABILITY_BINS) -> List[Tuple[float, float, int]]:
+    """(mean predicted, observed frequency, matches) per non-empty probability bin for one class."""
+    y = np.asarray(y_true, dtype=int)
+    p = np.asarray(probas, dtype=float)[:, cls]
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    points = []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        mask = (p >= lo) & ((p < hi) if hi < 1 else (p <= hi))
+        if np.any(mask):
+            points.append((float(np.mean(p[mask])), float(np.mean(y[mask] == cls)), int(mask.sum())))
+    return points
+
+
+def goal_error_counts(y_hg, y_ag, pred_scores: List[Tuple[int, int]]) -> Dict[str, np.ndarray]:
+    """Histogram counts for goal residuals (predicted minus actual) and goals per team."""
+    pred_hg = np.array([s[0] for s in pred_scores])
+    pred_ag = np.array([s[1] for s in pred_scores])
+    y_hg = np.asarray(y_hg)
+    y_ag = np.asarray(y_ag)
+    return {
+        "home_residuals": np.histogram(pred_hg - y_hg, bins=RESIDUAL_BINS)[0],
+        "away_residuals": np.histogram(pred_ag - y_ag, bins=RESIDUAL_BINS)[0],
+        "actual_goals": np.histogram(np.concatenate([y_hg, y_ag]), bins=GOAL_BINS)[0],
+        "predicted_goals": np.histogram(np.concatenate([pred_hg, pred_ag]), bins=GOAL_BINS)[0],
+    }
+
+
 def _color(name: str, index: int) -> str:
     return MODEL_COLORS.get(name, _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)])
 
@@ -166,9 +207,7 @@ def plot_confusion_matrices(
     fig, axes = plt.subplots(1, len(panels), figsize=(FIG_WIDTH, 3.7))
     axes = np.atleast_1d(axes)
     for ax, (title, preds) in zip(axes, panels):
-        cm = np.zeros((3, 3), dtype=int)
-        for t, p in zip(y_true, preds):
-            cm[int(t), int(p)] += 1
+        cm = confusion_counts(y_true, preds)
         cm_norm = cm.astype("float") / np.maximum(1, cm.sum(axis=1)[:, np.newaxis])
         ax.imshow(cm_norm, cmap=MONO_CMAP, interpolation="nearest", vmin=0, vmax=1)
         ax.set_title(title)
@@ -256,24 +295,18 @@ def plot_reliability_curves(
     y_true: np.ndarray,
     probability_sets: Dict[str, np.ndarray],
     output_path: Optional[str] = None,
-    bins: int = 8,
+    bins: int = RELIABILITY_BINS,
 ) -> str:
     """Per-class reliability curves: observed frequency against predicted probability."""
     output_path = _prepare(output_path, "reliability_curves.png")
-    y = np.asarray(y_true, dtype=int)
     fig, axes = plt.subplots(1, 3, figsize=(FIG_WIDTH, 3.6), sharex=True, sharey=True)
     labels = ["Away win", "Draw", "Home win"]
-    edges = np.linspace(0.0, 1.0, bins + 1)
     for cls, ax in enumerate(axes):
         ax.plot([0, 1], [0, 1], linestyle=(0, (3, 3)), color=DRAW, linewidth=1)
         for i, (name, probas) in enumerate(probability_sets.items()):
-            p = np.asarray(probas, dtype=float)[:, cls]
-            centers, observed = [], []
-            for lo, hi in zip(edges[:-1], edges[1:]):
-                mask = (p >= lo) & ((p < hi) if hi < 1 else (p <= hi))
-                if np.any(mask):
-                    centers.append(float(np.mean(p[mask])))
-                    observed.append(float(np.mean(y[mask] == cls)))
+            points = reliability_points(y_true, probas, cls, bins)
+            centers = [point[0] for point in points]
+            observed = [point[1] for point in points]
             ax.plot(centers, observed, marker="o", markersize=4, linewidth=1.6, label=name, color=_color(name, i))
         ax.set_title(labels[cls])
         ax.set_xlabel("Predicted probability")
@@ -325,28 +358,19 @@ def plot_goal_error_distribution(
 ) -> str:
     """Goal residuals (home and away) and actual versus predicted goal counts."""
     output_path = _prepare(output_path, "goal_error_distribution.png")
-    pred_hg = np.array([s[0] for s in pred_scores])
-    pred_ag = np.array([s[1] for s in pred_scores])
+    counts = goal_error_counts(y_hg, y_ag, pred_scores)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(FIG_WIDTH, 3.8))
-    ax1.hist(
-        [pred_hg - y_hg, pred_ag - y_ag],
-        bins=np.arange(-4.5, 5.5, 1),
-        label=["Home goals", "Away goals"],
-        color=[HOME, AWAY],
-        rwidth=0.85,
-    )
+    residuals = (RESIDUAL_BINS[:-1] + RESIDUAL_BINS[1:]) / 2
+    goals = (GOAL_BINS[:-1] + GOAL_BINS[1:]) / 2
+    ax1.bar(residuals - 0.21, counts["home_residuals"], width=0.4, label="Home goals", color=HOME)
+    ax1.bar(residuals + 0.21, counts["away_residuals"], width=0.4, label="Away goals", color=AWAY)
     ax1.set_title("Prediction error (predicted minus actual)")
     ax1.set_xlabel("Goals")
     ax1.set_ylabel("Matches")
     ax1.legend(fontsize=8)
     _clean(ax1)
-    ax2.hist(
-        [np.concatenate([y_hg, y_ag]), np.concatenate([pred_hg, pred_ag])],
-        bins=np.arange(-0.5, 6.5, 1),
-        label=["Actual", "Predicted"],
-        color=[INK, DRAW],
-        rwidth=0.85,
-    )
+    ax2.bar(goals - 0.21, counts["actual_goals"], width=0.4, label="Actual", color=INK)
+    ax2.bar(goals + 0.21, counts["predicted_goals"], width=0.4, label="Predicted", color=DRAW)
     ax2.set_title("Goals per team per match")
     ax2.set_xlabel("Goals")
     ax2.legend(fontsize=8)

@@ -315,3 +315,32 @@ def test_export_benchmark_includes_stacked():
     assert [m["name"] for m in payload["models"]] == ["Random Forest", "XGBoost", "Stacked"]
     assert [m["isProduction"] for m in payload["models"]] == [False, False, True]
     assert all(m["rps"] == 0.2068 for m in payload["models"])
+
+
+def test_evaluation_helpers_match_plot_inputs(tmp_path):
+    from types import SimpleNamespace
+
+    from export_web_data import build_evaluation
+    from src.evaluate import confusion_counts, goal_error_counts, plot_goal_error_distribution
+
+    y = np.array([0, 1, 2, 2, 2, 0])
+    preds = np.array([0, 2, 2, 2, 1, 0])
+    cm = confusion_counts(y, preds)
+    assert cm.sum() == len(y) and cm[2, 2] == 2 and cm[1, 2] == 1
+
+    goals = goal_error_counts([1, 0, 3], [2, 1, 0], [(1, 1), (5, 1), (1, 0)])
+    assert goals["home_residuals"].sum() == 2  # the +5 residual falls outside -4..4
+    assert goals["actual_goals"].sum() == 6
+    plot_goal_error_distribution(np.array([1, 0, 3]), np.array([2, 1, 0]), [(1, 1), (5, 1), (1, 0)],
+                                 output_path=str(tmp_path / "goals.png"))
+
+    proba = np.full((6, 3), 1 / 3)
+    metrics = {"Stacked": {"eval_y_outcome": y, "val_preds": preds, "val_proba": proba,
+                           "eval_y_home_goals": np.array([1, 0, 3]), "eval_y_away_goals": np.array([2, 1, 0]),
+                           "eval_pred_scores": [(1, 1), (0, 1), (1, 0)]}}
+    payload = build_evaluation(SimpleNamespace(metrics=metrics, best_model_name="Stacked"))
+    assert payload["matches"] == 6
+    assert payload["confusion"]["Stacked"] == cm.tolist()
+    assert len(payload["reliability"]["Stacked"]) == 3
+    assert payload["goalError"]["residuals"] == list(range(-4, 5))
+    assert payload["goalError"]["goals"] == list(range(0, 6))

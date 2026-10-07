@@ -81,6 +81,18 @@ monospace for data.
   others are `--ink-soft`.
 - The accessible label always reads the three percentages in words.
 
+## Charts
+
+- Simple bars (goals by gameweek, feature importance, RPS strip) are plain
+  HTML and CSS. Charts that need real axes (reliability curves, goal error)
+  use visx, coloured from the tokens through `var(--…)`.
+- Outcome colours keep their meaning in charts: `--home`, `--draw`, `--away`.
+  Models read as a ramp: the production model is `--ink`, benchmarks are
+  `--ink-soft` and `--draw`.
+- Every chart has a text alternative (`aria-label` or a caption table) and a
+  one-line note on how to read it. Diagnostic PNGs from `src/evaluate.py` use
+  the same palette and are only a fallback.
+
 ## Motion
 
 One orchestrated moment: when a gameweek loads or changes, the split bars sweep

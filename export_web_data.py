@@ -24,6 +24,13 @@ import numpy as np
 import pandas as pd
 
 from src.data_loader import load_historical_stats
+from src.evaluate import (
+    GOAL_BINS,
+    RESIDUAL_BINS,
+    confusion_counts,
+    goal_error_counts,
+    reliability_points,
+)
 from src.pipeline import PremierLeaguePredictionPipeline
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -145,6 +152,43 @@ def _resolve_result(hg: int, ag: int) -> str:
     return "D"
 
 
+def build_evaluation(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]:
+    """Held-out evaluation summaries the dashboard draws natively.
+
+    Uses the same arrays and helpers as the diagnostic PNGs (src/evaluate.py),
+    so the dashboard charts and the images always show identical numbers.
+    Outcome order is Away, Draw, Home.
+    """
+    metrics = pipeline.metrics
+    best = metrics[pipeline.best_model_name]
+    y_outcome = best["eval_y_outcome"]
+    goals = goal_error_counts(best["eval_y_home_goals"], best["eval_y_away_goals"], best["eval_pred_scores"])
+    return {
+        "matches": int(len(y_outcome)),
+        "confusion": {
+            name: confusion_counts(y_outcome, m["val_preds"]).tolist() for name, m in metrics.items()
+        },
+        "reliability": {
+            name: [
+                [
+                    {"predicted": round(p, 4), "observed": round(o, 4), "matches": n}
+                    for p, o, n in reliability_points(y_outcome, m["val_proba"], cls)
+                ]
+                for cls in range(3)
+            ]
+            for name, m in metrics.items()
+        },
+        "goalError": {
+            "residuals": [int(v) for v in (RESIDUAL_BINS[:-1] + 0.5)],
+            "home": goals["home_residuals"].tolist(),
+            "away": goals["away_residuals"].tolist(),
+            "goals": [int(v) for v in (GOAL_BINS[:-1] + 0.5)],
+            "actual": goals["actual_goals"].tolist(),
+            "predicted": goals["predicted_goals"].tolist(),
+        },
+    }
+
+
 def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]:
     """Builds benchmark payload from LIVE pipeline metrics (never hardcoded)."""
     metrics = pipeline.metrics
@@ -186,6 +230,7 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
         "productionModel": best,
         "models": models_payload,
         "topFeatures": top_features,
+        "evaluation": build_evaluation(pipeline),
         # Relative paths: frontend prefixes with import.meta.env.BASE_URL
         "diagnostics": [
             {

@@ -385,37 +385,10 @@
 .meter { height: 12px; overflow: hidden; border-radius: var(--radius-bar); background: var(--concourse); }
 .meter span { display: block; height: 100%; min-width: 2px; background: var(--ink); }
 
-/* Goals by gameweek: plain bars, recorded weeks dark, projected weeks grey. */
-.gw-chart { margin: 0; min-width: 0; }
-.gw-chart__plot { position: relative; height: 240px; margin: var(--space-5) 0 0 32px; border-bottom: 1px solid var(--ink-soft); }
-.gw-chart__grid span {
-  position: absolute;
-  left: -32px;
-  right: 0;
-  padding-left: 0;
-  border-top: 0;
-  background: linear-gradient(var(--line), var(--line)) right center / calc(100% - 28px) 1px no-repeat;
-  color: var(--ink-soft);
-  font-size: var(--fs-12);
-  line-height: 1;
-  transform: translateY(-50%);
-}
-.gw-chart__grid { position: absolute; inset: 0; }
-.gw-chart__bars {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.gw-chart__bars li { flex: 1 1 0; min-width: 0; min-height: 1px; background: var(--draw); }
-.gw-chart__bars li.is-recorded { background: var(--ink); }
-.gw-chart__axis { display: flex; gap: 2px; margin: var(--space-2) 0 0 32px; color: var(--ink-soft); font-size: var(--fs-12); }
-.gw-chart__axis span { flex: 1 1 0; min-width: 0; overflow: visible; text-align: center; white-space: nowrap; }
-.gw-chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-3) 0 0 32px; }
+/* Goals by gameweek (GoalsChart.tsx, visx). */
+.gw-chart { margin: var(--space-5) 0 0; min-width: 0; }
+.gw-chart svg { display: block; overflow: visible; }
+.gw-chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-3) 0 0 32px; font-size: var(--fs-14); }
 .gw-chart__legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; background: var(--draw); }
 .gw-chart__legend i.is-recorded { background: var(--ink); }
 
@@ -432,6 +405,25 @@
 .features__track { height: 12px; border-radius: var(--radius-bar); background: var(--concourse); }
 .features__track span { display: block; height: 100%; border-radius: var(--radius-bar); background: var(--ink); }
 .features__value { font-size: var(--fs-20); text-align: right; }
+
+/* Evaluation charts (EvaluationCharts.tsx): small multiples, one per model or outcome. */
+.eval-multiples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) var(--space-6); }
+.eval-multiples--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.eval-multiples figure { min-width: 0; margin: 0; }
+.eval-multiples figcaption { margin-bottom: var(--space-2); font-size: var(--fs-16); font-weight: 700; }
+.eval-multiples svg { display: block; overflow: visible; }
+.eval-note { grid-column: 1 / -1; margin-top: var(--space-1); font-size: var(--fs-14); }
+.eval-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin-top: var(--space-3); font-size: var(--fs-14); }
+.eval-legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; border-radius: 2px; }
+
+.confusion table { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
+.confusion th { padding: var(--space-1); font-weight: 600; text-align: center; }
+.confusion tbody th { width: 48px; padding-left: 0; text-align: left; }
+.confusion thead td { width: 48px; }
+.confusion td { height: 64px; padding: var(--space-1); color: var(--ink); text-align: center; vertical-align: middle; }
+.confusion td.is-dark { color: var(--paper); }
+.confusion td strong { display: block; font-size: var(--fs-20); }
+.confusion td span { font-size: var(--fs-12); opacity: 0.8; }
 
 .diagnostics { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
 .diagnostics__item {
@@ -486,6 +478,8 @@
 /* Responsive ------------------------------------------------------------- */
 
 @media (max-width: 979px) {
+  .eval-multiples,
+  .eval-multiples--2 { grid-template-columns: minmax(0, 1fr); }
   .fixtures { grid-template-columns: minmax(0, 1fr); }
   .sheet-backdrop {
     position: fixed;

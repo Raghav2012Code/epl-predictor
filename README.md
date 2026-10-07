@@ -37,7 +37,7 @@ The dashboard is a quiet football analysis workspace rather than a telemetry scr
 - **Simulator** provides a browser scenario estimate and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.
 - **Table** provides an accessible sortable projected table with explicit official/projected data notes.
 - **Clubs** provides controlled club selection, recent results, and next fixtures.
-- **Analytics** separates validation metrics, outcome mix, season goals, and diagnostic images. Diagnostic previews are keyboard dismissible with Escape.
+- **Analytics** separates validation metrics, outcome mix, season goals, feature importance, and held-out evaluation charts (confusion matrices, reliability curves, goal error) drawn with visx from `benchmark.evaluation` in the exported dataset. Datasets without that block fall back to the diagnostic PNGs.
 
 Client routes are available without a router dependency: `/` (landing), `/fixtures`, `/simulator`, `/table`, `/clubs`, and `/analytics`. The Vercel configuration rewrites these routes to the SPA entry point while leaving hashed assets and diagnostics cacheable.
 
@@ -51,7 +51,7 @@ npm run dev
 
 Open `http://localhost:5173`. The landing page is the default entry point; use **Explore forecasts** or `/fixtures` to enter the dashboard. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
 
-The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` so the light chart theme is available in both development and production builds.
+The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` as a fallback and for the API; they use the dashboard palette (`src/evaluate.py`) and the same summaries as the dashboard charts.
 
 ### Vercel deployment
 
@@ -151,7 +151,7 @@ data/                      Cached inputs, odds archive, and generated season for
 models/                    tuning.json + metrics.json (the binary checkpoint is ignored)
 visuals/                   Generated Matplotlib diagnostics
 web/public/visuals/        Dashboard copies of generated diagnostic PNGs
-web/                       React 19 + TypeScript + Vite 8 dashboard (plain CSS on design tokens; only Tailwind preflight is used)
+web/                       React 19 + TypeScript + Vite 8 dashboard (plain CSS on design tokens, visx for charts; only Tailwind preflight is used)
 web/src/App.tsx            Responsive dashboard composition and state ownership
 web/src/styles/index.css   Dashboard design system and responsive rules
 config.yaml                Central pipeline/model/training configuration

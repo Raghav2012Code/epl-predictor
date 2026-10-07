@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { EPLDataset } from "../types";
 import { SplitBar } from "../components/SplitBar";
 import { GoalsChart } from "../components/GoalsChart";
+import { ConfusionMatrices, GoalErrorCharts, ReliabilityCurves } from "../components/EvaluationCharts";
 
 /** Plots whose numbers the page already draws natively (table, RPS strip, feature bars). */
 const NATIVE_DIAGNOSTICS = new Set(["feature_importance", "rps_comparison", "model_metrics"]);
@@ -71,7 +72,11 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
       }),
   );
   const topImportance = Math.max(0.0001, ...dataset.benchmark.topFeatures.map((feature) => feature.importance));
-  const plots = dataset.benchmark.diagnostics.filter((diagnostic) => !NATIVE_DIAGNOSTICS.has(diagnostic.id));
+  const evaluation = dataset.benchmark.evaluation;
+  // Draw from data when the export carries it; older datasets fall back to the PNG plots.
+  const plots = evaluation
+    ? []
+    : dataset.benchmark.diagnostics.filter((diagnostic) => !NATIVE_DIAGNOSTICS.has(diagnostic.id));
   const outcome = dataset.analytics.outcomeDistribution;
   const metrics: Array<{ label: string; value: string; note: string }> = [
     { label: "RPS", value: `${model?.rps ?? "n/a"}`, note: "Selection metric. Lower is better." },
@@ -227,27 +232,57 @@ export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) =>
         </section>
       )}
 
-      <section className="block" aria-labelledby="diag-title">
-        <h2 id="diag-title">Training diagnostics</h2>
-        <p className="label block__sub">
-          Plots from the current training run. Select one to enlarge it.
-        </p>
-        <ul className="diagnostics">
-          {plots.map((diagnostic) => (
-            <li key={diagnostic.id}>
-              <button
-                type="button"
-                className="diagnostics__item"
-                onClick={() => setSelectedImage(diagnostic)}
-              >
-                <img src={asset(diagnostic.src)} alt="" loading="lazy" />
-                <span className="diagnostics__title">{diagnostic.title}</span>
-                <span className="label">{diagnostic.caption}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {evaluation && (
+        <>
+          <section className="block" aria-labelledby="confusion-title">
+            <h2 id="confusion-title">Where the calls land</h2>
+            <p className="label block__sub">
+              Every held-out match ({evaluation.matches}), split by the actual result and the outcome each model
+              picked.
+            </p>
+            <ConfusionMatrices evaluation={evaluation} production={dataset.benchmark.productionModel} />
+          </section>
+          <section className="block" aria-labelledby="calibration-title">
+            <h2 id="calibration-title">Are the probabilities honest?</h2>
+            <p className="label block__sub">
+              Held-out matches grouped by the probability each model gave an outcome.
+            </p>
+            <ReliabilityCurves evaluation={evaluation} production={dataset.benchmark.productionModel} />
+          </section>
+          <section className="block" aria-labelledby="goal-error-title">
+            <h2 id="goal-error-title">Goal error</h2>
+            <p className="label block__sub">
+              The {dataset.benchmark.productionModel} model's predicted scores against the real ones, on the same
+              held-out matches.
+            </p>
+            <GoalErrorCharts evaluation={evaluation} />
+          </section>
+        </>
+      )}
+
+      {plots.length > 0 && (
+        <section className="block" aria-labelledby="diag-title">
+          <h2 id="diag-title">Training diagnostics</h2>
+          <p className="label block__sub">
+            Plots from the current training run. Select one to enlarge it.
+          </p>
+          <ul className="diagnostics">
+            {plots.map((diagnostic) => (
+              <li key={diagnostic.id}>
+                <button
+                  type="button"
+                  className="diagnostics__item"
+                  onClick={() => setSelectedImage(diagnostic)}
+                >
+                  <img src={asset(diagnostic.src)} alt="" loading="lazy" />
+                  <span className="diagnostics__title">{diagnostic.title}</span>
+                  <span className="label">{diagnostic.caption}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {selectedImage && (
         <div
