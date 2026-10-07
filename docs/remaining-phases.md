@@ -8,9 +8,9 @@ Phases 0 through 8 are implemented in the current release candidate. The product
 
 | Model | RPS | Accuracy | Goal MAE | Status |
 | :--- | ---: | ---: | ---: | :--- |
-| Random Forest | 0.2050 | 47.7% | 0.92 | Benchmark |
-| XGBoost | 0.2051 | 48.9% | 0.92 | Benchmark |
-| Stacked | 0.2043 | 48.9% | 0.89 | Production |
+| Random Forest | 0.2048 | 47.5% | 0.91 | Benchmark |
+| XGBoost | 0.2053 | 48.7% | 0.92 | Benchmark |
+| Stacked | 0.2043 | 48.5% | 0.91 | Production |
 
 These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results.
 
