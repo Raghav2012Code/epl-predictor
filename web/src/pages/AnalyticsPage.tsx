@@ -5,7 +5,7 @@ import { SplitBar } from "../components/SplitBar";
 import { GoalsChart } from "../components/GoalsChart";
 
 /** Plots whose numbers the page already draws natively (table, RPS strip, feature bars). */
-const NATIVE_DIAGNOSTICS = new Set(["feature_importance", "rps_comparison", "model_metrics_comparison"]);
+const NATIVE_DIAGNOSTICS = new Set(["feature_importance", "rps_comparison", "model_metrics"]);
 
 export const AnalyticsPage: React.FC<{ dataset: EPLDataset }> = ({ dataset }) => {
   const [selectedImage, setSelectedImage] = useState<{
