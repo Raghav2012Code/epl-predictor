@@ -63,14 +63,13 @@
   transition: background-color var(--duration-quick) var(--ease-out);
 }
 .match:hover { background: color-mix(in srgb, var(--concourse) 55%, var(--paper)); }
-.match.is-selected { background: var(--concourse); }
-.match.is-selected::before {
-  content: "";
+.match__indicator {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--ink);
+  inset: 0;
+  background: var(--concourse);
+  box-shadow: inset 3px 0 0 var(--ink);
 }
+.match > :not(.match__indicator) { position: relative; z-index: 1; }
 .match__when { display: grid; align-content: start; gap: 2px; }
 .match__time { font-size: var(--fs-20); }
 .match__next {
@@ -278,15 +277,14 @@
   color: var(--ink);
 }
 .club-picker__item .team-mark { width: 36px; height: 36px; }
-.club-picker__item:hover,
-.club-picker__item[aria-pressed="true"] { background: var(--concourse); }
-.club-picker__item[aria-pressed="true"]::after {
-  content: "";
+.club-picker__item:hover { background: var(--concourse); }
+.club-picker__indicator {
   position: absolute;
-  inset: auto 0 0;
-  height: 3px;
-  background: var(--ink);
+  inset: 0;
+  background: var(--concourse);
+  box-shadow: inset 0 -3px 0 var(--ink);
 }
+.club-picker__item > :not(.club-picker__indicator) { position: relative; z-index: 1; }
 
 .club-hero {
   display: grid;

@@ -25,6 +25,8 @@
 }
 .split-bar__track { height: var(--split-bar-height); }
 
+.split-bar__segment,
+.split-bar__value { transition: flex-basis var(--duration-sweep) var(--ease-out); }
 .split-bar__segment {
   display: block;
   flex: 0 1 auto;

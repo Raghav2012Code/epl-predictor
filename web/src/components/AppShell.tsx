@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { EPLDataset } from "../types";
 import { RouteLink } from "./RouteLink";
-import { MotionPop, MotionPresence, MotionSection } from "./Motion";
+import { ActiveIndicator, MotionPop, MotionPresence, MotionSection } from "./Motion";
 import { TeamMark } from "./TeamMark";
 import { BrandLockup } from "./BrandMark";
 import { kickoff, shortDay } from "../lib/format";
@@ -143,6 +143,7 @@ export const AppShell: React.FC<{
               >
                 <Icon className="tabs__icon" size={22} strokeWidth={2} aria-hidden="true" />
                 {label}
+                {activeTab === id && <ActiveIndicator id="tab-indicator" className="tabs__indicator" />}
               </RouteLink>
             ))}
           </nav>

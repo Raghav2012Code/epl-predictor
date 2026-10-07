@@ -84,6 +84,7 @@
   background: var(--concourse);
 }
 .segmented button {
+  position: relative;
   min-height: 44px;
   padding: 0 var(--space-3);
   border: 0;
@@ -95,9 +96,13 @@
   transition: background-color var(--duration-quick) var(--ease-out), color var(--duration-quick) var(--ease-out);
 }
 .segmented button:hover { color: var(--ink); }
-.segmented button[aria-pressed="true"] {
+.segmented button[aria-pressed="true"] { color: var(--ink); }
+.segmented button > span:not(.segmented__pill) { position: relative; z-index: 1; }
+.segmented__pill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-bar);
   background: var(--paper);
-  color: var(--ink);
 }
 
 .page-head {
@@ -238,8 +243,7 @@ img.team-mark {
 }
 .tabs__item:hover { color: var(--ink); }
 .tabs__item[aria-current="page"] { color: var(--ink); }
-.tabs__item[aria-current="page"]::after {
-  content: "";
+.tabs__indicator {
   position: absolute;
   inset: auto var(--space-3) -1px;
   height: 3px;
@@ -428,7 +432,7 @@ img.team-mark {
     font-size: var(--fs-12);
   }
   .tabs__icon { display: block; }
-  .tabs__item[aria-current="page"]::after {
+  .tabs__indicator {
     inset: 0 var(--space-4) auto;
     height: 3px;
   }

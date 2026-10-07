@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { EPLDataset, Fixture } from "../types";
 import { TeamMark } from "../components/TeamMark";
+import { ActiveIndicator, SwapFade } from "../components/Motion";
 import { SplitBar } from "../components/SplitBar";
 import {
   confidenceFor,
@@ -69,6 +70,7 @@ const FixtureRow: React.FC<{
           fixture.time === "TBC" ? "kickoff to be confirmed" : `kickoff ${fixture.time}`
         }. ${played ? "Final" : "Predicted"} score ${homeGoals} to ${awayGoals}. Forecast: home win ${fixture.homeWinProb.toFixed(1)} percent, draw ${fixture.drawProb.toFixed(1)}, away win ${fixture.awayWinProb.toFixed(1)}.${isNext ? " Next match." : ""}`}
       >
+        {selected && <ActiveIndicator id="fixture-selected" className="match__indicator" />}
         <span className="match__when" aria-hidden="true">
           <span className="match__time num">{kickoff(fixture.time)}</span>
           {isNext && (
@@ -416,7 +418,8 @@ export const FixturesPage: React.FC<{
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
             >
-              {label}
+              {filter === value && <ActiveIndicator id="fixture-filter" className="segmented__pill" />}
+              <span>{label}</span>
             </button>
           ))}
         </div>
@@ -493,12 +496,9 @@ export const FixturesPage: React.FC<{
             <X size={18} aria-hidden="true" /> Close
           </button>
           {selected ? (
-            <FixtureDetail
-              key={selected.id}
-              dataset={dataset}
-              fixture={selected}
-              onSimulate={onSimulate}
-            />
+            <SwapFade swapKey={selected.id}>
+              <FixtureDetail dataset={dataset} fixture={selected} onSimulate={onSimulate} />
+            </SwapFade>
           ) : (
             <div className="empty">
               <strong>Choose a fixture</strong>

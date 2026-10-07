@@ -97,9 +97,18 @@ monospace for data.
 
 One orchestrated moment: when a gameweek loads or changes, the split bars sweep
 in from zero, staggered down the list (about 400ms total). Everything else
-responds only to user action: opening detail, the mobile sheet, the dialog.
+responds only to user action:
+
+- Active indicators (top tabs, fixture filter, selected fixture, club picker)
+  glide to the new choice with one shared spring (`SPRING` in `Motion.tsx`,
+  about 300ms, no overshoot) through Motion `layoutId`.
+- Split bars glide to new values when they change in place (simulator).
+- Swapped content (fixture detail, club profile) and route changes fade in
+  with a short rise.
+- Opening detail, the mobile sheet and the dialog.
+
 All motion is disabled by `prefers-reduced-motion` and by the in-app motion
-toggle.
+toggle, through one `MotionConfig` plus the CSS overrides in `base.css`.
 
 ## Copy
 
