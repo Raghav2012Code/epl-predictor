@@ -148,7 +148,6 @@ export const SimulatorPage: React.FC<{
               min="-30"
               max="30"
               value={homeBoost}
-              aria-valuetext={`${formatBoost(homeBoost)} goals scored`}
               onChange={(event) => setHomeBoost(Number(event.target.value))}
               aria-valuetext={formatBoost(homeBoost)}
             />
@@ -170,7 +169,6 @@ export const SimulatorPage: React.FC<{
               min="-30"
               max="30"
               value={awayBoost}
-              aria-valuetext={`${formatBoost(awayBoost)} goals scored`}
               onChange={(event) => setAwayBoost(Number(event.target.value))}
               aria-valuetext={formatBoost(awayBoost)}
             />
