@@ -69,9 +69,12 @@
   border-radius: var(--radius-control);
   background: var(--concourse);
   color: var(--ink);
+  font-family: inherit;
   font-size: var(--fs-14);
 }
-.select { cursor: pointer; }
+/* Form controls resolve their own font in most engines; make the inherit
+   explicit and match the weight of the control text beside them. */
+.select { cursor: pointer; font-weight: 600; }
 .select:hover,
 .input:hover { border-color: var(--line); }
 .select option:disabled { color: var(--ink-soft); }
