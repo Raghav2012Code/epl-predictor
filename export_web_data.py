@@ -230,7 +230,6 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
         "productionModel": best,
         "models": models_payload,
         "topFeatures": top_features,
-        "evaluation": build_evaluation(pipeline),
         # Relative paths: frontend prefixes with import.meta.env.BASE_URL
         "diagnostics": [
             {
@@ -514,6 +513,7 @@ def build_web_dataset() -> str:
 
     # 4. Benchmark from live metrics
     benchmark_data = build_benchmark(pipeline)
+    benchmark_data["evaluation"] = build_evaluation(pipeline)
 
     # 5. Club profiles with REAL historical averages + derived splits
     hist_avgs = build_historical_club_averages(pipeline.raw_historical)
