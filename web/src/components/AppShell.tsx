@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ThemeToggle } from "./ThemeToggle";
 import {
   CalendarDays,
   ChartColumn,
@@ -283,7 +282,6 @@ export const AppShell: React.FC<{
         <div className="wrap footer__inner">
           <span>Forecasts are probabilities, not guarantees.</span>
           <div className="footer__actions">
-            <ThemeToggle />
             <button
               type="button"
               className="text-button"

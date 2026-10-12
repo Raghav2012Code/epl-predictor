@@ -154,7 +154,6 @@
   letter-spacing: 0;
 }
 img.team-mark {
-  filter: var(--badge-halo, none);
   display: block;
   padding: 0;
   border: 0;

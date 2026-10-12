@@ -31,7 +31,7 @@ These are validation measurements, not a promise of future accuracy. Exact score
 
 The default `/` entry point is a premium landing page that introduces the model, explains the evidence chain, and directs visitors into the dashboard. It uses the same quiet football-analysis visual language as the workspace: readable typography, restrained club accents, factual metrics, and motion that respects reduced-motion preferences.
 
-The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata. A light and a dark theme follow the OS, with a footer toggle to choose one.
+The dashboard is a quiet football analysis workspace rather than a telemetry screen. It uses a responsive layout, readable typography, restrained club accents, clear official/projected labels, and one consistent data source. The landing page and dashboard share the same validated dataset and model metadata.
 
 - **Fixtures** shows each gameweek with the selected match, probability strip, scoreline, and a plain-language model read. Played matches say whether the model called the result; form comes from official results only.
 - **Simulator** provides a browser scenario estimate, shows it against the unadjusted baseline, and keeps the scheduled production forecast beside it. Reverse fixtures are re-oriented before comparison.

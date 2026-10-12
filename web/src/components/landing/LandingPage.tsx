@@ -1,5 +1,4 @@
 import React from "react";
-import { ThemeToggle } from "../ThemeToggle";
 import { ChevronRight } from "lucide-react";
 import type { EPLDataset, Fixture } from "../../types";
 import { useMotionDisabled } from "../Motion";
@@ -336,7 +335,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="wrap footer__inner">
           <span>Forecasts are probabilities, not guarantees.</span>
           <div className="footer__actions">
-            <ThemeToggle />
             {onToggleMotion && (
               <button
                 type="button"
