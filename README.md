@@ -17,9 +17,9 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.5% | 0.435 | 1.009 | 0.2048 | 0.91 | 61.7% | Benchmark |
-| XGBoost | 48.7% | 0.431 | 1.012 | 0.2053 | 0.92 | 62.9% | Benchmark |
-| Stacked | 48.5% | 0.445 | 1.006 | 0.2043 | 0.91 | 62.5% | Production |
+| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | Benchmark |
+| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | Benchmark |
+| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 60.8% | Production |
 
 These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale.
 
