@@ -1,7 +1,7 @@
 # Render Blueprint for the FastAPI serving surface (api.py).
 #
 # This deploys ONLY the prediction API. The static dashboard lives on Vercel
-# (see vercel.json); point its VITE_DATA_URL at this service's /dataset.
+# (see vercel.json) and reads its bundled dataset.
 #
 # The production checkpoint is intentionally gitignored, so the build trains
 # it. The multi-competition openfootball cache is gitignored too, so

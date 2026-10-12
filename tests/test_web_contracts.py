@@ -57,8 +57,8 @@ def test_service_worker_registration_handles_rejection() -> None:
     assert ".catch(" in source, "service worker registration must handle rejection"
 
 
-def test_remote_dashboard_data_loader_has_a_bounded_request() -> None:
+def test_dashboard_data_loader_reads_the_bundled_dataset() -> None:
+    """The dashboard is offline-first: it must not fetch the dataset at runtime."""
     source = (ROOT / "web" / "src" / "hooks" / "useEPLData.ts").read_text(encoding="utf-8")
-    assert "AbortController" in source
-    assert "setTimeout" in source
-    assert "signal: controller.signal" in source
+    assert "import('../data/eplData.json')" in source
+    assert "fetch(" not in source

@@ -49,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The landing page is the default entry point; use **Explore forecasts** or `/fixtures` to enter the dashboard. The dashboard uses the bundled `web/src/data/eplData.json`; set `VITE_DATA_URL` to load the same schema from a remote endpoint.
+Open `http://localhost:5173`. The landing page is the default entry point; use **Explore forecasts** or `/fixtures` to enter the dashboard. The dashboard renders the bundled `web/src/data/eplData.json`.
 
 The dashboard is fixture-first and responsive across desktop, tablet, and phone widths. On narrow screens, dense model comparisons become labeled metric cards, wide tables remain readable through intentional horizontal scrolling, and the landing menu keeps the complete dashboard view list available behind a touch-friendly control. Diagnostic PNGs are served from `web/public/visuals/` as a fallback and for the API; they use the dashboard palette (`src/evaluate.py`) and the same summaries as the dashboard charts.
 
@@ -57,9 +57,9 @@ The dashboard is fixture-first and responsive across desktop, tablet, and phone 
 
 The repository includes a root `vercel.json` for deploying the React dashboard as a static Vite site. In Vercel, import the repository and leave the project root at the repository root; the checked-in configuration installs from `web/`, builds with the locked `web/package-lock.json`, and serves `web/dist/`. No Python runtime or model checkpoint is bundled into this frontend deployment.
 
-The dashboard is offline-first and uses the validated dataset committed at `web/src/data/eplData.json`. To use a separately hosted dataset endpoint, add the Vercel environment variable `VITE_DATA_URL` for the relevant environment. The endpoint must return the same validated schema and allow requests from the deployed site.
+The dashboard is offline-first and renders the committed dataset at `web/src/data/eplData.json`. Refreshing it is a `export_web_data.py` run.
 
-The FastAPI service is a separate deployment target because its production checkpoint is intentionally ignored by Git and must be supplied through `EPL_MODEL_PATH`. Deploy it on a Python-capable service, set `EPL_ENV=production`, `EPL_CORS_ORIGINS`, `EPL_ALLOWED_HOSTS`, and `EPL_MODEL_PATH`, then point `VITE_DATA_URL` at the compatible `/dataset` endpoint if remote data is required. Validate `/health` and `/ready` before routing traffic.
+The FastAPI service is a separate deployment target because its production checkpoint is intentionally ignored by Git and must be supplied through `EPL_MODEL_PATH`. Deploy it on a Python-capable service, set `EPL_ENV=production`, `EPL_CORS_ORIGINS`, `EPL_ALLOWED_HOSTS`, and `EPL_MODEL_PATH`, and validate `/health` and `/ready` before routing traffic. It serves the dataset and predictions over `/dataset`, `/predict` and `/gameweek/{n}`.
 
 Vercel's generated asset files are immutable-cacheable while `sw.js` is explicitly revalidated on every request, allowing frontend releases to update without leaving an old service worker in control.
 
