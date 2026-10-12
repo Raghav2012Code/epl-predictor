@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 try:
     import yaml  # type: ignore
@@ -75,6 +75,32 @@ def _load_file() -> Dict[str, Any]:
         return {}
 
 
+def split_csv_env(raw: Optional[str]) -> List[str]:
+    """Parses a comma-separated env var into trimmed, non-empty items."""
+    return [item.strip() for item in (raw or "").split(",") if item.strip()]
+
+
+def _assign(cfg: Dict[str, Any], path: tuple, value: Any) -> None:
+    node = cfg
+    for key in path[:-1]:
+        node = node[key]
+    node[path[-1]] = value
+
+
+# env var -> config path. CSV vars are split; the rest are taken verbatim.
+_CSV_ENV = {
+    "EPL_SEASONS": ("data", "seasons"),
+    "OPENFOOTBALL_SEASONS": ("data", "openfootball", "seasons"),
+    "OPENFOOTBALL_COMPETITIONS": ("data", "openfootball", "competitions"),
+}
+_STR_ENV = {
+    "EPL_FIXTURE_URL": ("data", "fixture_url"),
+    "EPL_FIXTURE_SEASON": ("data", "fixture_season"),
+    "EPL_SPLIT_DATE": ("pipeline", "split_date"),
+    "OPENFOOTBALL_BASE_URL": ("data", "openfootball", "base_url"),
+}
+
+
 @lru_cache(maxsize=1)
 def get_config() -> Dict[str, Any]:
     """Returns the merged configuration dict (cached)."""
@@ -85,27 +111,14 @@ def get_config() -> Dict[str, Any]:
     }
 
     # Environment overrides.
-    seasons = os.environ.get("EPL_SEASONS")
-    if seasons:
-        cfg["data"]["seasons"] = [s.strip() for s in seasons.split(",") if s.strip()]
-    fixture_url = os.environ.get("EPL_FIXTURE_URL")
-    if fixture_url:
-        cfg["data"]["fixture_url"] = fixture_url
-    fixture_season = os.environ.get("EPL_FIXTURE_SEASON")
-    if fixture_season:
-        cfg["data"]["fixture_season"] = fixture_season
-    split_date = os.environ.get("EPL_SPLIT_DATE")
-    if split_date:
-        cfg["pipeline"]["split_date"] = split_date
-    of_base = os.environ.get("OPENFOOTBALL_BASE_URL")
-    if of_base:
-        cfg["data"]["openfootball"]["base_url"] = of_base
-    of_seasons = os.environ.get("OPENFOOTBALL_SEASONS")
-    if of_seasons:
-        cfg["data"]["openfootball"]["seasons"] = [s.strip() for s in of_seasons.split(",") if s.strip()]
-    of_competitions = os.environ.get("OPENFOOTBALL_COMPETITIONS")
-    if of_competitions:
-        cfg["data"]["openfootball"]["competitions"] = [c.strip() for c in of_competitions.split(",") if c.strip()]
+    for name, path in _CSV_ENV.items():
+        raw = os.environ.get(name)
+        if raw:
+            _assign(cfg, path, split_csv_env(raw))
+    for name, path in _STR_ENV.items():
+        value = os.environ.get(name)
+        if value:
+            _assign(cfg, path, value)
     return cfg
 
 

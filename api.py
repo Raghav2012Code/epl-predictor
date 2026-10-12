@@ -34,6 +34,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from src.config import split_csv_env
 from src.logging_config import get_logger
 from src.dataset_validation import validate_web_dataset
 from src.pipeline import DEFAULT_MODEL_PATH, PremierLeaguePredictionPipeline
@@ -49,10 +50,7 @@ _is_production = _environment == "production"
 
 
 def _split_env_list(name: str) -> List[str]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return []
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    return split_csv_env(os.environ.get(name))
 
 
 def _require_explicit_env(name: str, noun: str) -> List[str]:
