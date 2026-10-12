@@ -31,10 +31,11 @@ Defined once as CSS custom properties in `web/src/styles/tokens.css`.
 | `--zone-cl` | `#4B3FB5` | Table edge for the Champions League places (1-4) |
 | `--zone-europe` | `#D0661A` | Table edge for the Europa and Conference League places (5-6) |
 
-Dark theme: the same roles with dark values (`tokens.css`), following the OS
-unless the footer "Dark mode" toggle stored a choice (`html[data-theme]`, set
-before first paint by the inline script in `index.html`). Backdrops use
-`--scrim`, never a tint of `--ink`, because ink turns light in the dark theme.
+Dark theme: the same roles with dark values (`tokens.css`), opt-in through the
+footer "Dark mode" toggle (`html[data-theme]`, persisted and applied before
+first paint by the inline script in `index.html`). Light is the default and the
+site never follows the OS. Backdrops use `--scrim`, never a tint of `--ink`,
+because ink turns light in the dark theme.
 
 Focus: every interactive element shows a 2px `--ink` outline with 2px offset
 on `:focus-visible` (on navy surfaces, a 2px `--paper` outline). Amber is never
