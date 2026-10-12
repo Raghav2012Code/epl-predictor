@@ -385,8 +385,12 @@
 
 /* Goals by gameweek (GoalsChart.tsx, visx). */
 .gw-chart { margin: var(--space-5) 0 0; min-width: 0; }
-.gw-chart svg { display: block; overflow: visible; }
-.gw-chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-3) 0 0 32px; font-size: var(--fs-14); }
+.gw-bars { display: flex; align-items: flex-end; gap: 3px; height: 220px; border-bottom: 1px solid var(--line); }
+.gw-bars__bar { flex: 1 1 0; min-width: 0; min-height: 2px; border-radius: var(--radius-bar) var(--radius-bar) 0 0; background: var(--draw); }
+.gw-bars__bar.is-recorded { background: var(--ink); }
+.gw-ticks { display: flex; gap: 3px; margin-top: var(--space-1); }
+.gw-ticks__tick { flex: 1 1 0; min-width: 0; text-align: center; font-size: var(--fs-12); line-height: 1; color: var(--ink-soft); }
+.gw-chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-3) 0 0; font-size: var(--fs-14); }
 .gw-chart__legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-1); vertical-align: -1px; background: var(--draw); }
 .gw-chart__legend i.is-recorded { background: var(--ink); }
 

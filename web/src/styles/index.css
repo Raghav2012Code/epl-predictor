@@ -1,11 +1,9 @@
 /*
- * Global stylesheet entry. Only Tailwind's preflight reset is used; it lives
- * in the `base` layer, and base.css adds the split-board defaults to that same
- * layer after it. Everything else is plain, unlayered component CSS, and this
- * file is the single place that sets its order (landing.css must load after
- * tokens.css so its type sizes win over the shared `.label` role).
+ * Global stylesheet entry. Sets the single place that fixes import order:
+ * tokens first, then the reset/element defaults, then component CSS
+ * (landing.css must load after tokens.css so its type sizes win over the
+ * shared `.label` role).
  */
-@import "tailwindcss/preflight.css" layer(base);
 @import "@fontsource-variable/archivo/wdth.css";
 @import "./tokens.css";
 @import "./base.css";

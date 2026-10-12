@@ -1,10 +1,16 @@
 /*
- * Split-board base layer. Lives in Tailwind's `base` layer so it is ordered
- * after Tailwind preflight (and wins over it) while Tailwind utilities used by
- * the vendored charts still win over these element defaults.
+ * Split-board base layer: the app's own reset, then element defaults. Kept in
+ * the `base` layer so unlayered component CSS (pages.css, shell.css, …) always
+ * wins over these defaults without specificity fights.
  */
 @layer base {
-  *, *::before, *::after { box-sizing: border-box; }
+  /* Reset (previously Tailwind's preflight). */
+  *, ::before, ::after, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
 
   html {
     background: var(--paper);
@@ -50,18 +56,35 @@
   small { font-size: var(--fs-12); }
   strong, b { font-weight: 600; }
 
-  a { color: var(--ink); text-underline-offset: 3px; }
+  a { color: var(--ink); text-decoration: inherit; text-underline-offset: 3px; }
 
-  button, input, select, textarea {
+  button, input, select, optgroup, textarea, ::file-selector-button {
     font: inherit;
+    font-feature-settings: inherit;
     font-variation-settings: inherit;
     color: inherit;
     letter-spacing: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
   }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; opacity: 0.45; }
+  button, input:where([type="button"], [type="reset"], [type="submit"]), ::file-selector-button {
+    appearance: button;
+  }
+  textarea { resize: vertical; }
+  ::placeholder { opacity: 1; }
+  summary { display: list-item; }
+  ol, ul, menu { list-style: none; }
+  table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+  hr { height: 0; color: inherit; border-top-width: 1px; }
+  abbr:where([title]) { text-decoration: underline dotted; }
+  sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+  [hidden]:where(:not([hidden="until-found"])) { display: none !important; }
 
-  img, svg { max-width: 100%; }
+  img, svg, video, canvas, audio, iframe, embed, object { display: block; vertical-align: middle; }
+  img, video { max-width: 100%; height: auto; }
 
   /* Focus: 2px ink outline, 2px offset. Amber is never a focus colour. */
   :focus { outline: none; }
