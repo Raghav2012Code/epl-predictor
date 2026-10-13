@@ -119,6 +119,15 @@ DRAW_MIN_PROB = 0.24
 DRAW_MARGIN_NO_MARKET = 0.12
 DRAW_MIN_PROB_NO_MARKET = 0.25
 
+# Scoreline distribution calibration (issue #49). Dixon-Coles theta replaces
+# the hardcoded rho once fitted; dispersion is a grid exponent (1.0 neutral,
+# <1 flattens mass off the mode, >1 sharpens it). Grids are deterministic and
+# ordered so ties resolve to the first (smallest dispersion, then rho).
+DEFAULT_SCORELINE_RHO = 0.11
+DEFAULT_SCORELINE_DISPERSION = 1.0
+SCORELINE_RHO_VALUES = tuple(round(-0.06 + 0.02 * i, 2) for i in range(19))
+SCORELINE_DISPERSION_VALUES = (0.5, 0.7, 0.85, 1.0, 1.2, 1.5)
+
 
 def get_draw_rule() -> Dict[str, float]:
     """Returns config-driven draw thresholds with backward-compatible defaults."""
@@ -381,6 +390,11 @@ class MatchPredictorModel:
         # means): counters systematic under/over-prediction of Poisson means.
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
+        # Joint scoreline shape (fit on the calibration slice): Dixon-Coles
+        # theta and grid dispersion. Defaults reproduce the legacy grid until
+        # calibrate_scoreline runs.
+        self.scoreline_theta: float = DEFAULT_SCORELINE_RHO
+        self.scoreline_dispersion: float = DEFAULT_SCORELINE_DISPERSION
         self.market_blend_weight: float = 0.0
         self.no_market_blend_weight: float = 0.0
 
@@ -447,6 +461,33 @@ class MatchPredictorModel:
             pred_h, pred_a, np.asarray(y_hg, dtype=float), np.asarray(y_ag, dtype=float)
         )
         return self.home_goal_correction, self.away_goal_correction
+
+    def calibrate_scoreline(self, X_cal: pd.DataFrame, y_hg, y_ag,
+                            max_goals: int = 10) -> Tuple[float, float]:
+        """Fits Dixon-Coles theta + grid dispersion on a calibration slice.
+
+        Minimizes scoreline cross-entropy (mean NLL of the true scoreline
+        under the predicted joint grid) over a deterministic grid; ties keep
+        the first (smallest dispersion, then rho). Empty slices keep current
+        values. Only the scoreline path consumes the result.
+        """
+        if len(X_cal) == 0:
+            return self.scoreline_theta, self.scoreline_dispersion
+        lam_h, lam_a = self.predict_expected_goals(X_cal, apply_correction=False)
+        true_h = np.clip(np.asarray(y_hg, dtype=int).ravel(), 0, int(max_goals))
+        true_ag = np.clip(np.asarray(y_ag, dtype=int).ravel(), 0, int(max_goals))
+        rows = np.arange(len(true_h))
+        best_nll, best = float("inf"), (self.scoreline_theta, self.scoreline_dispersion)
+        for dispersion in SCORELINE_DISPERSION_VALUES:
+            for rho in SCORELINE_RHO_VALUES:
+                grids, _ = self.compute_poisson_grid(
+                    lam_h, lam_a, max_goals=max_goals, rho=rho, dispersion=dispersion
+                )
+                nll = float(-np.mean(np.log(np.maximum(grids[rows, true_h, true_ag], 1e-12))))
+                if nll < best_nll:
+                    best_nll, best = nll, (float(rho), float(dispersion))
+        self.scoreline_theta, self.scoreline_dispersion = best
+        return best
 
     def calibrate_market_blend(self, X_cal: pd.DataFrame, y_cal: pd.Series) -> Tuple[float, float]:
         """Learns market blend weight on calibration rows using RPS only."""
@@ -594,13 +635,16 @@ class MatchPredictorModel:
 
     @staticmethod
     def compute_poisson_grid(
-        h_exp: float | np.ndarray, a_exp: float | np.ndarray, max_goals: int = 10
+        h_exp: float | np.ndarray, a_exp: float | np.ndarray, max_goals: int = 10,
+        rho: float = DEFAULT_SCORELINE_RHO, dispersion: float = DEFAULT_SCORELINE_DISPERSION,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Calculates normalized bivariate Poisson probability grid and outcome probabilities.
 
-        Applies Dixon-Coles adjustment for low scores (0-0, 1-0, 0-1, 1-1).
-        Supports scalar inputs and batch array inputs vectorized across N matches
-        to achieve ~40x acceleration over Python row loops.
+        Applies Dixon-Coles adjustment (theta ``rho``) for low scores
+        (0-0, 1-0, 0-1, 1-1), then an optional grid exponent (``dispersion``;
+        1.0 is neutral). Supports scalar inputs and batch array inputs
+        vectorized across N matches to achieve ~40x acceleration over
+        Python row loops.
         """
         is_scalar = np.ndim(h_exp) == 0 and np.ndim(a_exp) == 0
         lh = np.maximum(0.2, np.asarray(h_exp, dtype=float))
@@ -609,7 +653,7 @@ class MatchPredictorModel:
             lh = lh.reshape(1)
             la = la.reshape(1)
 
-        rho = 0.11
+        rho = float(rho)
         h_idx = np.arange(max_goals + 1)
         a_idx = np.arange(max_goals + 1)
 
@@ -631,6 +675,10 @@ class MatchPredictorModel:
 
         tot = grid.sum(axis=(1, 2), keepdims=True)
         grid = np.where(tot > 0, grid / tot, grid)
+        if float(dispersion) != 1.0:
+            grid = np.power(np.maximum(grid, 0.0), float(dispersion))
+            tot = grid.sum(axis=(1, 2), keepdims=True)
+            grid = np.where(tot > 0, grid / tot, grid)
 
         tril_mask = np.tril(np.ones((max_goals + 1, max_goals + 1), dtype=bool), -1)
         diag_mask = np.eye(max_goals + 1, dtype=bool)
@@ -686,10 +734,18 @@ class MatchPredictorModel:
             blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
-    def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
-        """Returns bias-corrected expected float goals (expected_hg, expected_ag)."""
-        exp_hg = np.maximum(0.0, self.home_regressor.predict(X)) * self.home_goal_correction
-        exp_ag = np.maximum(0.0, self.away_regressor.predict(X)) * self.away_goal_correction
+    def predict_expected_goals(self, X: pd.DataFrame, apply_correction: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns bias-corrected expected float goals (expected_hg, expected_ag).
+
+        With ``apply_correction=False`` the raw regressor means are returned;
+        the scoreline path uses raw means so the fitted scoreline parameters
+        replace the hand-bounded correction there.
+        """
+        exp_hg = np.maximum(0.0, self.home_regressor.predict(X))
+        exp_ag = np.maximum(0.0, self.away_regressor.predict(X))
+        if apply_correction:
+            exp_hg = exp_hg * self.home_goal_correction
+            exp_ag = exp_ag * self.away_goal_correction
         return exp_hg, exp_ag
 
     def predict_scoreline(self, X: pd.DataFrame) -> List[Tuple[int, int]]:
@@ -699,14 +755,22 @@ class MatchPredictorModel:
         the blended outcome argmax, so the scoreline always agrees with
         ``predict_outcome_proba``. This eliminates forced 2-1 mode collapse
         while keeping probabilities and predicted outcomes consistent.
+
+        Uses raw regressor means with the calibration-slice-fitted scoreline
+        theta/dispersion; the hand-bounded goal corrections apply to the
+        outcome path only.
         """
-        exp_hg, exp_ag = self.predict_expected_goals(X)
+        exp_hg, exp_ag = self.predict_expected_goals(X, apply_correction=False)
         probas = self.predict_outcome_proba(X)
 
         scorelines: List[Tuple[int, int]] = []
         max_goals = 10
         # Compute Poisson grids in a single batch pass across X
-        grids, _ = self.compute_poisson_grid(exp_hg, exp_ag, max_goals=max_goals)
+        grids, _ = self.compute_poisson_grid(
+            exp_hg, exp_ag, max_goals=max_goals,
+            rho=getattr(self, "scoreline_theta", DEFAULT_SCORELINE_RHO),
+            dispersion=getattr(self, "scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION),
+        )
 
         for i in range(len(X)):
             grid = grids[i]
@@ -759,6 +823,8 @@ class MatchPredictorModel:
             "calibrated_classifier": self.calibrated_classifier,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
+            "scoreline_theta": self.scoreline_theta,
+            "scoreline_dispersion": self.scoreline_dispersion,
             "market_blend_weight": self.market_blend_weight,
             "no_market_blend_weight": self.no_market_blend_weight,
         }
@@ -793,6 +859,8 @@ class MatchPredictorModel:
         instance.calibrated_classifier = payload.get("calibrated_classifier")
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
+        instance.scoreline_theta = float(payload.get("scoreline_theta", DEFAULT_SCORELINE_RHO))
+        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION))
         instance.market_blend_weight = float(payload.get("market_blend_weight", 0.0))
         instance.no_market_blend_weight = float(payload.get("no_market_blend_weight", 0.0))
         return instance
@@ -831,6 +899,11 @@ def _score_benchmark_model(
     calibration_slice, evaluation_slice = split_calibration_evaluation(len(X_val))
     if calibration_slice.stop:
         model.calibrate_goals(
+            X_val.iloc[calibration_slice],
+            y_val_hg.iloc[calibration_slice],
+            y_val_ag.iloc[calibration_slice],
+        )
+        model.calibrate_scoreline(
             X_val.iloc[calibration_slice],
             y_val_hg.iloc[calibration_slice],
             y_val_ag.iloc[calibration_slice],
@@ -928,6 +1001,8 @@ def _score_benchmark_model(
         "calibration_scores": getattr(model, "calibration_scores", {}),
         "home_goal_correction": model.home_goal_correction,
         "away_goal_correction": model.away_goal_correction,
+        "scoreline_theta": model.scoreline_theta,
+        "scoreline_dispersion": model.scoreline_dispersion,
         "market_blend_weight": getattr(model, "market_blend_weight", 0.0),
         "no_market_blend_weight": getattr(model, "no_market_blend_weight", 0.0),
         "eval_y_outcome": eval_y_outcome.values,
@@ -1154,6 +1229,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
+        self.scoreline_theta: float = DEFAULT_SCORELINE_RHO
+        self.scoreline_dispersion: float = DEFAULT_SCORELINE_DISPERSION
         self.market_blend_weight: float = 0.0
         self.no_market_blend_weight: float = 0.0
 
@@ -1188,7 +1265,7 @@ class StackedEnsembleModel(MatchPredictorModel):
             blended = apply_temperature_scaling(blended, self.calibration_temperature)
         return blended
 
-    def predict_expected_goals(self, X: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def predict_expected_goals(self, X: pd.DataFrame, apply_correction: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """Bias-corrected mean of member expected-goal means.
 
         The goal corrections must be applied here too. calibrate_goals fits
@@ -1202,8 +1279,11 @@ class StackedEnsembleModel(MatchPredictorModel):
             exp_hg, exp_ag = self.members[key].predict_expected_goals(X)
             homes.append(np.asarray(exp_hg, dtype=float))
             aways.append(np.asarray(exp_ag, dtype=float))
-        mean_h = np.mean(homes, axis=0) * self.home_goal_correction
-        mean_a = np.mean(aways, axis=0) * self.away_goal_correction
+        mean_h = np.mean(homes, axis=0)
+        mean_a = np.mean(aways, axis=0)
+        if apply_correction:
+            mean_h = mean_h * self.home_goal_correction
+            mean_a = mean_a * self.away_goal_correction
         return mean_h, mean_a
 
     def get_feature_importances(self) -> pd.Series:
@@ -1234,6 +1314,8 @@ class StackedEnsembleModel(MatchPredictorModel):
             "calibration_scores": self.calibration_scores,
             "home_goal_correction": self.home_goal_correction,
             "away_goal_correction": self.away_goal_correction,
+            "scoreline_theta": self.scoreline_theta,
+            "scoreline_dispersion": self.scoreline_dispersion,
             "market_blend_weight": self.market_blend_weight,
             "no_market_blend_weight": self.no_market_blend_weight,
         }
@@ -1256,6 +1338,8 @@ class StackedEnsembleModel(MatchPredictorModel):
         instance.calibration_scores = dict(payload.get("calibration_scores", {}))
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
+        instance.scoreline_theta = float(payload.get("scoreline_theta", DEFAULT_SCORELINE_RHO))
+        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION))
         instance.market_blend_weight = float(payload.get("market_blend_weight", 0.0))
         instance.no_market_blend_weight = float(payload.get("no_market_blend_weight", 0.0))
         return instance

@@ -109,6 +109,15 @@ def test_markdown_report_carries_scoreline_quality():
     metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
     assert "Scoreline KL" in md
     assert "Variety" in md
+    rows = {}
+    for line in md.splitlines():
+        match = re.match(r"^\|\s*(Random Forest|XGBoost|Stacked)\s*\|(.+)\|$", line.strip())
+        if match:
+            rows[match.group(1)] = [cell.strip() for cell in match.group(2).split("|")]
     for name, source in metrics["models"].items():
         quality = source.get("scoreline_quality") or {}
-        assert f"{round(float(quality.get('kl_divergence', 0.0)), 4):.4f}" in md, f"{name} KL missing from Markdown"
+        # The Markdown table formatter strips trailing zeros (8.4940 -> 8.494),
+        # so compare values, not substrings; a stale number still fails.
+        kl_cell = float(rows[name][-2])
+        assert abs(kl_cell - round(float(quality.get("kl_divergence", 0.0)), 4)) < 5e-5, name
+        assert rows[name][-1] == f"{round(float(quality.get('argmax_variety', 0.0)) * 100, 1)}%", name

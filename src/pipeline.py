@@ -75,6 +75,8 @@ _CALIBRATION_ATTRIBUTES = (
     "calibration_scores",
     "home_goal_correction",
     "away_goal_correction",
+    "scoreline_theta",
+    "scoreline_dispersion",
     "market_blend_weight",
     "no_market_blend_weight",
 )
@@ -348,6 +350,9 @@ class PremierLeaguePredictionPipeline:
                         "argmax_variety": round(float(quality.get("argmax_variety", 0.0)), 6),
                         "n_matches": int(quality.get("n_matches", 0)),
                     }
+                for param in ("scoreline_theta", "scoreline_dispersion"):
+                    if param in vals:
+                        entry[param] = round(float(vals[param]), 4)
                 return entry
 
             models_sidecar = {

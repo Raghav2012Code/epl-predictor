@@ -8,8 +8,8 @@
   "no_market_blend_weight": 0.0,
   "feature_count": 112,
   "scoreline_quality": {
-    "kl_divergence": 8.8785,
-    "argmax_variety": 0.161017,
+    "kl_divergence": 8.7707,
+    "argmax_variety": 0.266949,
     "n_matches": 472
   },
   "models": {
@@ -21,17 +21,19 @@
       "mae_home_goals": 0.9391,
       "mae_away_goals": 0.8979,
       "avg_goal_mae": 0.9185,
-      "exact_score_acc": 0.0975,
-      "within_1_goal_acc": 0.6059,
+      "exact_score_acc": 0.1123,
+      "within_1_goal_acc": 0.6271,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 0.9835,
       "away_goal_correction": 1.1203,
       "scoreline_quality": {
-        "kl_divergence": 6.5153,
-        "argmax_variety": 0.177966,
+        "kl_divergence": 8.494,
+        "argmax_variety": 0.279661,
         "n_matches": 472
-      }
+      },
+      "scoreline_theta": -0.06,
+      "scoreline_dispersion": 1.0
     },
     "XGBoost": {
       "accuracy": 0.4894,
@@ -41,17 +43,19 @@
       "mae_home_goals": 0.9435,
       "mae_away_goals": 0.8924,
       "avg_goal_mae": 0.918,
-      "exact_score_acc": 0.0911,
-      "within_1_goal_acc": 0.6229,
+      "exact_score_acc": 0.1123,
+      "within_1_goal_acc": 0.6271,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 1.0036,
       "away_goal_correction": 1.1534,
       "scoreline_quality": {
-        "kl_divergence": 10.2302,
-        "argmax_variety": 0.169492,
+        "kl_divergence": 10.1025,
+        "argmax_variety": 0.264831,
         "n_matches": 472
-      }
+      },
+      "scoreline_theta": -0.06,
+      "scoreline_dispersion": 1.0
     },
     "Stacked": {
       "accuracy": 0.4873,
@@ -61,17 +65,19 @@
       "mae_home_goals": 0.9418,
       "mae_away_goals": 0.8915,
       "avg_goal_mae": 0.9166,
-      "exact_score_acc": 0.0953,
-      "within_1_goal_acc": 0.6081,
+      "exact_score_acc": 0.1144,
+      "within_1_goal_acc": 0.6144,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 1.0189,
       "away_goal_correction": 1.1459,
       "scoreline_quality": {
-        "kl_divergence": 8.8785,
-        "argmax_variety": 0.161017,
+        "kl_divergence": 8.7707,
+        "argmax_variety": 0.266949,
         "n_matches": 472
-      }
+      },
+      "scoreline_theta": -0.06,
+      "scoreline_dispersion": 1.0
     }
   }
 }

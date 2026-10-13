@@ -17,9 +17,9 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Scoreline KL | Variety | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | 6.5153 | 17.8% | Benchmark |
-| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | 10.2302 | 16.9% | Benchmark |
-| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 60.8% | 8.8785 | 16.1% | Production |
+| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 62.7% | 8.4940 | 28.0% | Benchmark |
+| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.7% | 10.1025 | 26.5% | Benchmark |
+| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 61.4% | 8.7707 | 26.7% | Production |
 
 These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale. Scoreline KL (natural log, 6x6 grid capped at 5 goals, lower is better) and Variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied) are measured on the held-out evaluation tail (472 matches).
 
