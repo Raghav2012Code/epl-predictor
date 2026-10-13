@@ -20,6 +20,9 @@ pipeline:
 
 model:
   home_advantage: 65.0
+  # Member blend fallback defaults. The joint tuning receipt in
+  # models/tuning.json ("joint" section) overrides these when present;
+  # this file is only the fallback. Do not retype receipt values here.
   blend_classifier: 0.6
   blend_poisson: 0.0
   blend_supremacy: 0.4
@@ -27,7 +30,9 @@ model:
   calibration_grid_max: 3.0
   calibration_grid_step: 0.05
   draw_rule:
-    # RPS-constrained receipt from the disjoint evaluation/forecast grids.
+    # Fallback defaults (historical receipt from the disjoint
+    # evaluation/forecast grids). The joint tuning receipt overrides
+    # these when present; do not retype receipt values here.
     market_margin: 0.12
     market_min_prob: 0.24
     no_market_margin: 0.12

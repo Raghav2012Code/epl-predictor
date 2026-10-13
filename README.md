@@ -13,17 +13,17 @@ The production model combines a three-class classifier with two Poisson goal reg
 
 When bookmaker odds are available, the final outcome probabilities can also use a calibration-slice-selected direct market blend; missing-market rows use the model alone. Goal corrections are learned on the disjoint calibration slice and bounded before they reach scoreline generation.
 
-The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for calibration-method selection; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
+The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for calibration-method selection; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`). The draw rule, member blend weights, and scoreline shape share one deterministic joint receipt in the same file (re-run with `.venv\Scripts\python.exe -m src.tuning --joint --trials 40 --offline`); serving prefers the receipt over config.yaml and code constants.
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Scoreline KL | Variety | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 62.7% | 8.4940 | 28.0% | Benchmark |
-| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.7% | 10.1025 | 26.5% | Benchmark |
-| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 61.4% | 8.7707 | 26.7% | Production |
+| Random Forest | 50.6% | 0.420 | 1.030 | 0.2076 | 0.89 | 60.8% | 8.5639 | 21.5% | Production |
+| XGBoost | 48.1% | 0.381 | 1.043 | 0.2119 | 0.87 | 56.3% | 10.3027 | 16.5% | Benchmark |
+| Stacked | 48.1% | 0.371 | 1.030 | 0.2082 | 0.87 | 58.2% | 8.6580 | 18.4% | Benchmark |
 
 These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale. Scoreline KL (natural log, 6x6 grid capped at 5 goals, lower is better) and Variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied) are measured on the held-out evaluation tail (472 matches).
 
-Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on RPS, log loss and macro F1. It is not ahead everywhere: XGBoost has higher accuracy (48.7% against 48.5%) and Random Forest a slightly lower goal MAE (0.910 against 0.915).
+Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. Selection uses pooled RPS across three rolling-origin folds (Random Forest 0.1970, Stacked 0.1978, XGBoost 0.1995; fold receipts in `models/metrics.json`); the table above headlines the most recent fold. Random Forest leads on pooled RPS as well as headline accuracy, macro F1 and RPS. It is not ahead everywhere: XGBoost and Stacked share the lower goal MAE (0.87 against 0.89).
 
 These are validation measurements, not a promise of future accuracy. Exact scorelines are especially uncertain; probabilities should be read as distributions.
 

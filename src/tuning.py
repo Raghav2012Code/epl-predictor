@@ -19,17 +19,24 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional
+import tempfile
+from typing import Any, Dict, Iterator, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from src.evaluate import ranked_probability_score
 from src.logging_config import get_logger
-from src.models import MatchPredictorModel, split_calibration_evaluation
+from src.models import (
+    JOINT_BLEND_KEYS,
+    JOINT_DRAW_KEYS,
+    MatchPredictorModel,
+    split_calibration_evaluation,
+)
 
 logger = get_logger(__name__)
 
@@ -41,6 +48,18 @@ XGB_PARAM_KEYS = (
     "n_estimators", "max_depth", "learning_rate",
     "subsample", "colsample_bytree", "reg_lambda",
 )
+# Draw-share admissibility band for study trials. The production draw rule
+# was selected under an 18-27% draw-share constraint on both market regimes
+# (see the draw-rule provenance note in src/models.py); the joint search
+# carries the same constraint so tuning can never reintroduce a
+# never-calls-draws pathology. Trials outside the band score inf.
+JOINT_DRAW_SHARE_MIN = 0.18
+JOINT_DRAW_SHARE_MAX = 0.27
+
+
+def draw_share_admissible(share: float) -> bool:
+    """Whether an eval draw share keeps a trial in the joint search."""
+    return bool(JOINT_DRAW_SHARE_MIN <= float(share) <= JOINT_DRAW_SHARE_MAX)
 
 
 def suggest_rf(trial) -> Dict[str, Any]:
@@ -154,6 +173,247 @@ def get_tuned_params(model_type: str, path: Optional[str] = None) -> Dict[str, A
         return {}
 
 
+@contextlib.contextmanager
+def _study_baseline() -> Iterator[None]:
+    """Hides any persisted joint receipt from serving accessors.
+
+    Trial evaluation must start from baseline serving behavior (config +
+    constants). Without this, a previous record leaks into evaluation
+    through get_draw_rule/blend_weights/get_scoreline_defaults and two
+    runs of the same study diverge. Restores the path afterwards.
+    """
+    global TUNING_PATH
+    try:
+        with open(TUNING_PATH, "r", encoding="utf-8") as f:
+            record = json.load(f) or {}
+    except (OSError, ValueError):
+        record = {}
+    baseline = {k: v for k, v in (record if isinstance(record, dict) else {}).items()
+                if k != "joint"}
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
+    try:
+        json.dump(baseline, tmp, indent=2)
+        tmp.close()
+        previous, TUNING_PATH = TUNING_PATH, tmp.name
+        try:
+            yield
+        finally:
+            TUNING_PATH = previous
+    finally:
+        try:
+            os.remove(tmp.name)
+        except OSError:
+            pass
+
+
+def get_joint_params(path: Optional[str] = None) -> Dict[str, Any]:
+    """Reads the joint receipt params from tuning.json ({} when absent).
+
+    Small file, read per call (no cache) so serving never goes stale and
+    tests need no cache invalidation. Missing file degrades to {} and every
+    consumer falls back to config/constants.
+    """
+    try:
+        with open(path or TUNING_PATH, "r", encoding="utf-8") as f:
+            record = json.load(f) or {}
+        params = (record.get("joint", {}) or {}).get("params", {})
+        return dict(params) if isinstance(params, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def suggest_joint(trial) -> Dict[str, Any]:
+    """Joint search space: draw rule, blend weights, scoreline shape."""
+    from src.models import SCORELINE_DISPERSION_VALUES, SCORELINE_RHO_VALUES
+
+    return {
+        "draw_rule": {
+            "market_margin": trial.suggest_float("market_margin", 0.02, 0.25),
+            "market_min_prob": trial.suggest_float("market_min_prob", 0.15, 0.35),
+            "no_market_margin": trial.suggest_float("no_market_margin", 0.02, 0.25),
+            "no_market_min_prob": trial.suggest_float("no_market_min_prob", 0.15, 0.35),
+        },
+        "blend": {
+            "blend_classifier": trial.suggest_float("blend_classifier", 0.0, 1.0),
+            "blend_poisson": trial.suggest_float("blend_poisson", 0.0, 1.0),
+            "blend_supremacy": trial.suggest_float("blend_supremacy", 0.0, 1.0),
+        },
+        "scoreline_theta": trial.suggest_categorical(
+            "scoreline_theta", list(SCORELINE_RHO_VALUES)),
+        "scoreline_dispersion": trial.suggest_categorical(
+            "scoreline_dispersion", list(SCORELINE_DISPERSION_VALUES)),
+    }
+
+
+def evaluate_joint(
+    joint_params: Dict[str, Any],
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    feature_cols: List[str],
+) -> Dict[str, float]:
+    """Scores one joint receipt on the disjoint evaluation slice.
+
+    Fits the tuned-RF reference on train rows (temperature on the cal
+    slice, mirroring the tree protocol), then applies the trial draw rule,
+    blend weights, and scoreline shape exactly as serving would. Returns
+    the joint error (RPS + scoreline cross-entropy + draw-decision error,
+    all lower-better nats/rates documented as one scalar) with components.
+    Trials whose eval draw share falls outside the admissibility band score
+    inf: tuning must never reintroduce a never-calls-draws forecast.
+    """
+    from src.models import MatchPredictorModel, apply_temperature_scaling, favor_outcome_from_proba
+
+    cal_slice, eval_slice = split_calibration_evaluation(len(val_df))
+    X_train, y_outcome = train_df[feature_cols], train_df["target_outcome"]
+    y_hg, y_ag = train_df["target_home_goals"], train_df["target_away_goals"]
+    X_cal = val_df[feature_cols].iloc[cal_slice] if cal_slice.stop else val_df[feature_cols].iloc[0:0]
+    y_cal = val_df["target_outcome"].iloc[cal_slice] if cal_slice.stop else val_df["target_outcome"].iloc[0:0]
+    X_eval = val_df[feature_cols].iloc[eval_slice]
+    y_eval = val_df["target_outcome"].iloc[eval_slice]
+    if len(X_eval) == 0:
+        return {"value": float("inf"), "rps": float("inf"),
+                "scoreline_nll": float("inf"), "draw_error": float("inf")}
+    from src.config import get_config as _get_cfg_tune
+    from src.feature_engineering import recency_weights as _recency_weights_tune
+
+    _sw = _recency_weights_tune(
+        train_df["date"] if "date" in train_df.columns else None,
+        half_life_days=float(_get_cfg_tune()["model"].get("recency_half_life_days", 730)),
+    )
+    model = MatchPredictorModel("rf").apply_params(get_tuned_params("rf"))
+    model.fit(X_train, y_outcome, y_hg, y_ag, sample_weight=_sw)
+    if len(X_cal) > 0:
+        try:
+            model.calibrate_temperature(X_cal, y_cal)
+        except Exception:
+            model.calibration_temperature = 1.0
+
+    rule = (joint_params.get("draw_rule") or {})
+    blend = (joint_params.get("blend") or {})
+    weights = np.array([
+        float(blend.get("blend_classifier", 0.6)),
+        float(blend.get("blend_poisson", 0.0)),
+        float(blend.get("blend_supremacy", 0.4)),
+    ])
+    weights = weights / weights.sum() if weights.sum() > 0 else np.array([0.6, 0.0, 0.4])
+    sources = model._source_probas(X_eval)
+    probas = (weights[0] * sources["clf"] + weights[1] * sources["poisson"]
+              + weights[2] * sources["supremacy"])
+    probas = probas / np.maximum(probas.sum(axis=1, keepdims=True), 1e-12)
+    if model.calibration_method == "temperature" and model.calibration_temperature != 1.0:
+        probas = apply_temperature_scaling(probas, model.calibration_temperature)
+    rps = float(ranked_probability_score(y_eval, probas))
+
+    missing = (X_eval["odds_missing"].to_numpy(dtype=float)
+               if "odds_missing" in X_eval.columns else np.zeros(len(X_eval)))
+    preds = np.array([favor_outcome_from_proba(p, odds_missing=m, rule=rule)
+                      for p, m in zip(probas, missing)])
+    draw_error = float(np.mean(preds != np.asarray(y_eval.values, dtype=int)))
+    draw_share = float(np.mean(preds == 1)) if len(preds) else 0.0
+
+    lam_h, lam_a = model.predict_expected_goals(X_eval, apply_correction=False)
+    grids, _ = model.compute_poisson_grid(
+        lam_h, lam_a, max_goals=10,
+        rho=joint_params.get("scoreline_theta", 0.11),
+        dispersion=joint_params.get("scoreline_dispersion", 1.0),
+    )
+    rows = np.arange(len(X_eval))
+    true_h = np.clip(np.asarray(val_df["target_home_goals"].iloc[eval_slice], dtype=int).ravel(), 0, 10)
+    true_a = np.clip(np.asarray(val_df["target_away_goals"].iloc[eval_slice], dtype=int).ravel(), 0, 10)
+    nll = float(-np.mean(np.log(np.maximum(grids[rows, true_h, true_a], 1e-12))))
+    components = {"rps": rps, "scoreline_nll": nll, "draw_error": draw_error,
+                  "draw_share": draw_share}
+    if not draw_share_admissible(draw_share):
+        return {"value": float("inf"), **components}
+    return {"value": rps + nll + draw_error, **components}
+
+
+def tune_joint(
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    feature_cols: List[str],
+    n_trials: int = 40,
+    seed: int = 42,
+) -> Dict[str, Any]:
+    """Runs one deterministic Optuna study over the joint receipt space.
+
+    The whole study evaluates under baseline serving behavior: a persisted
+    joint receipt is hidden from the serving accessors for the run, so a
+    previous record can never leak into trial evaluation and reruns from
+    the same code and data are identical.
+    """
+    import optuna
+
+    sampler = optuna.samplers.TPESampler(seed=seed)
+    study = optuna.create_study(direction="minimize", sampler=sampler)
+
+    def _objective(trial) -> float:
+        return evaluate_joint(
+            suggest_joint(trial), train_df, val_df, feature_cols)["value"]
+
+    with _study_baseline():
+        study.optimize(_objective, n_trials=max(1, n_trials))
+    best = study.best_trial
+    return {
+        "params": suggest_joint_to_record(best),
+        "value": float(study.best_value),
+        "components": {k: float(v) for k, v in _joint_components(
+            best, train_df, val_df, feature_cols).items() if k != "value"},
+        "trials": len(study.trials),
+        "metric": "joint_nll",
+        "seed": seed,
+    }
+
+
+def suggest_joint_to_record(trial) -> Dict[str, Any]:
+    """Reshapes flat trial params into the receipt structure."""
+    flat = dict(trial.params)
+    return {
+        "draw_rule": {k: float(flat[k]) for k in JOINT_DRAW_KEYS},
+        "blend": {k: float(flat[k]) for k in JOINT_BLEND_KEYS},
+        "scoreline_theta": float(flat["scoreline_theta"]),
+        "scoreline_dispersion": float(flat["scoreline_dispersion"]),
+    }
+
+
+def _joint_components(best, train_df, val_df, feature_cols) -> Dict[str, float]:
+    return evaluate_joint(
+        suggest_joint_to_record(best), train_df, val_df, feature_cols)
+
+
+def run_joint_tuning(
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    feature_cols: List[str],
+    n_trials: int = 40,
+    seed: int = 42,
+    persist: bool = True,
+) -> Dict[str, Any]:
+    """Tunes the joint receipt, merging it into models/tuning.json.
+
+    The existing tree section is preserved; only the "joint" key is set.
+    """
+    logger.info("Tuning joint receipt (%d trials)...", n_trials)
+    outcome = tune_joint(train_df, val_df, feature_cols,
+                         n_trials=n_trials, seed=seed)
+    logger.info("  - best joint_nll=%.4f params=%s", outcome["value"], outcome["params"])
+    results: Dict[str, Any] = dict(outcome)
+    if persist:
+        os.makedirs(MODELS_DIR, exist_ok=True)
+        try:
+            with open(TUNING_PATH, "r", encoding="utf-8") as f:
+                record = json.load(f) or {}
+        except (OSError, ValueError):
+            record = {}
+        if not isinstance(record, dict):
+            record = {}
+        record["joint"] = outcome
+        with open(TUNING_PATH, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2)
+        logger.info("Joint receipt saved to %s", TUNING_PATH)
+    return results
+
+
 def run_tuning(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
@@ -191,6 +451,10 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--no-persist", action="store_true")
+    parser.add_argument(
+        "--joint", action="store_true",
+        help="Tune the joint receipt (draw rule, blend weights, scoreline shape) instead of tree hyperparameters.",
+    )
     args = parser.parse_args()
 
     from src.config import get_split_date
@@ -209,6 +473,10 @@ def main() -> int:
     train_df = eng[eng["date"] < split_date].copy()
     val_df = eng[eng["date"] >= split_date].copy()
     logger.info("Tuning data: %d train / %d validation rows.", len(train_df), len(val_df))
+    if args.joint:
+        run_joint_tuning(train_df, val_df, cols, n_trials=args.trials,
+                         seed=args.seed, persist=not args.no_persist)
+        return 0
     run_tuning(train_df, val_df, cols, n_trials=args.trials,
                seed=args.seed, metric=args.metric, persist=not args.no_persist)
     return 0

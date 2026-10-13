@@ -114,10 +114,33 @@ def align_probas(classes, probas: np.ndarray, n_classes: int = 3) -> np.ndarray:
 # ~22-23% on the no-market slate). Phase 7 receipt (2026-09-15): values moved
 # to config.yaml and retained after the disjoint eval/forecast RPS grid with
 # 18-27% draw-share constraints.
+# Superseded by the joint tuning receipt (models/tuning.json, "joint"
+# section; re-run with .venv\Scripts\python.exe -m src.tuning --joint
+# --trials 40 --offline): the DRAW_* constants below are fallbacks only.
 DRAW_MARGIN = 0.12
 DRAW_MIN_PROB = 0.24
 DRAW_MARGIN_NO_MARKET = 0.12
 DRAW_MIN_PROB_NO_MARKET = 0.25
+
+# Joint receipt key sets (issue #53): the single Optuna search records these
+# in models/tuning.json; serving accessors prefer them over config/constants.
+JOINT_DRAW_KEYS = ("market_margin", "market_min_prob", "no_market_margin", "no_market_min_prob")
+JOINT_BLEND_KEYS = ("blend_classifier", "blend_poisson", "blend_supremacy")
+
+
+def _joint_params() -> Dict[str, Any]:
+    """Tuning receipt params ({} when absent or unreadable).
+
+    Single stanza for every serving accessor below so the fallback shape
+    is written once. Small file, read per call: serving never goes stale.
+    """
+    try:
+        from src.tuning import get_joint_params as _get_joint
+
+        params = _get_joint()
+        return dict(params) if isinstance(params, dict) else {}
+    except Exception:
+        return {}
 
 # Scoreline distribution calibration (issue #49). Dixon-Coles theta replaces
 # the hardcoded rho once fitted; dispersion is a grid exponent (1.0 neutral,
@@ -130,26 +153,37 @@ SCORELINE_DISPERSION_VALUES = (0.5, 0.7, 0.85, 1.0, 1.2, 1.5)
 
 
 def get_draw_rule() -> Dict[str, float]:
-    """Returns config-driven draw thresholds with backward-compatible defaults."""
+    """Returns draw thresholds: joint tuning receipt first, then config, then defaults."""
     from src.config import get_config
 
     configured = get_config().get("model", {}).get("draw_rule", {})
-    return {
+    rule = {
         "market_margin": float(configured.get("market_margin", DRAW_MARGIN)),
         "market_min_prob": float(configured.get("market_min_prob", DRAW_MIN_PROB)),
         "no_market_margin": float(configured.get("no_market_margin", DRAW_MARGIN_NO_MARKET)),
         "no_market_min_prob": float(configured.get("no_market_min_prob", DRAW_MIN_PROB_NO_MARKET)),
     }
+    try:
+        joint_rule = _joint_params().get("draw_rule") or {}
+        for key in JOINT_DRAW_KEYS:
+            value = joint_rule.get(key)
+            if value is not None and float(value) == float(value):
+                rule[key] = float(value)
+    except Exception:
+        pass
+    return rule
 
 
-def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
+def favor_outcome_from_proba(probas, odds_missing: float = 0.0, rule=None) -> int:
     """Maps a [p_away, p_draw, p_home] vector to 0 (Away), 1 (Draw), 2 (Home).
 
     A close home/away race with a robust draw probability is called a
     draw; thresholds are regime-aware because market-present and
-    no-market proba distributions differ sharply.
+    no-market proba distributions differ sharply. An explicit ``rule``
+    mapping (same keys as ``get_draw_rule``) overrides the configured one;
+    this stays the single draw-decision source for every caller.
     """
-    rule = get_draw_rule()
+    rule = dict(rule) if rule else get_draw_rule()
     if float(odds_missing) >= 0.5:
         margin, min_prob = rule["no_market_margin"], rule["no_market_min_prob"]
     else:
@@ -163,8 +197,9 @@ def favor_outcome_from_proba(probas, odds_missing: float = 0.0) -> int:
 def blend_weights() -> Tuple[float, float, float]:
     """Normalized (classifier, hg/ag-Poisson, supremacy/totals) blend weights.
 
-    Read from config.yaml (keys blend_classifier, blend_poisson,
-    blend_supremacy); normalized to sum to 1 so partial configs stay valid.
+    Joint tuning receipt first, then config.yaml (keys blend_classifier,
+    blend_poisson, blend_supremacy); normalized to sum to 1 so partial
+    configs stay valid.
     """
     from src.config import get_config
 
@@ -174,10 +209,30 @@ def blend_weights() -> Tuple[float, float, float]:
         float(cfg.get("blend_poisson", 0.0)),
         float(cfg.get("blend_supremacy", 0.4)),
     )
+    try:
+        joint_blend = _joint_params().get("blend") or {}
+        tuned = [joint_blend.get(key) for key in JOINT_BLEND_KEYS]
+        if all(v is not None and float(v) == float(v) for v in tuned):
+            raw = (float(tuned[0]), float(tuned[1]), float(tuned[2]))
+    except Exception:
+        pass
     total = sum(raw)
     if total <= 0:
         return (0.6, 0.0, 0.4)
     return (raw[0] / total, raw[1] / total, raw[2] / total)
+
+
+def get_scoreline_defaults() -> Tuple[float, float]:
+    """Joint tuning receipt (theta, dispersion), else the legacy constants."""
+    try:
+        joint = _joint_params()
+        theta = joint.get("scoreline_theta", DEFAULT_SCORELINE_RHO)
+        dispersion = joint.get("scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION)
+        if float(theta) == float(theta) and float(dispersion) == float(dispersion):
+            return float(theta), float(dispersion)
+    except Exception:
+        pass
+    return DEFAULT_SCORELINE_RHO, DEFAULT_SCORELINE_DISPERSION
 
 
 def supremacy_to_means(
@@ -391,10 +446,10 @@ class MatchPredictorModel:
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
         # Joint scoreline shape (fit on the calibration slice): Dixon-Coles
-        # theta and grid dispersion. Defaults reproduce the legacy grid until
+        # theta and grid dispersion. Defaults follow the joint tuning
+        # receipt when present, else the legacy constants, until
         # calibrate_scoreline runs.
-        self.scoreline_theta: float = DEFAULT_SCORELINE_RHO
-        self.scoreline_dispersion: float = DEFAULT_SCORELINE_DISPERSION
+        self.scoreline_theta, self.scoreline_dispersion = get_scoreline_defaults()
         self.market_blend_weight: float = 0.0
         self.no_market_blend_weight: float = 0.0
 
@@ -636,7 +691,7 @@ class MatchPredictorModel:
     @staticmethod
     def compute_poisson_grid(
         h_exp: float | np.ndarray, a_exp: float | np.ndarray, max_goals: int = 10,
-        rho: float = DEFAULT_SCORELINE_RHO, dispersion: float = DEFAULT_SCORELINE_DISPERSION,
+        rho: float | None = None, dispersion: float | None = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Calculates normalized bivariate Poisson probability grid and outcome probabilities.
 
@@ -653,6 +708,10 @@ class MatchPredictorModel:
             lh = lh.reshape(1)
             la = la.reshape(1)
 
+        if rho is None or dispersion is None:
+            tuned_theta, tuned_dispersion = get_scoreline_defaults()
+            rho = tuned_theta if rho is None else rho
+            dispersion = tuned_dispersion if dispersion is None else dispersion
         rho = float(rho)
         h_idx = np.arange(max_goals + 1)
         a_idx = np.arange(max_goals + 1)
@@ -766,10 +825,11 @@ class MatchPredictorModel:
         scorelines: List[Tuple[int, int]] = []
         max_goals = 10
         # Compute Poisson grids in a single batch pass across X
+        _theta, _dispersion = get_scoreline_defaults()
         grids, _ = self.compute_poisson_grid(
             exp_hg, exp_ag, max_goals=max_goals,
-            rho=getattr(self, "scoreline_theta", DEFAULT_SCORELINE_RHO),
-            dispersion=getattr(self, "scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION),
+            rho=getattr(self, "scoreline_theta", _theta),
+            dispersion=getattr(self, "scoreline_dispersion", _dispersion),
         )
 
         for i in range(len(X)):
@@ -805,10 +865,11 @@ class MatchPredictorModel:
         order. Probabilities are percents rounded to one decimal.
         """
         exp_hg, exp_ag = self.predict_expected_goals(X, apply_correction=False)
+        _theta, _dispersion = get_scoreline_defaults()
         grids, _ = self.compute_poisson_grid(
             exp_hg, exp_ag, max_goals=10,
-            rho=getattr(self, "scoreline_theta", DEFAULT_SCORELINE_RHO),
-            dispersion=getattr(self, "scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION),
+            rho=getattr(self, "scoreline_theta", _theta),
+            dispersion=getattr(self, "scoreline_dispersion", _dispersion),
         )
         headline = self.predict_scoreline(X)
 
@@ -887,8 +948,9 @@ class MatchPredictorModel:
         instance.calibrated_classifier = payload.get("calibrated_classifier")
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
-        instance.scoreline_theta = float(payload.get("scoreline_theta", DEFAULT_SCORELINE_RHO))
-        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION))
+        _theta, _dispersion = get_scoreline_defaults()
+        instance.scoreline_theta = float(payload.get("scoreline_theta", _theta))
+        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", _dispersion))
         instance.market_blend_weight = float(payload.get("market_blend_weight", 0.0))
         instance.no_market_blend_weight = float(payload.get("no_market_blend_weight", 0.0))
         return instance
@@ -1324,8 +1386,7 @@ class StackedEnsembleModel(MatchPredictorModel):
         self.calibration_scores: Dict[str, float] = {}
         self.home_goal_correction: float = 1.0
         self.away_goal_correction: float = 1.0
-        self.scoreline_theta: float = DEFAULT_SCORELINE_RHO
-        self.scoreline_dispersion: float = DEFAULT_SCORELINE_DISPERSION
+        self.scoreline_theta, self.scoreline_dispersion = get_scoreline_defaults()
         self.market_blend_weight: float = 0.0
         self.no_market_blend_weight: float = 0.0
 
@@ -1433,8 +1494,9 @@ class StackedEnsembleModel(MatchPredictorModel):
         instance.calibration_scores = dict(payload.get("calibration_scores", {}))
         instance.home_goal_correction = float(payload.get("home_goal_correction", 1.0))
         instance.away_goal_correction = float(payload.get("away_goal_correction", 1.0))
-        instance.scoreline_theta = float(payload.get("scoreline_theta", DEFAULT_SCORELINE_RHO))
-        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION))
+        _theta, _dispersion = get_scoreline_defaults()
+        instance.scoreline_theta = float(payload.get("scoreline_theta", _theta))
+        instance.scoreline_dispersion = float(payload.get("scoreline_dispersion", _dispersion))
         instance.market_blend_weight = float(payload.get("market_blend_weight", 0.0))
         instance.no_market_blend_weight = float(payload.get("no_market_blend_weight", 0.0))
         return instance

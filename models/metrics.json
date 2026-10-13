@@ -1,83 +1,121 @@
 {
-  "production_model": "Stacked",
+  "production_model": "Random Forest",
   "calibration_temperature": 1.0,
   "calibration_method": "temperature",
-  "home_goal_correction": 1.0,
-  "away_goal_correction": 1.0,
-  "market_blend_weight": 0.5,
+  "home_goal_correction": 1.0381462272689008,
+  "away_goal_correction": 0.9455877028684062,
+  "market_blend_weight": 0.2,
   "no_market_blend_weight": 0.0,
   "feature_count": 112,
   "scoreline_quality": {
-    "kl_divergence": 8.7707,
-    "argmax_variety": 0.266949,
-    "n_matches": 472
+    "kl_divergence": 7.1373,
+    "argmax_variety": 0.253165,
+    "n_matches": 158
   },
   "models": {
     "Random Forest": {
-      "accuracy": 0.4767,
-      "log_loss": 1.0084,
-      "macro_f1": 0.4426,
-      "rps": 0.205,
-      "mae_home_goals": 0.9391,
-      "mae_away_goals": 0.8979,
-      "avg_goal_mae": 0.9185,
-      "exact_score_acc": 0.1123,
-      "within_1_goal_acc": 0.6271,
+      "accuracy": 0.5063,
+      "log_loss": 1.0308,
+      "macro_f1": 0.472,
+      "rps": 0.2078,
+      "mae_home_goals": 0.9223,
+      "mae_away_goals": 0.8573,
+      "avg_goal_mae": 0.8898,
+      "exact_score_acc": 0.1139,
+      "within_1_goal_acc": 0.6139,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
-      "home_goal_correction": 0.9835,
-      "away_goal_correction": 1.1203,
+      "home_goal_correction": 1.0381,
+      "away_goal_correction": 0.9456,
       "scoreline_quality": {
-        "kl_divergence": 8.494,
-        "argmax_variety": 0.279661,
-        "n_matches": 472
+        "kl_divergence": 7.1373,
+        "argmax_variety": 0.253165,
+        "n_matches": 158
       },
       "scoreline_theta": -0.06,
       "scoreline_dispersion": 1.0
     },
     "XGBoost": {
-      "accuracy": 0.4894,
-      "log_loss": 1.0118,
-      "macro_f1": 0.4314,
-      "rps": 0.2051,
-      "mae_home_goals": 0.9435,
-      "mae_away_goals": 0.8924,
-      "avg_goal_mae": 0.918,
-      "exact_score_acc": 0.1123,
-      "within_1_goal_acc": 0.6271,
+      "accuracy": 0.5063,
+      "log_loss": 1.0412,
+      "macro_f1": 0.4637,
+      "rps": 0.2109,
+      "mae_home_goals": 0.9051,
+      "mae_away_goals": 0.8285,
+      "avg_goal_mae": 0.8668,
+      "exact_score_acc": 0.1392,
+      "within_1_goal_acc": 0.5886,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
-      "home_goal_correction": 1.0036,
-      "away_goal_correction": 1.1534,
+      "home_goal_correction": 1.0312,
+      "away_goal_correction": 0.9644,
       "scoreline_quality": {
-        "kl_divergence": 10.1025,
-        "argmax_variety": 0.264831,
-        "n_matches": 472
+        "kl_divergence": 10.1708,
+        "argmax_variety": 0.208861,
+        "n_matches": 158
       },
       "scoreline_theta": -0.06,
       "scoreline_dispersion": 1.0
     },
     "Stacked": {
-      "accuracy": 0.4873,
-      "log_loss": 1.0063,
-      "macro_f1": 0.4454,
-      "rps": 0.2044,
-      "mae_home_goals": 0.9418,
-      "mae_away_goals": 0.8915,
-      "avg_goal_mae": 0.9166,
-      "exact_score_acc": 0.1144,
-      "within_1_goal_acc": 0.6144,
+      "accuracy": 0.5,
+      "log_loss": 1.0271,
+      "macro_f1": 0.4618,
+      "rps": 0.2077,
+      "mae_home_goals": 0.9103,
+      "mae_away_goals": 0.8276,
+      "avg_goal_mae": 0.8689,
+      "exact_score_acc": 0.1203,
+      "within_1_goal_acc": 0.5949,
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
-      "home_goal_correction": 1.0189,
-      "away_goal_correction": 1.1459,
+      "home_goal_correction": 1.0325,
+      "away_goal_correction": 0.9694,
       "scoreline_quality": {
-        "kl_divergence": 8.7707,
-        "argmax_variety": 0.266949,
-        "n_matches": 472
+        "kl_divergence": 8.4604,
+        "argmax_variety": 0.246835,
+        "n_matches": 158
       },
       "scoreline_theta": -0.06,
       "scoreline_dispersion": 1.0
+    }
+  },
+  "validation": {
+    "n_folds": 3,
+    "fold_train_rows": [
+      2096,
+      2406,
+      2725
+    ],
+    "fold_val_rows": [
+      310,
+      319,
+      315
+    ],
+    "fold_val_starts": [
+      "2024-01-01",
+      "2024-12-01",
+      "2025-10-05"
+    ],
+    "pooled_metrics": {
+      "Random Forest": {
+        "rps": 0.1974,
+        "log_loss": 0.9772,
+        "accuracy": 0.5349,
+        "avg_goal_mae": 0.9125
+      },
+      "XGBoost": {
+        "rps": 0.1994,
+        "log_loss": 0.9841,
+        "accuracy": 0.5349,
+        "avg_goal_mae": 0.9067
+      },
+      "Stacked": {
+        "rps": 0.1981,
+        "log_loss": 0.9794,
+        "accuracy": 0.5074,
+        "avg_goal_mae": 0.9047
+      }
     }
   }
 }

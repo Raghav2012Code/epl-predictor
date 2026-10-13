@@ -8,11 +8,11 @@ Phases 0 through 8 are implemented in the current release candidate. The product
 
 | Model | RPS | Accuracy | Goal MAE | Scoreline KL | Variety | Status |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 0.2050 | 47.7% | 0.92 | 8.4940 | 28.0% | Benchmark |
-| XGBoost | 0.2051 | 48.9% | 0.92 | 10.1025 | 26.5% | Benchmark |
-| Stacked | 0.2044 | 48.7% | 0.92 | 8.7707 | 26.7% | Production |
+| Random Forest | 0.2076 | 50.6% | 0.89 | 8.5639 | 21.5% | Production |
+| XGBoost | 0.2119 | 48.1% | 0.87 | 10.3027 | 16.5% | Benchmark |
+| Stacked | 0.2082 | 48.1% | 0.87 | 8.6580 | 18.4% | Benchmark |
 
-These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results. Scoreline quality (KL divergence vs empirical scorelines and argmax-variety) is measured on the held-out evaluation tail (472 matches) and transcribed from `models/metrics.json`.
+These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results. Scoreline quality (KL divergence vs empirical scorelines and argmax-variety) is measured on the held-out evaluation tail (472 matches) and transcribed from `models/metrics.json`. Production follows pooled RPS across three rolling-origin folds (Random Forest 0.1970, Stacked 0.1978, XGBoost 0.1995); the table headlines the most recent fold.
 
 ## Completed phases
 

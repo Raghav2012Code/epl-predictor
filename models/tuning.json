@@ -26,5 +26,32 @@
       "trials": 40,
       "metric": "rps"
     }
+  },
+  "joint": {
+    "params": {
+      "draw_rule": {
+        "market_margin": 0.12468056150657505,
+        "market_min_prob": 0.19726635403455023,
+        "no_market_margin": 0.0694608080169756,
+        "no_market_min_prob": 0.16867036392764514
+      },
+      "blend": {
+        "blend_classifier": 0.6760123173054032,
+        "blend_poisson": 0.24961243900209096,
+        "blend_supremacy": 0.3314045329694303
+      },
+      "scoreline_theta": 0.0,
+      "scoreline_dispersion": 1.0
+    },
+    "value": 3.6512026873818693,
+    "components": {
+      "rps": 0.20820223048342568,
+      "scoreline_nll": 2.909102151813698,
+      "draw_error": 0.5338983050847458,
+      "draw_share": 0.211864406779661
+    },
+    "trials": 40,
+    "metric": "joint_nll",
+    "seed": 42
   }
 }

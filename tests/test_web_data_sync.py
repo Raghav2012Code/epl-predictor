@@ -82,7 +82,6 @@ def test_dashboard_benchmark_matches_authoritative_model_metrics():
     dashboard = json.loads(
         (REPOSITORY_ROOT / "web/src/data/eplData.json").read_text(encoding="utf-8")
     )
-
     benchmark = dashboard["benchmark"]
     assert benchmark["productionModel"] == metrics["production_model"]
     assert len(benchmark["models"]) == len(metrics["models"])
@@ -100,6 +99,18 @@ def test_dashboard_benchmark_matches_authoritative_model_metrics():
     receipt = benchmark.get("scorelineQuality") or {}
     assert receipt.get("klDivergence") == round(float(production_quality.get("kl_divergence", 0.0)), 4)
     assert receipt.get("argmaxVariety") == round(float(production_quality.get("argmax_variety", 0.0)) * 100, 1)
+
+
+def test_metrics_artifact_carries_fold_receipts():
+    metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
+    validation = metrics.get("validation") or {}
+    assert validation.get("n_folds") == 3
+    assert len(validation.get("fold_train_rows", [])) == 3
+    assert len(validation.get("fold_val_rows", [])) == 3
+    assert len(validation.get("fold_val_starts", [])) == 3
+    pooled = validation.get("pooled_metrics") or {}
+    assert set(pooled) == set(metrics["models"])
+    assert metrics["production_model"] in pooled
 
 
 def test_top_scorelines_consistent_across_csv_markdown_and_dataset(tmp_path):
