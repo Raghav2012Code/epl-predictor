@@ -133,6 +133,19 @@
 .form-line__name { flex: 1; min-width: 0; font-size: var(--fs-14); font-weight: 600; }
 .detail__note { max-width: none; }
 
+/* Top-three scorelines: text-first list, first row is the model pick. */
+.topscores { display: grid; gap: var(--space-2); }
+.topscores ol { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.topscores li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+.topscores li .label { margin-left: auto; }
+
 .facts { display: grid; gap: var(--space-3); margin: 0; }
 .facts > div {
   display: flex;

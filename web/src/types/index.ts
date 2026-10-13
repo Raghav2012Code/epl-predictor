@@ -1,5 +1,10 @@
 export type MatchOutcome = 'Home Win' | 'Draw' | 'Away Win';
 
+export interface TopScoreline {
+  score: string;
+  prob: number;
+}
+
 export interface Fixture {
   id: number;
   gameweek: number;
@@ -17,6 +22,8 @@ export interface Fixture {
   predictedScore: string;
   predHomeGoals: number;
   predAwayGoals: number;
+  /** Top-3 scorelines, headline pick first; absent in datasets exported before it existed. */
+  topScorelines?: TopScoreline[];
   homeWinProb: number;
   drawProb: number;
   awayWinProb: number;

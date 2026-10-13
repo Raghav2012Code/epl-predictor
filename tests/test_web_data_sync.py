@@ -102,6 +102,81 @@ def test_dashboard_benchmark_matches_authoritative_model_metrics():
     assert receipt.get("argmaxVariety") == round(float(production_quality.get("argmax_variety", 0.0)) * 100, 1)
 
 
+def test_top_scorelines_consistent_across_csv_markdown_and_dataset(tmp_path):
+    """The top-3 block reads identically on every surface for the same fixture.
+
+    Builds one forecast row in memory, serializes it through the real CSV
+    expansion, Markdown report, and dataset-JSON mapping, then checks the
+    values agree byte-for-byte (headline pick first, one-decimal percents).
+    The committed artifacts cannot be regenerated in this worktree, so the
+    pipeline/export entry points are not run here.
+    """
+    import pandas as pd
+
+    from export_web_data import fixture_top_scorelines
+    from src.pipeline import PremierLeaguePredictionPipeline, expand_top_scorelines_column
+
+    row = {
+        "gameweek": 1,
+        "date": "2026-08-15",
+        "time": "15:00",
+        "home_team": "Arsenal",
+        "away_team": "Chelsea",
+        "home_win_prob": 50.0,
+        "draw_prob": 27.0,
+        "away_win_prob": 23.0,
+        "predicted_outcome": "Home Win",
+        "predicted_score": "2 - 1",
+        "pred_home_goals": 2,
+        "pred_away_goals": 1,
+        "actual_score": "-",
+        "status": "Upcoming",
+        "top_scorelines": [
+            {"score": "2 - 1", "prob": 11.2},
+            {"score": "1 - 0", "prob": 9.8},
+            {"score": "2 - 0", "prob": 8.1},
+        ],
+    }
+    flat = expand_top_scorelines_column(pd.DataFrame([row]))
+    csv_path = tmp_path / "preds.csv"
+    flat.to_csv(csv_path, index=False)
+    csv_row = pd.read_csv(csv_path).iloc[0]
+
+    pipe = PremierLeaguePredictionPipeline()
+    pipe.best_model_name = "Stacked"
+    pipe.metrics = {
+        "Stacked": {
+            "accuracy": 0.5,
+            "macro_f1": 0.4,
+            "log_loss": 1.0,
+            "avg_goal_mae": 0.9,
+            "within_1_goal_acc": 0.6,
+            "scoreline_quality": {"kl_divergence": 1.0, "argmax_variety": 0.2, "n_matches": 10},
+        }
+    }
+    md_path = tmp_path / "preds.md"
+    pipe._export_markdown_report(flat, str(md_path))
+    md = md_path.read_text(encoding="utf-8")
+
+    dataset_block = fixture_top_scorelines(csv_row)
+
+    # Field presence on every surface.
+    for n in (1, 2, 3):
+        assert f"top{n}_score" in flat.columns
+        assert f"top{n}_prob" in flat.columns
+    assert "Top 3" in md
+    assert len(dataset_block) == 3
+
+    # Cross-surface byte-consistency: the same fixture, the same strings.
+    for n, entry in enumerate(dataset_block, 1):
+        assert entry["score"] == str(csv_row[f"top{n}_score"])
+        assert entry["prob"] == round(float(csv_row[f"top{n}_prob"]), 1)
+        assert f"{entry['score']} ({entry['prob']:.1f}%)" in md
+    # Headline pick first, alternatives most likely first.
+    assert dataset_block[0]["score"] == str(csv_row["predicted_score"])
+    assert dataset_block[1]["prob"] >= dataset_block[2]["prob"]
+
+
 def test_markdown_report_carries_scoreline_quality():
     from pathlib import Path as _Path
 

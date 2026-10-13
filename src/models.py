@@ -795,6 +795,34 @@ class MatchPredictorModel:
 
         return scorelines
 
+    def predict_top_scorelines(self, X: pd.DataFrame, k: int = 3) -> List[List[Tuple[int, int, float]]]:
+        """Ranks the top-k joint scorelines per match from the fitted grid.
+
+        Uses raw regressor means with the calibration-slice-fitted scoreline
+        theta/dispersion (the same serving means as ``predict_scoreline``).
+        The headline pick is pinned first so it always matches
+        ``predict_scoreline``; the remaining picks follow grid probability
+        order. Probabilities are percents rounded to one decimal.
+        """
+        exp_hg, exp_ag = self.predict_expected_goals(X, apply_correction=False)
+        grids, _ = self.compute_poisson_grid(
+            exp_hg, exp_ag, max_goals=10,
+            rho=getattr(self, "scoreline_theta", DEFAULT_SCORELINE_RHO),
+            dispersion=getattr(self, "scoreline_dispersion", DEFAULT_SCORELINE_DISPERSION),
+        )
+        headline = self.predict_scoreline(X)
+
+        ranked: List[List[Tuple[int, int, float]]] = []
+        for i in range(len(X)):
+            grid = grids[i]
+            order = np.dstack(np.unravel_index(np.argsort(grid.ravel())[::-1], grid.shape))[0]
+            cells = [(int(h), int(a), round(float(grid[h, a]) * 100, 1)) for h, a in order]
+            head = headline[i]
+            first = next(entry for entry in cells if (entry[0], entry[1]) == head)
+            rest = [entry for entry in cells if (entry[0], entry[1]) != head]
+            ranked.append([first] + rest[:max(0, k - 1)])
+        return ranked
+
     def get_feature_importances(self) -> pd.Series:
         """Extracts normalized feature importances from the outcome classifier."""
         if hasattr(self.classifier, "feature_importances_"):

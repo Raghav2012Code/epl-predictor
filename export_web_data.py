@@ -152,6 +152,35 @@ def _resolve_result(hg: int, ag: int) -> str:
     return "D"
 
 
+def fixture_top_scorelines(r: Any) -> List[Dict[str, Any]]:
+    """Maps one predictions-CSV row to the fixture ``topScorelines`` block.
+
+    Headline pick first, probabilities as one-decimal percents. Rows from
+    CSVs that predate the block map to an empty list (the dashboard falls
+    back to the headline score), never to None.
+    """
+    out: List[Dict[str, Any]] = []
+    get = r.get if hasattr(r, "get") else lambda key, default=None: default
+    for n in (1, 2, 3):
+        score = get(f"top{n}_score")
+        prob = get(f"top{n}_prob")
+        if score is None or prob is None:
+            continue
+        if isinstance(score, float) and pd.isna(score):
+            continue
+        try:
+            rounded = round(float(prob), 1)
+        except (TypeError, ValueError):
+            continue
+        if not np.isfinite(rounded):
+            continue
+        text = str(score).strip()
+        if not text or text.lower() == "nan":
+            continue
+        out.append({"score": text, "prob": rounded})
+    return out
+
+
 def build_evaluation(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]:
     """Held-out evaluation summaries the dashboard draws natively.
 
@@ -366,6 +395,7 @@ def build_web_dataset() -> str:
                 "predictedScore": str(r["predicted_score"]),
                 "predHomeGoals": int(r["pred_home_goals"]),
                 "predAwayGoals": int(r["pred_away_goals"]),
+                "topScorelines": fixture_top_scorelines(r),
                 "homeWinProb": float(r["home_win_prob"]),
                 "drawProb": float(r["draw_prob"]),
                 "awayWinProb": float(r["away_win_prob"]),

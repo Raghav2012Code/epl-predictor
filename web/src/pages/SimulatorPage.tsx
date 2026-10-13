@@ -3,7 +3,7 @@ import type { EPLDataset } from "../types";
 import { TeamMark } from "../components/TeamMark";
 import { SplitBar } from "../components/SplitBar";
 import { scoreParts } from "../lib/format";
-import { calculateScenario } from "../lib/fixtures";
+import { calculateScenario, topScorelinesFor } from "../lib/fixtures";
 
 export const SimulatorPage: React.FC<{
   dataset: EPLDataset;
@@ -38,6 +38,10 @@ export const SimulatorPage: React.FC<{
     );
     if (!reverse) return null;
     const score = scoreParts(reverse.predictedScore);
+    const flip = (value: string) => {
+      const parts = scoreParts(value);
+      return parts ? `${parts[1]} - ${parts[0]}` : value;
+    };
     return {
       ...reverse,
       homeTeam,
@@ -51,6 +55,10 @@ export const SimulatorPage: React.FC<{
         : reverse.predictedScore,
       predHomeGoals: reverse.predAwayGoals,
       predAwayGoals: reverse.predHomeGoals,
+      topScorelines: (reverse.topScorelines ?? []).map((pick) => ({
+        ...pick,
+        score: flip(pick.score),
+      })),
       homeWinProb: reverse.awayWinProb,
       awayWinProb: reverse.homeWinProb,
       predictedOutcome:
@@ -244,10 +252,23 @@ export const SimulatorPage: React.FC<{
             {production ? (
               <>
                 <p className="label">
-                  {dataset.benchmark.productionModel} model, gameweek {production.gameweek}. Predicted score{" "}
+                  {dataset.benchmark.productionModel} model, gameweek {production.gameweek}. Most likely score{" "}
                   <strong className="num">{production.predictedScore}</strong>. Your controls do not change it.
                 </p>
                 <SplitBar home={production.homeWinProb} draw={production.drawProb} away={production.awayWinProb} />
+                <section className="topscores" aria-label="Most likely score">
+                  <h3 className="label">Most likely score</h3>
+                  <ol>
+                    {topScorelinesFor(production).map((pick, index) => (
+                      <li key={`${pick.score}-${index}`}>
+                        <span className="num">{pick.score}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span className="num">{pick.prob.toFixed(1)}%</span>
+                        {index === 0 && <span className="label"> — model pick</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               </>
             ) : (
               <p className="label">

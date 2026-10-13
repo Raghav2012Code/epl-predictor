@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickWasRight, recentForm } from "./fixtures";
+import { pickWasRight, recentForm, topScorelinesFor } from "./fixtures";
 import type { Fixture } from "../types";
 
 const make = (over: Partial<Fixture> & { id: number }): Fixture =>
@@ -13,6 +13,9 @@ const make = (over: Partial<Fixture> & { id: number }): Fixture =>
     actualScore: "1 - 0",
     predictedScore: "1 - 0",
     predictedOutcome: "Home Win",
+    homeWinProb: 50,
+    drawProb: 25,
+    awayWinProb: 25,
     ...over,
   }) as Fixture;
 
@@ -40,5 +43,25 @@ describe("pickWasRight", () => {
     expect(pickWasRight(make({ id: 1, actualScore: "2 - 1" }))).toBe(true);
     expect(pickWasRight(make({ id: 2, actualScore: "1 - 1" }))).toBe(false);
     expect(pickWasRight(make({ id: 3, status: "Upcoming", actualScore: "TBC" }))).toBeNull();
+  });
+});
+
+describe("topScorelinesFor", () => {
+  const block = [
+    { score: "2 - 1", prob: 11.2 },
+    { score: "1 - 0", prob: 9.8 },
+    { score: "2 - 0", prob: 8.1 },
+  ];
+  it("passes the served block through with the headline pick first", () => {
+    expect(topScorelinesFor(make({ id: 1, topScorelines: block }))).toEqual(block);
+  });
+
+  it("falls back to the headline score for datasets predating the block", () => {
+    expect(topScorelinesFor(make({ id: 1, topScorelines: undefined }))).toEqual([
+      { score: "1 - 0", prob: 50 },
+    ]);
+    expect(topScorelinesFor(make({ id: 1, topScorelines: [] }))).toEqual([
+      { score: "1 - 0", prob: 50 },
+    ]);
   });
 });

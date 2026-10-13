@@ -124,3 +124,15 @@ export const pickWasRight = (fixture: Fixture): boolean | null => {
         : "Draw";
   return published === result;
 };
+
+/**
+ * The top-three scoreline block, headline pick first. Datasets exported
+ * before the block existed fall back to the headline score at the
+ * published outcome confidence, so the list always renders as text.
+ */
+export const topScorelinesFor = (
+  fixture: Fixture,
+): Array<{ score: string; prob: number }> =>
+  fixture.topScorelines?.length
+    ? fixture.topScorelines
+    : [{ score: fixture.predictedScore, prob: confidenceFor(fixture) }];

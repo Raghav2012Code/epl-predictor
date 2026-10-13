@@ -67,6 +67,31 @@ def _round_probabilities(probabilities: List[float]) -> List[float]:
     return [round(int(value) / 10.0, 1) for value in units]
 
 
+def expand_top_scorelines_column(pred_df: pd.DataFrame) -> pd.DataFrame:
+    """Expands the forecast ``top_scorelines`` object column into flat CSV-ready columns.
+
+    Each fixture gains ``top1_score``/``top1_prob`` .. ``top3_score``/``top3_prob``;
+    the headline pick is first. The object column is dropped (CSVs hold scalars).
+    """
+    flat = pred_df.copy()
+    tops = list(flat.pop("top_scorelines"))
+    for n in (1, 2, 3):
+        flat[f"top{n}_score"] = [row[n - 1]["score"] for row in tops]
+        flat[f"top{n}_prob"] = [row[n - 1]["prob"] for row in tops]
+    return flat
+
+
+def format_top_scorelines_cell(row: Any) -> str:
+    """Renders one fixture's top-3 block for the Markdown table (ASCII-safe)."""
+    try:
+        cells = ", ".join(
+            f"{row[f'top{n}_score']} ({float(row[f'top{n}_prob']):.1f}%)" for n in (1, 2, 3)
+        )
+    except (KeyError, TypeError, ValueError):
+        return "-"
+    return cells
+
+
 # Calibration constants that a full-data refit invalidates or resets. These are
 # fitted on rows held out from the benchmark fit, then carried across the refit.
 _CALIBRATION_ATTRIBUTES = (
@@ -495,6 +520,10 @@ class PremierLeaguePredictionPipeline:
 
             pred_scores = self.best_model.predict_scoreline(X_match)[0]
             pred_hg, pred_ag = pred_scores
+            top_scorelines = [
+                {"score": f"{h} - {a}", "prob": prob}
+                for h, a, prob in self.best_model.predict_top_scorelines(X_match, k=3)[0]
+            ]
 
             # Favorite outcome uses the shared draw-aware rule so it always
             # agrees with home/draw/away probs (scoreline is already
@@ -518,6 +547,7 @@ class PremierLeaguePredictionPipeline:
                 "predicted_score": f"{pred_hg} - {pred_ag}",
                 "pred_home_goals": pred_hg,
                 "pred_away_goals": pred_ag,
+                "top_scorelines": top_scorelines,
             }
 
             # Check if match was already played in 2026/27 (early weeks)
@@ -564,15 +594,16 @@ class PremierLeaguePredictionPipeline:
 
         pred_df = pd.DataFrame(predictions)
 
-        # Export CSV
+        # Export CSV (flat top-3 columns; the object column holds dicts)
         os.makedirs(DATA_DIR, exist_ok=True)
         csv_path = os.path.join(DATA_DIR, "predictions_2026_2027.csv")
-        pred_df.to_csv(csv_path, index=False)
+        csv_df = expand_top_scorelines_column(pred_df)
+        csv_df.to_csv(csv_path, index=False)
         logger.info(f"      - Exported CSV to: {csv_path}")
 
-        # Export Markdown
+        # Export Markdown (same flat frame, so CSV and MD can never drift)
         md_path = os.path.join(DATA_DIR, "predictions_2026_2027.md")
-        self._export_markdown_report(pred_df, md_path)
+        self._export_markdown_report(csv_df, md_path)
         logger.info(f"      - Exported Markdown summary to: {md_path}")
 
         return pred_df
@@ -623,13 +654,14 @@ class PremierLeaguePredictionPipeline:
                         r["home_team"],
                         r["predicted_score"],
                         r["away_team"],
+                        format_top_scorelines_cell(r),
                         f"{r['home_win_prob']}%",
                         f"{r['draw_prob']}%",
                         f"{r['away_win_prob']}%",
                         r["predicted_outcome"],
                         r["status"],
                     ])
-                gw_headers = ["Date", "Home", "Pred Score", "Away", "Home %", "Draw %", "Away %", "Fav Outcome", "Status"]
+                gw_headers = ["Date", "Home", "Most likely", "Away", "Top 3", "Home %", "Draw %", "Away %", "Fav Outcome", "Status"]
                 f.write(tabulate(tbl_rows, headers=gw_headers, tablefmt="github"))
                 f.write("\n\n")
 

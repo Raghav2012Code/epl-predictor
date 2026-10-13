@@ -13,7 +13,7 @@ import {
   shortDay,
 } from "../lib/format";
 import { compareDay, nextFixtureByDate } from "../lib/fixtureDates";
-import { downloadFixturesCsv, pickWasRight, recentForm, resultFor } from "../lib/fixtures";
+import { downloadFixturesCsv, pickWasRight, recentForm, resultFor, topScorelinesFor } from "../lib/fixtures";
 import { FormChips } from "../components/FormChips";
 
 type FixtureFilter = "all" | "upcoming" | "played";
@@ -156,7 +156,7 @@ const FixtureDetail: React.FC<{
             <span className="sr-only"> to </span>
             {awayGoals}
           </span>
-          <span className="label">{played ? "Final score" : "Predicted score"}</span>
+          <span className="label">{played ? "Final score" : "Most likely score"}</span>
         </div>
         <div className="detail__team">
           <TeamMark short={fixture.awayShort} badge={fixture.awayBadge} />
@@ -170,6 +170,19 @@ const FixtureDetail: React.FC<{
         draw={fixture.drawProb}
         away={fixture.awayWinProb}
       />
+      <section className="topscores" aria-label="Most likely score">
+        <h3 className="label">Most likely score</h3>
+        <ol>
+          {topScorelinesFor(fixture).map((pick, index) => (
+            <li key={`${pick.score}-${index}`}>
+              <span className="num">{pick.score}</span>
+              <span aria-hidden="true"> · </span>
+              <span className="num">{pick.prob.toFixed(1)}%</span>
+              {index === 0 && <span className="label"> — model pick</span>}
+            </li>
+          ))}
+        </ol>
+      </section>
       <dl className="facts">
         <div>
           <dt className="label">Model pick</dt>
@@ -187,7 +200,7 @@ const FixtureDetail: React.FC<{
         )}
         {played && (
           <div>
-            <dt className="label">Predicted score</dt>
+            <dt className="label">Most likely score</dt>
             <dd>{fixture.predictedScore}</dd>
           </div>
         )}
@@ -221,7 +234,7 @@ const FixtureDetail: React.FC<{
         Open in simulator
       </button>
       <p className="label detail__note">
-        Percentages are rounded to one decimal place. The predicted score is the
+        Percentages are rounded to one decimal place. The most likely score is the
         single most likely result, not a certainty.
       </p>
     </article>
