@@ -900,6 +900,10 @@ def _score_benchmark_model(
     )
     rps = float(ranked_probability_score(eval_y_outcome, val_proba))
 
+    from src.evaluate import scoreline_quality_metrics as _scoreline_quality
+
+    quality = _scoreline_quality(eval_y_hg.values, eval_y_ag.values, pred_scores)
+
     return {
         "accuracy": acc,
         "log_loss": log_loss,
@@ -910,6 +914,7 @@ def _score_benchmark_model(
         "avg_goal_mae": avg_mae,
         "exact_score_acc": exact_score_acc,
         "within_1_goal_acc": within_1_goal,
+        "scoreline_quality": quality,
         "val_preds": val_preds,
         "val_proba": val_proba,
         # Keep the historical public shape for callers that use this as a

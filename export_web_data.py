@@ -197,6 +197,7 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
     models_payload: List[Dict[str, Any]] = []
     for name in metrics:
         m = metrics[name]
+        quality = m.get("scoreline_quality") or {}
         models_payload.append(
             {
                 "name": name,
@@ -210,6 +211,8 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
                 "avgGoalMae": round(float(m["avg_goal_mae"]), 2),
                 "within1Goal": round(float(m["within_1_goal_acc"]) * 100, 1),
                 "exactScoreAcc": round(float(m.get("exact_score_acc", 0.0)) * 100, 1),
+                "scorelineKl": round(float(quality.get("kl_divergence", 0.0)), 4),
+                "argmaxVariety": round(float(quality.get("argmax_variety", 0.0)) * 100, 1),
             }
         )
 
@@ -226,9 +229,16 @@ def build_benchmark(pipeline: PremierLeaguePredictionPipeline) -> Dict[str, Any]
             }
         )
 
+    production_quality = (metrics.get(best, {}).get("scoreline_quality") or {})
     return {
         "productionModel": best,
         "models": models_payload,
+        "scorelineQuality": {
+            "klDivergence": round(float(production_quality.get("kl_divergence", 0.0)), 4),
+            "argmaxVariety": round(float(production_quality.get("argmax_variety", 0.0)) * 100, 1),
+            "matches": int(production_quality.get("n_matches", 0)),
+            "basis": "Held-out evaluation tail; KL (natural log, 6x6 grid capped at 5) vs empirical scorelines.",
+        },
         "topFeatures": top_features,
         # Relative paths: frontend prefixes with import.meta.env.BASE_URL
         "diagnostics": [

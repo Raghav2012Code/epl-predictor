@@ -9580,7 +9580,9 @@
         "awayGoalMae": 0.9,
         "avgGoalMae": 0.92,
         "within1Goal": 60.6,
-        "exactScoreAcc": 9.7
+        "exactScoreAcc": 9.7,
+        "scorelineKl": 6.5153,
+        "argmaxVariety": 17.8
       },
       {
         "name": "XGBoost",
@@ -9593,7 +9595,9 @@
         "awayGoalMae": 0.89,
         "avgGoalMae": 0.92,
         "within1Goal": 62.3,
-        "exactScoreAcc": 9.1
+        "exactScoreAcc": 9.1,
+        "scorelineKl": 10.2302,
+        "argmaxVariety": 16.9
       },
       {
         "name": "Stacked",
@@ -9606,9 +9610,17 @@
         "awayGoalMae": 0.89,
         "avgGoalMae": 0.92,
         "within1Goal": 60.8,
-        "exactScoreAcc": 9.5
+        "exactScoreAcc": 9.5,
+        "scorelineKl": 8.8785,
+        "argmaxVariety": 16.1
       }
     ],
+    "scorelineQuality": {
+      "klDivergence": 8.8785,
+      "argmaxVariety": 16.1,
+      "matches": 472,
+      "basis": "Held-out evaluation tail; KL (natural log, 6x6 grid capped at 5) vs empirical scorelines."
+    },
     "topFeatures": [
       {
         "name": "elo_diff",

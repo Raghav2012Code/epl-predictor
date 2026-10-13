@@ -15,13 +15,13 @@ When bookmaker odds are available, the final outcome probabilities can also use 
 
 The current generated benchmark is held out after a time-series split at 2024-01-01. Half of the validation tail is reserved for calibration-method selection; the reported metrics use the later evaluation tail. Tree hyperparameters come from a deterministic Optuna search recorded in `models/tuning.json` (re-run with `.venv\Scripts\python.exe -m src.tuning --trials 40 --offline`).
 
-| Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Selection |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | Benchmark |
-| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | Benchmark |
-| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 60.8% | Production |
+| Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Scoreline KL | Variety | Selection |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
+| Random Forest | 47.7% | 0.443 | 1.008 | 0.2050 | 0.92 | 60.6% | 6.5153 | 17.8% | Benchmark |
+| XGBoost | 48.9% | 0.431 | 1.012 | 0.2051 | 0.92 | 62.3% | 10.2302 | 16.9% | Benchmark |
+| Stacked | 48.7% | 0.445 | 1.006 | 0.2044 | 0.92 | 60.8% | 8.8785 | 16.1% | Production |
 
-These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale.
+These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale. Scoreline KL (natural log, 6x6 grid capped at 5 goals, lower is better) and Variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied) are measured on the held-out evaluation tail (472 matches).
 
 Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. The stacked ensemble (RF + XGBoost + logistic regression + Elo-Poisson members, meta-learner on out-of-fold train probabilities) leads on RPS, log loss and macro F1. It is not ahead everywhere: XGBoost has higher accuracy (48.7% against 48.5%) and Random Forest a slightly lower goal MAE (0.910 against 0.915).
 

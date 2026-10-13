@@ -7,6 +7,11 @@
   "market_blend_weight": 0.5,
   "no_market_blend_weight": 0.0,
   "feature_count": 112,
+  "scoreline_quality": {
+    "kl_divergence": 8.8785,
+    "argmax_variety": 0.161017,
+    "n_matches": 472
+  },
   "models": {
     "Random Forest": {
       "accuracy": 0.4767,
@@ -21,7 +26,12 @@
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 0.9835,
-      "away_goal_correction": 1.1203
+      "away_goal_correction": 1.1203,
+      "scoreline_quality": {
+        "kl_divergence": 6.5153,
+        "argmax_variety": 0.177966,
+        "n_matches": 472
+      }
     },
     "XGBoost": {
       "accuracy": 0.4894,
@@ -36,7 +46,12 @@
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 1.0036,
-      "away_goal_correction": 1.1534
+      "away_goal_correction": 1.1534,
+      "scoreline_quality": {
+        "kl_divergence": 10.2302,
+        "argmax_variety": 0.169492,
+        "n_matches": 472
+      }
     },
     "Stacked": {
       "accuracy": 0.4873,
@@ -51,7 +66,12 @@
       "calibration_temperature": 1.0,
       "calibration_method": "temperature",
       "home_goal_correction": 1.0189,
-      "away_goal_correction": 1.1459
+      "away_goal_correction": 1.1459,
+      "scoreline_quality": {
+        "kl_divergence": 8.8785,
+        "argmax_variety": 0.161017,
+        "n_matches": 472
+      }
     }
   }
 }

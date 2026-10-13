@@ -25,6 +25,8 @@ def _readme_benchmark_rows() -> dict[str, dict[str, str]]:
             "rps": cells[3],
             "goal_mae": cells[4],
             "within_1": cells[5],
+            "scoreline_kl": cells[6],
+            "variety": cells[7],
             "selection": match.group(3),
         }
     return rows
@@ -51,6 +53,9 @@ def test_documented_benchmark_matches_authoritative_model_metrics():
         assert documented["rps"] == f"{round(source['rps'], 4):.4f}", name
         assert documented["goal_mae"] == f"{round(source['avg_goal_mae'], 2):.2f}", name
         assert documented["within_1"] == f"{round(source['within_1_goal_acc'] * 100, 1)}%", name
+        quality = source.get("scoreline_quality") or {}
+        assert documented["scoreline_kl"] == f"{round(float(quality.get('kl_divergence', 0.0)), 4):.4f}", name
+        assert documented["variety"] == f"{round(float(quality.get('argmax_variety', 0.0)) * 100, 1)}%", name
 
     production = metrics["production_model"]
     assert rows[production]["selection"] == "Production"
@@ -67,6 +72,9 @@ def test_documented_status_table_matches_authoritative_model_metrics():
         assert f"{round(source['rps'], 4):.4f}" in docs, f"{name} RPS missing from docs"
         assert f"{round(source['accuracy'] * 100, 1)}%" in docs, f"{name} accuracy missing from docs"
         assert f"{round(source['avg_goal_mae'], 2):.2f}" in docs, f"{name} goal MAE missing from docs"
+        quality = source.get("scoreline_quality") or {}
+        assert f"{round(float(quality.get('kl_divergence', 0.0)), 4):.4f}" in docs, f"{name} scoreline KL missing from docs"
+        assert f"{round(float(quality.get('argmax_variety', 0.0)) * 100, 1)}%" in docs, f"{name} variety missing from docs"
 
 
 def test_dashboard_benchmark_matches_authoritative_model_metrics():
@@ -84,3 +92,23 @@ def test_dashboard_benchmark_matches_authoritative_model_metrics():
         assert model["accuracy"] == round(source["accuracy"] * 100, 1)
         assert model["rps"] == round(source["rps"], 4)
         assert model["avgGoalMae"] == round(source["avg_goal_mae"], 2)
+        quality = source.get("scoreline_quality") or {}
+        assert model["scorelineKl"] == round(float(quality.get("kl_divergence", 0.0)), 4)
+        assert model["argmaxVariety"] == round(float(quality.get("argmax_variety", 0.0)) * 100, 1)
+
+    production_quality = metrics.get("scoreline_quality") or {}
+    receipt = benchmark.get("scorelineQuality") or {}
+    assert receipt.get("klDivergence") == round(float(production_quality.get("kl_divergence", 0.0)), 4)
+    assert receipt.get("argmaxVariety") == round(float(production_quality.get("argmax_variety", 0.0)) * 100, 1)
+
+
+def test_markdown_report_carries_scoreline_quality():
+    from pathlib import Path as _Path
+
+    md = (_Path(__file__).resolve().parents[1] / "data" / "predictions_2026_2027.md").read_text(encoding="utf-8")
+    metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
+    assert "Scoreline KL" in md
+    assert "Variety" in md
+    for name, source in metrics["models"].items():
+        quality = source.get("scoreline_quality") or {}
+        assert f"{round(float(quality.get('kl_divergence', 0.0)), 4):.4f}" in md, f"{name} KL missing from Markdown"

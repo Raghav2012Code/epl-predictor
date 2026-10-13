@@ -1,15 +1,17 @@
 # Premier League 2026/2027 Season Match Predictions
 
-Generated on: 2026-10-12 21:09:49
+Generated on: 2026-10-13 15:56:18
 Primary Prediction Engine: **Stacked**
 
 ## Model Performance Benchmark Summary
 
-| Model         | Accuracy   |   Macro F1 |   Log Loss |   Goal MAE | Within 1 Goal Acc   |
-|---------------|------------|------------|------------|------------|---------------------|
-| Random Forest | 47.7%      |      0.443 |      1.008 |       0.92 | 60.6%               |
-| XGBoost       | 48.9%      |      0.431 |      1.012 |       0.92 | 62.3%               |
-| Stacked       | 48.7%      |      0.445 |      1.006 |       0.92 | 60.8%               |
+| Model         | Accuracy   |   Macro F1 |   Log Loss |   Goal MAE | Within 1 Goal Acc   |   Scoreline KL | Variety   |
+|---------------|------------|------------|------------|------------|---------------------|----------------|-----------|
+| Random Forest | 47.7%      |      0.443 |      1.008 |       0.92 | 60.6%               |         6.5153 | 17.8%     |
+| XGBoost       | 48.9%      |      0.431 |      1.012 |       0.92 | 62.3%               |        10.2302 | 16.9%     |
+| Stacked       | 48.7%      |      0.445 |      1.006 |       0.92 | 60.8%               |         8.8785 | 16.1%     |
+
+Scoreline quality is measured on the held-out evaluation tail: KL divergence (natural log, 6x6 grid capped at 5 goals, lower is better) between empirical and predicted scoreline distributions, plus argmax-variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied). Production (Stacked): KL 8.8785, variety 16.1% over 472 matches.
 
 ---
 

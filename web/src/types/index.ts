@@ -54,6 +54,10 @@ export interface ModelMetric {
   avgGoalMae: number;
   within1Goal: number;
   exactScoreAcc?: number;
+  /** Scoreline KL (natural log, 6x6 grid capped at 5); absent in datasets exported before it existed. */
+  scorelineKl?: number;
+  /** Share (%) of argmax picks outside the four most frequent predicted scorelines. */
+  argmaxVariety?: number;
 }
 
 export interface FeatureImportance {
@@ -183,6 +187,8 @@ export interface EPLDataset {
     diagnostics: DiagnosticImage[];
     /** Held-out evaluation summaries; absent in datasets exported before it existed. */
     evaluation?: ModelEvaluation;
+    /** Production scoreline-quality receipt; absent in datasets exported before it existed. */
+    scorelineQuality?: { klDivergence: number; argmaxVariety: number; matches: number; basis: string };
   };
   teams: Record<string, TeamProfile>;
   analytics: LeagueAnalytics;

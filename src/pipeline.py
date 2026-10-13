@@ -326,6 +326,36 @@ class PremierLeaguePredictionPipeline:
         # checkpoint corresponds to without committing the large .joblib.
         try:
             sidecar = os.path.join(os.path.dirname(path), "metrics.json")
+
+            def _sidecar_entry(vals: Dict[str, Any]) -> Dict[str, Any]:
+                entry = {
+                    k: (round(float(v), 4) if isinstance(v, (int, float)) else v)
+                    for k, v in vals.items()
+                    if k in ("accuracy", "log_loss", "macro_f1", "rps",
+                             "mae_home_goals",
+                             "mae_away_goals", "avg_goal_mae", "exact_score_acc",
+                             "within_1_goal_acc", "calibration_temperature",
+                             "calibration_method",
+                             "home_goal_correction", "away_goal_correction")
+                }
+                quality = vals.get("scoreline_quality")
+                if isinstance(quality, dict):
+                    entry["scoreline_quality"] = {
+                        "kl_divergence": round(float(quality.get("kl_divergence", 0.0)), 4),
+                        # Variety is transcribed as a 1-decimal % on every surface; keep 6
+                        # decimals so the sidecar value transcribes to the same tenth as the
+                        # raw fraction (4 decimals double-rounds e.g. 16.9492% via 0.1695 to 17.0%).
+                        "argmax_variety": round(float(quality.get("argmax_variety", 0.0)), 6),
+                        "n_matches": int(quality.get("n_matches", 0)),
+                    }
+                return entry
+
+            models_sidecar = {
+                name: _sidecar_entry(vals)
+                for name, vals in (self.metrics or {}).items()
+            }
+            production_quality = (models_sidecar.get(self.best_model_name, {}).get("scoreline_quality")
+                                  or {"kl_divergence": 0.0, "argmax_variety": 0.0, "n_matches": 0})
             payload = {
                 "production_model": self.best_model_name,
                 "calibration_temperature": getattr(self.best_model, "calibration_temperature", 1.0),
@@ -335,19 +365,8 @@ class PremierLeaguePredictionPipeline:
                 "market_blend_weight": getattr(self.best_model, "market_blend_weight", 0.0),
                 "no_market_blend_weight": getattr(self.best_model, "no_market_blend_weight", 0.0),
                 "feature_count": len(self.feature_cols),
-                "models": {
-                    name: {
-                        k: (round(float(v), 4) if isinstance(v, (int, float)) else v)
-                        for k, v in vals.items()
-                        if k in ("accuracy", "log_loss", "macro_f1", "rps",
-                                 "mae_home_goals",
-                                 "mae_away_goals", "avg_goal_mae", "exact_score_acc",
-                                 "within_1_goal_acc", "calibration_temperature",
-                                 "calibration_method",
-                                 "home_goal_correction", "away_goal_correction")
-                    }
-                    for name, vals in (self.metrics or {}).items()
-                },
+                "scoreline_quality": production_quality,
+                "models": models_sidecar,
             }
             os.makedirs(os.path.dirname(os.path.abspath(sidecar)), exist_ok=True)
             with open(sidecar, "w", encoding="utf-8") as f:
@@ -540,6 +559,7 @@ class PremierLeaguePredictionPipeline:
             f.write("## Model Performance Benchmark Summary\n\n")
             bench_data = []
             for m_name, m_vals in self.metrics.items():
+                quality = m_vals.get("scoreline_quality") or {}
                 bench_data.append([
                     m_name,
                     f"{m_vals['accuracy']*100:.1f}%",
@@ -547,10 +567,23 @@ class PremierLeaguePredictionPipeline:
                     f"{m_vals['log_loss']:.3f}",
                     f"{m_vals['avg_goal_mae']:.2f}",
                     f"{m_vals['within_1_goal_acc']*100:.1f}%",
+                    f"{float(quality.get('kl_divergence', 0.0)):.4f}",
+                    f"{float(quality.get('argmax_variety', 0.0))*100:.1f}%",
                 ])
-            headers = ["Model", "Accuracy", "Macro F1", "Log Loss", "Goal MAE", "Within 1 Goal Acc"]
+            headers = ["Model", "Accuracy", "Macro F1", "Log Loss", "Goal MAE", "Within 1 Goal Acc",
+                       "Scoreline KL", "Variety"]
             f.write(tabulate(bench_data, headers=headers, tablefmt="github"))
-            f.write("\n\n---\n\n")
+            f.write("\n\n")
+            f.write("Scoreline quality is measured on the held-out evaluation tail: KL divergence "
+                    "(natural log, 6x6 grid capped at 5 goals, lower is better) between empirical and "
+                    "predicted scoreline distributions, plus argmax-variety (share of argmax picks outside "
+                    "the four most frequent predicted scorelines, higher means more varied). ")
+            prod_quality = (self.metrics.get(self.best_model_name, {}).get("scoreline_quality") or {})
+            f.write(f"Production ({self.best_model_name}): KL "
+                    f"{float(prod_quality.get('kl_divergence', 0.0)):.4f}, variety "
+                    f"{float(prod_quality.get('argmax_variety', 0.0))*100:.1f}% "
+                    f"over {int(prod_quality.get('n_matches', 0))} matches.\n")
+            f.write("\n---\n\n")
 
             f.write("## Season Fixtures and Forecasts\n\n")
             for gw, gw_matches in df.groupby("gameweek"):

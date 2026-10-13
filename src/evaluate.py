@@ -67,6 +67,70 @@ RESIDUAL_BINS = np.arange(-4.5, 5.5, 1)  # integer residuals -4..4
 GOAL_BINS = np.arange(-0.5, 6.5, 1)  # goals per team 0..5
 RELIABILITY_BINS = 8
 
+# Scoreline-quality joint grid: scores above this cap fall into the MAX bin
+# (e.g. 6-0 counts as 5-0) so the KL stays on a fixed 6x6 support.
+SCORELINE_QUALITY_MAX_GOALS = 5
+SCORELINE_QUALITY_EPS = 1e-9
+
+
+def scoreline_quality_metrics(y_hg, y_ag, pred_scores, max_goals: int = SCORELINE_QUALITY_MAX_GOALS) -> Dict[str, Any]:
+    """KL divergence (empirical vs predicted) + argmax-variety on one slice.
+
+    Both distributions are joint scoreline histograms on a fixed
+    ``(max_goals+1)x(max_goals+1)`` grid with over-cap goals clipped into the
+    max bin. ``kl_divergence`` uses natural log with epsilon-smoothed
+    predictions so it is finite in ``[0, inf)``; ``argmax_variety`` is the
+    share of predicted scorelines outside the four most frequent predicted
+    scorelines (deterministic tie-break by score), in ``[0, 1]``. Pure
+    measurement: no model state is touched.
+    """
+    pred_list = list(pred_scores) if pred_scores is not None else []
+    hg = np.asarray(list(y_hg) if y_hg is not None else [], dtype=float).ravel()
+    ag = np.asarray(list(y_ag) if y_ag is not None else [], dtype=float).ravel()
+    n = int(min(len(hg), len(ag), len(pred_list)))
+    if n == 0:
+        return {"kl_divergence": 0.0, "argmax_variety": 0.0, "n_matches": 0}
+    hg, ag, pred_list = hg[:n], ag[:n], pred_list[:n]
+
+    def _clip(g: float) -> int:
+        try:
+            v = int(g)
+        except (TypeError, ValueError):
+            v = 0
+        return min(max(v, 0), int(max_goals))
+
+    k = (int(max_goals) + 1) ** 2
+    eps = float(SCORELINE_QUALITY_EPS)
+    emp_counts = np.zeros(k, dtype=float)
+    pred_counts = np.zeros(k, dtype=float)
+    width = int(max_goals) + 1
+    clipped_preds: List[Tuple[int, int]] = []
+    for i in range(n):
+        eh, ea = _clip(hg[i]), _clip(ag[i])
+        emp_counts[eh * width + ea] += 1.0
+        try:
+            ph, pa = int(pred_list[i][0]), int(pred_list[i][1])
+        except (TypeError, ValueError, IndexError):
+            ph, pa = 0, 0
+        ph, pa = _clip(ph), _clip(pa)
+        clipped_preds.append((ph, pa))
+        pred_counts[ph * width + pa] += 1.0
+
+    p = emp_counts / float(n)
+    q = (pred_counts + eps) / (float(n) + eps * float(k))
+    kl = float(np.sum(p[p > 0] * np.log(p[p > 0] / q[p > 0])))
+    kl = max(0.0, kl) if np.isfinite(kl) else float("inf")
+
+    from collections import Counter
+
+    counts = Counter(clipped_preds)
+    top4 = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:4]
+    top4_set = {s for s, _ in top4}
+    outside = sum(1 for s in clipped_preds if s not in top4_set)
+    variety = float(outside) / float(n) if n else 0.0
+    variety = min(max(variety, 0.0), 1.0)
+    return {"kl_divergence": kl, "argmax_variety": variety, "n_matches": n}
+
 
 def confusion_counts(y_true, preds) -> np.ndarray:
     """3x3 counts, rows actual and columns predicted, in Away/Draw/Home order."""

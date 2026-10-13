@@ -6,13 +6,13 @@ This document is the current release-oriented status for the Premier League pred
 
 Phases 0 through 8 are implemented in the current release candidate. The production classifier is selected by Ranked Probability Score (RPS), not raw accuracy. The current held-out benchmark is sourced from `models/metrics.json`:
 
-| Model | RPS | Accuracy | Goal MAE | Status |
-| :--- | ---: | ---: | ---: | :--- |
-| Random Forest | 0.2050 | 47.7% | 0.92 | Benchmark |
-| XGBoost | 0.2051 | 48.9% | 0.92 | Benchmark |
-| Stacked | 0.2044 | 48.7% | 0.92 | Production |
+| Model | RPS | Accuracy | Goal MAE | Scoreline KL | Variety | Status |
+| :--- | ---: | ---: | ---: | ---: | ---: | :--- |
+| Random Forest | 0.2050 | 47.7% | 0.92 | 6.5153 | 17.8% | Benchmark |
+| XGBoost | 0.2051 | 48.9% | 0.92 | 10.2302 | 16.9% | Benchmark |
+| Stacked | 0.2044 | 48.7% | 0.92 | 8.8785 | 16.1% | Production |
 
-These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results.
+These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results. Scoreline quality (KL divergence vs empirical scorelines and argmax-variety) is measured on the held-out evaluation tail (472 matches) and transcribed from `models/metrics.json`.
 
 ## Completed phases
 
