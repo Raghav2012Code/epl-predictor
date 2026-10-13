@@ -140,6 +140,7 @@ class PremierLeaguePredictionPipeline:
         self.metrics: Dict[str, Dict[str, Any]] = {}
         self.best_model_name: str = "XGBoost"
         self.best_model: Optional[MatchPredictorModel] = None
+        self.validation_receipt: Optional[Dict[str, Any]] = None
 
     def load_data(
         self, force_download: bool = False, offline: bool | None = None
@@ -213,25 +214,46 @@ class PremierLeaguePredictionPipeline:
 
         logger.info(f"[3/5] Benchmarking Random Forest vs XGBoost with time-series split (cutoff: {split_date_str})...")
         split_date = pd.to_datetime(split_date_str)
-        train_mask = self.engineered_df["date"] < split_date
-        val_mask = self.engineered_df["date"] >= split_date
 
-        train_df = self.engineered_df[train_mask].copy()
-        val_df = self.engineered_df[val_mask].copy()
+        from src.models import build_rolling_folds, select_by_pooled_rps
 
-        logger.info(f"      - Training matches: {len(train_df)} | Validation matches: {len(val_df)}")
+        # Rolling-origin validation: the validation region (date >= cutoff)
+        # is chunked into date-contiguous folds; each fold trains strictly
+        # on earlier matches (expanding window) and calibrates/scores via
+        # train_and_benchmark_models, so calibration/evaluation stays
+        # disjoint inside every fold.
+        folds = build_rolling_folds(self.engineered_df, n_folds=3, validation_from=split_date)
+        per_fold_models: List[Dict[str, MatchPredictorModel]] = []
+        per_fold_metrics: List[Dict[str, Any]] = []
+        for fold_no, (train_df, val_df) in enumerate(folds, start=1):
+            logger.info(f"      - Fold {fold_no}/{len(folds)}: training {len(train_df)} | validation {len(val_df)}")
+            fold_models, fold_metrics = train_and_benchmark_models(train_df, val_df, self.feature_cols)
+            per_fold_models.append(fold_models)
+            per_fold_metrics.append(fold_metrics)
 
-        self.models, self.metrics = train_and_benchmark_models(train_df, val_df, self.feature_cols)
-
-        # Best model: primary key is Ranked Probability Score (lower),
-        # tie-broken by log-loss (lower), accuracy (higher), goal MAE
-        # (lower). RPS is the proper scoring rule for ordered Home/Draw/
-        # Away outcomes: near-misses outrank far misses.
-        def _rank(m: Dict[str, Any]) -> tuple:
-            return (m["rps"], m["log_loss"], -m["accuracy"], m["avg_goal_mae"])
-
-        self.best_model_name = min(self.metrics, key=lambda name: _rank(self.metrics[name]))
+        # Production selection by pooled RPS across folds with the
+        # documented tie-break (RPS, then log loss, accuracy, goal MAE).
+        fold_names = list(per_fold_metrics[0])
+        self.best_model_name, pooled = select_by_pooled_rps(
+            {name: [pm[name] for pm in per_fold_metrics] for name in fold_names}
+        )
+        # Headline metrics/plots use the most recent fold (most training
+        # data, most recent validation slice); entries keep every key.
+        self.models, self.metrics = per_fold_models[-1], per_fold_metrics[-1]
         self.best_model = self.models[self.best_model_name]
+        _, val_df = folds[-1]
+        self.validation_receipt = {
+            "n_folds": len(folds),
+            "fold_train_rows": [len(train_df) for train_df, _ in folds],
+            "fold_val_rows": [len(val_df) for _, val_df in folds],
+            "fold_val_starts": [
+                str(pd.to_datetime(val_df["date"]).min().date()) for _, val_df in folds
+            ],
+            "pooled_metrics": {
+                name: {key: round(float(vals[key]), 4) for key in vals}
+                for name, vals in pooled.items()
+            },
+        }
 
         for _name, _m in self.metrics.items():
             logger.info(
@@ -239,7 +261,7 @@ class PremierLeaguePredictionPipeline:
                 f"RPS: {_m['rps']:.4f} | LogLoss: {_m['log_loss']:.3f} | "
                 f"Goal MAE: {_m['avg_goal_mae']:.3f}"
             )
-        logger.info(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest RPS)")
+        logger.info(f"      -> Best Performing Model Selected: {self.best_model_name} (lowest pooled RPS over {len(folds)} folds)")
 
         # Generate Matplotlib visualizations
         logger.info("[4/5] Generating Matplotlib diagnostic visualization suite...")
@@ -372,6 +394,7 @@ class PremierLeaguePredictionPipeline:
                 "feature_count": len(self.feature_cols),
                 "scoreline_quality": production_quality,
                 "models": models_sidecar,
+                "validation": self.validation_receipt,
             }
             os.makedirs(os.path.dirname(os.path.abspath(sidecar)), exist_ok=True)
             with open(sidecar, "w", encoding="utf-8") as f:
