@@ -866,6 +866,73 @@ class MatchPredictorModel:
         return instance
 
 
+def build_rolling_folds(
+    frame: pd.DataFrame,
+    n_folds: int = 3,
+    validation_from=None,
+) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
+    """Builds expanding-window rolling-origin folds over date-ordered rows.
+
+    The validation region (``date >= validation_from``) is chunked into
+    ``n_folds`` contiguous date blocks; fold ``k`` trains on every row
+    strictly earlier than block ``k`` and validates on block ``k``. Cuts
+    fall on date boundaries so same-date rows are never split and input
+    order within a date is preserved (stable sort). Deterministic.
+    """
+    if n_folds < 1:
+        raise ValueError(f"n_folds must be >= 1, got {n_folds}.")
+    if frame is None or frame.empty or "date" not in frame.columns:
+        raise ValueError("Frame must be non-empty with a 'date' column.")
+    dates = pd.to_datetime(frame["date"])
+    order = np.argsort(dates.values, kind="stable")
+    df = frame.iloc[order].reset_index(drop=True)
+    dates = pd.to_datetime(df["date"]).reset_index(drop=True)
+    cutoff = pd.to_datetime(validation_from) if validation_from is not None else dates.min()
+    val_dates = np.array(sorted(dates[dates >= cutoff].unique()))
+    if len(val_dates) < n_folds:
+        raise ValueError(
+            f"Only {len(val_dates)} validation dates for {n_folds} folds; "
+            "move validation_from earlier or reduce n_folds."
+        )
+    folds = []
+    for chunk in np.array_split(val_dates, n_folds):
+        start = pd.to_datetime(chunk[0])
+        train_df = df[dates < start].reset_index(drop=True)
+        if train_df.empty:
+            raise ValueError(f"No training rows before validation block starting {start.date()}.")
+        folds.append((train_df, df[dates.isin(chunk)].reset_index(drop=True)))
+    return folds
+
+
+def select_by_pooled_rps(
+    fold_metrics: Dict[str, List[Dict[str, Any]]],
+) -> Tuple[str, Dict[str, Dict[str, float]]]:
+    """Selects production by row-weighted pooled RPS across folds.
+
+    Pools each model's per-fold ``rps``/``log_loss``/``accuracy``/
+    ``avg_goal_mae`` (weighted by fold eval rows) and applies the
+    documented tie-break: RPS, then log loss, accuracy, goal MAE.
+    Returns (best_name, pooled_table).
+    """
+    pooled: Dict[str, Dict[str, float]] = {}
+    for name, entries in fold_metrics.items():
+        rows = np.array(
+            [len(np.asarray(e.get("eval_y_outcome", []))) for e in entries], dtype=float
+        )
+        if rows.sum() <= 0:
+            rows = np.ones(len(entries))
+        pooled[name] = {
+            key: float(np.average([float(e[key]) for e in entries], weights=rows))
+            for key in ("rps", "log_loss", "accuracy", "avg_goal_mae")
+        }
+    best = min(
+        pooled,
+        key=lambda n: (pooled[n]["rps"], pooled[n]["log_loss"],
+                       -pooled[n]["accuracy"], pooled[n]["avg_goal_mae"]),
+    )
+    return best, pooled
+
+
 def split_calibration_evaluation(
     n_rows: int,
 ) -> Tuple[slice, slice]:
