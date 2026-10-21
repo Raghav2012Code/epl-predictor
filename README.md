@@ -7,6 +7,27 @@ The repository has two entry points:
 - A Python pipeline for ingestion, feature engineering, time ordered validation, forecasting, diagnostics, and serving.
 - A React dashboard for fixtures, scenario exploration, projected standings, club profiles, and model evidence.
 
+> Reading this as a fan or analyst? Start here. Check `status` first: `Played` means `actual_score` is a recorded result you can compare against `predicted_score`; `Upcoming` means no official result is recorded yet and the row is forecast-only. Probabilities are `home_win_prob / draw_prob / away_win_prob` in percent and sum to ~100. `predicted_outcome` is the final pick to quote. Exact scores are far less certain than match outcomes (about 11-14% vs about 50%); see How good is it below.
+
+## How to read a forecast (do not mistake projected for recorded)
+
+Example from `data/predictions_2026_2027.csv`:
+
+```text
+Arsenal vs Coventry | home_win_prob=72.1 draw_prob=17.4 away_win_prob=10.5
+predicted_outcome=Home Win predicted_score=2 - 0 actual_score=3 - 0 status=Played
+```
+
+| Field | Meaning |
+| --- | --- |
+| `home_win_prob`, `draw_prob`, `away_win_prob` | Percent chances shown as one three-way split bar. CSV order is Home/Draw/Away. |
+| `predicted_outcome` | Final pick (`Home Win`, `Draw`, `Away Win`). Quote this; do not recompute your own argmax. |
+| `predicted_score`, `pred_home_goals`, `pred_away_goals` | Most likely scoreline. Dashboard also shows top-3 scorelines at ~10-13% each. |
+| `actual_score`, `status` | `Played` = recorded result present. `Upcoming` = forecast only, nothing to compare yet. |
+| `date`, `time`, `gameweek` | Gameweeks 1-38. `time=TBC` means missing upstream; the pipeline never invents a time. |
+
+Common analyst mistakes: quoting an `Upcoming` score as played; quoting a 70% match favourite as 70% for the exact score; reordering probabilities; inventing a `TBC` time; expecting lineups, injuries, or live odds (intentionally excluded).
+
 ## What the model does
 
 The production model combines a three-class classifier with two Poisson goal regressors. Features are built chronologically with lagged rolling windows, exponentially weighted form, venue splits, head-to-head history, rest days, fixture congestion, away-travel distance, dynamic Elo ratings, and pre-kickoff bookmaker market signals (overround-stripped closing odds, same-book steam, overround). Training rows carry exponential recency weights. A match never sees a result from the same date or a later date, and odds frames are gated to pre-kickoff fields only. Cold starts use club-specific priors rather than zeros or future dataset medians.
@@ -17,13 +38,13 @@ The current generated benchmark is held out after a time-series split at 2024-01
 
 | Model | Accuracy | Macro F1 | Log loss | RPS | Goal MAE | Within one goal | Scoreline KL | Variety | Selection |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 50.6% | 0.420 | 1.030 | 0.2076 | 0.89 | 60.8% | 8.5639 | 21.5% | Production |
-| XGBoost | 48.1% | 0.381 | 1.043 | 0.2119 | 0.87 | 56.3% | 10.3027 | 16.5% | Benchmark |
-| Stacked | 48.1% | 0.371 | 1.030 | 0.2082 | 0.87 | 58.2% | 8.6580 | 18.4% | Benchmark |
+| Random Forest | 50.63% | 0.472 | 1.031 | 0.2078 | 0.89 | 61.39% | 7.1373 | 25.3% | Production |
+| XGBoost | 50.63% | 0.464 | 1.041 | 0.2109 | 0.87 | 58.86% | 10.1708 | 20.9% | Benchmark |
+| Stacked | 50.00% | 0.462 | 1.027 | 0.2077 | 0.87 | 59.49% | 8.4604 | 24.7% | Benchmark |
 
-These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale. Scoreline KL (natural log, 6x6 grid capped at 5 goals, lower is better) and Variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied) are measured on the held-out evaluation tail (472 matches).
+These figures are transcribed from `models/metrics.json`, which is the generated source of truth. If the two ever disagree, the metrics file is correct and this table is stale. Scoreline KL (natural log, 6x6 grid capped at 5 goals, lower is better) and Variety (share of argmax picks outside the four most frequent predicted scorelines, higher means more varied) are measured on the held-out evaluation tail (158 matches).
 
-Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. Selection uses pooled RPS across three rolling-origin folds (Random Forest 0.1970, Stacked 0.1978, XGBoost 0.1995; fold receipts in `models/metrics.json`); the table above headlines the most recent fold. Random Forest leads on pooled RPS as well as headline accuracy, macro F1 and RPS. It is not ahead everywhere: XGBoost and Stacked share the lower goal MAE (0.87 against 0.89).
+Production is selected by Ranked Probability Score (lower is better): the proper scoring rule for ordered Home/Draw/Away outcomes. Selection uses pooled RPS across three rolling-origin folds (Random Forest 0.1974, Stacked 0.1981, XGBoost 0.1994; fold receipts in `models/metrics.json`); the table above headlines the most recent fold. Random Forest leads on pooled RPS. It is not ahead everywhere: XGBoost and Stacked share the lower goal MAE (0.87 against 0.89).
 
 These are validation measurements, not a promise of future accuracy. Exact scorelines are especially uncertain; probabilities should be read as distributions.
 
