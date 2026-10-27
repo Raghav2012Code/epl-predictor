@@ -9,6 +9,7 @@ import pytest
 from src.data_loader import (
     TEAM_ALIASES,
     COMPETITION_FILE_MAP,
+    attach_played_results,
     season_label_start_year,
     standardize_team_name,
     parse_openfootball_fixtures,
@@ -72,6 +73,83 @@ def test_season_label_start_year_handles_both_label_shapes():
     assert season_label_start_year("2425") == 2024
     assert season_label_start_year("2627") == 2026
     assert season_label_start_year("1819") == 2018
+
+
+def test_results_overlay_fills_missing_scores_and_keeps_leakage_out():
+    """The schedule feed lags the results feed; the overlay fills the gap.
+
+    Matches are keyed on clubs with a +/-3 day kickoff tolerance because the
+    two feeds disagree by a day on rescheduled games, and a result must never
+    overwrite a fixture that already has one.
+    """
+    fixtures = pd.DataFrame(
+        {
+            "gameweek": [4, 4, 5],
+            "date": pd.to_datetime(["2026-09-12", "2026-09-13", "2026-09-19"]),
+            "time": ["", "14:00", ""],
+            "home_team": ["Crystal Palace", "Arsenal", "Leeds"],
+            "away_team": ["Ipswich", "Chelsea", "Crystal Palace"],
+            "status": ["upcoming", "played", "upcoming"],
+            "home_goals": [np.nan, 2.0, np.nan],
+            "away_goals": [np.nan, 1.0, np.nan],
+        }
+    )
+    results = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2026-09-12", "2026-09-13", "2026-09-20"]),
+            "home_team": ["Crystal Palace", "Arsenal", "Leeds"],
+            "away_team": ["Ipswich", "Chelsea", "Crystal Palace"],
+            "home_goals": [1, 4, 0],
+            "away_goals": [3, 0, 0],
+            "time": ["15:00", "14:00", "16:30"],
+        }
+    )
+
+    merged = attach_played_results(fixtures, results).set_index("home_team")
+
+    # Exact-day match records the score and the kickoff time the feed lacked.
+    assert merged.loc["Crystal Palace", "status"] == "played"
+    assert (merged.loc["Crystal Palace", "home_goals"], merged.loc["Crystal Palace", "away_goals"]) == (1, 3)
+    assert merged.loc["Crystal Palace", "time"] == "15:00"
+    # Recorded results are authoritative: the overlay never rewrites them.
+    assert (merged.loc["Arsenal", "home_goals"], merged.loc["Arsenal", "away_goals"]) == (2, 1)
+    # One-day reschedule still matches, and the schedule's own date is kept.
+    assert merged.loc["Leeds", "status"] == "played"
+    assert merged.loc["Leeds", "date"] == pd.Timestamp("2026-09-19")
+    assert merged.loc["Leeds", "time"] == "16:30"
+    # Untouched fixtures stay upcoming.
+    assert list(fixtures["status"]) == ["upcoming", "played", "upcoming"]
+
+
+def test_results_overlay_ignores_stale_or_unrelated_results():
+    """A result months away from the scheduled fixture is not that fixture."""
+    fixtures = pd.DataFrame(
+        {
+            "gameweek": [10],
+            "date": pd.to_datetime(["2027-05-02"]),
+            "time": ["15:00"],
+            "home_team": ["Arsenal"],
+            "away_team": ["Chelsea"],
+            "status": ["upcoming"],
+            "home_goals": [np.nan],
+            "away_goals": [np.nan],
+        }
+    )
+    results = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2026-08-23"]),
+            "home_team": ["Arsenal"],
+            "away_team": ["Chelsea"],
+            "home_goals": [2],
+            "away_goals": [0],
+            "time": ["15:00"],
+        }
+    )
+
+    merged = attach_played_results(fixtures, results)
+
+    assert merged.loc[0, "status"] == "upcoming"
+    assert pd.isna(merged.loc[0, "home_goals"])
 
 
 def test_openfootball_cup_and_knockout_parsing(tmp_path):

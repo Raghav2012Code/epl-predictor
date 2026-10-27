@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 import urllib.request
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -284,6 +285,10 @@ def download_file(
 
 OPENFOOTBALL_BASE_URL = "https://raw.githubusercontent.com/openfootball/england/master"
 OPENFOOTBALL_CACHE_DIR = os.path.join(RAW_DATA_DIR, "openfootball")
+
+# A stale results feed is the bug this guards against, but so is a data load
+# that cannot run without the network: refresh at most every six hours.
+RESULTS_REFRESH_SECONDS = 6 * 3600
 
 # Filenames published by openfootball/england. The cup files are `facup.txt`
 # and `eflcup.txt`; there are no `fa-cup.txt` / `efl-cup.txt` / `league-cup.txt`
@@ -747,11 +752,114 @@ def load_historical_stats(
     return full_df
 
 
+def football_data_results(season_label: str, offline: bool = False) -> pd.DataFrame:
+    """Official scorelines from the football-data season file for one season.
+
+    The openfootball schedule is published before the season and only gains a
+    score when its maintainers refresh the dump, so it lags the live results
+    feed by weeks: the dashboard then showed predictions for gameweeks whose
+    matches were already played. This frame fills that gap.
+
+    Only the scoreline columns are read here. The market features still come
+    from ``src.odds_loader``, which rejects ``FTHG``/``FTAG``/``FTR`` before
+    a feature row is built, so a result can never leak into a forecast.
+    """
+    from src.odds_loader import ODDS_CACHE_DIR, download_season_odds
+
+    empty = pd.DataFrame(columns=["date", "home_team", "away_team", "home_goals", "away_goals", "time"])
+    start = season_label_start_year(season_label)
+    code = f"{start % 100:02d}{(start + 1) % 100:02d}"
+    cached = os.path.join(ODDS_CACHE_DIR, f"E0_{code}.csv")
+    # football-data refreshes a few times a week; re-fetching on every load
+    # would put the API's readiness probe behind a network call for no gain.
+    stale = (
+        not os.path.exists(cached)
+        or (time.time() - os.path.getmtime(cached)) > RESULTS_REFRESH_SECONDS
+    )
+    try:
+        path = download_season_odds(code, force_download=stale and not offline, offline=offline)
+    except Exception as exc:
+        logger.warning("Results feed refresh failed for %s (%s); using the cached copy.", code, exc)
+        try:
+            path = download_season_odds(code, offline=True)
+        except FileNotFoundError:
+            return empty
+
+    raw = pd.read_csv(path)
+    if not {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"} <= set(raw.columns):
+        return empty
+    raw = raw.dropna(subset=["FTHG", "FTAG"])
+    return pd.DataFrame(
+        {
+            "date": pd.to_datetime(raw["Date"], dayfirst=True, errors="coerce").dt.normalize(),
+            "home_team": raw["HomeTeam"].map(standardize_team_name),
+            "away_team": raw["AwayTeam"].map(standardize_team_name),
+            "home_goals": pd.to_numeric(raw["FTHG"], errors="coerce"),
+            "away_goals": pd.to_numeric(raw["FTAG"], errors="coerce"),
+            "time": raw["Time"].astype(str) if "Time" in raw.columns else "",
+        }
+    ).dropna(subset=["date", "home_goals", "away_goals"])
+
+
+def attach_played_results(fixtures: pd.DataFrame, results: pd.DataFrame) -> pd.DataFrame:
+    """Marks fixtures played from an external results frame (clubs + kickoff day).
+
+    Records the official score only: the forecast for that fixture was made
+    from earlier history, so the result never becomes a feature.
+
+    The two feeds disagree by a day on rescheduled matches (Leeds v Crystal
+    Palace, Liverpool v Brighton in 2026/27), so a result is matched to the
+    club pair whose kickoff day is nearest, within three days.
+    """
+    if fixtures is None or fixtures.empty or results is None or results.empty:
+        return fixtures
+    tracked = [
+        "date", "time", "home_team", "away_team", "home_goals", "away_goals", "status"
+    ]
+    if not set(tracked) <= set(fixtures.columns):
+        logger.warning("Fixture frame missing result columns; skipping results overlay.")
+        return fixtures
+
+    out = fixtures.copy()
+    by_clubs: Dict[Tuple[str, str], List[Tuple[pd.Timestamp, int, int, str]]] = {}
+    for row in results.itertuples(index=False):
+        by_clubs.setdefault((row.home_team, row.away_team), []).append(
+            (row.date, int(row.home_goals), int(row.away_goals), row.time)
+        )
+    filled = 0
+    for idx, fixture in out.iterrows():
+        if fixture["status"] == "played" and pd.notna(fixture["home_goals"]):
+            continue
+        clubs = (
+            standardize_team_name(str(fixture["home_team"])),
+            standardize_team_name(str(fixture["away_team"])),
+        )
+        candidates = by_clubs.get(clubs)
+        if not candidates:
+            continue
+        day = pd.Timestamp(fixture["date"]).normalize()
+        result_day, home_goals, away_goals, kickoff_time = min(
+            candidates, key=lambda candidate: abs((candidate[0] - day).days)
+        )
+        if abs((result_day - day).days) > 3:
+            continue
+        out.at[idx, "home_goals"] = home_goals
+        out.at[idx, "away_goals"] = away_goals
+        out.at[idx, "status"] = "played"
+        if not str(fixture["time"]).strip() and kickoff_time not in ("", "nan"):
+            out.at[idx, "time"] = kickoff_time
+        filled += 1
+    if filled:
+        logger.info("Results overlay: recorded %d played fixture(s) the schedule feed lacked.", filled)
+    return out
+
+
 def load_2026_2027_fixtures(offline: bool = False) -> pd.DataFrame:
-    """Loads and parses the 2026/2027 Premier League schedule from openfootball/england."""
+    """Loads the 2026/2027 Premier League schedule, with results filled in."""
     from src.config import get_config
 
     cfg = get_config()["data"]
     url = str(cfg["fixture_url"])
     season = str(cfg["fixture_season"])
-    return parse_openfootball_fixtures(url, season=season, is_url=True, offline=offline)
+    fixtures = parse_openfootball_fixtures(url, season=season, is_url=True, offline=offline)
+    return attach_played_results(fixtures, football_data_results(season, offline=offline))

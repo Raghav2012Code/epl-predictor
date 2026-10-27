@@ -42,7 +42,10 @@ def test_tune_joint_is_deterministic_with_full_receipt():
     first = tune_joint(train, val, cols, n_trials=3, seed=7)
     second = tune_joint(train, val, cols, n_trials=3, seed=7)
     assert first["params"] == second["params"]
-    assert first["value"] == second["value"]
+    # Same params can still differ in the last float bit: the objective sums
+    # sklearn/xgboost outputs in library thread order, so compare the receipt
+    # value at a tolerance rather than demanding bit-identical arithmetic.
+    assert abs(first["value"] - second["value"]) < 1e-9
     params = first["params"]
     assert set(params["draw_rule"]) == {
         "market_margin", "market_min_prob", "no_market_margin", "no_market_min_prob",
@@ -172,4 +175,4 @@ def test_study_ignores_persisted_joint_record(tmp_path, monkeypatch):
     monkeypatch.setattr(tuning_mod, "TUNING_PATH", str(tmp_path / "absent.json"))
     without_record = tune_joint(train, val, cols, n_trials=1, seed=7)
     assert with_record["params"] == without_record["params"]
-    assert with_record["value"] == without_record["value"]
+    assert abs(with_record["value"] - without_record["value"]) < 1e-9
