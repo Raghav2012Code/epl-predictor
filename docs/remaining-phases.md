@@ -8,11 +8,11 @@ Phases 0 through 8 are implemented in the current release candidate. The product
 
 | Model | RPS | Accuracy | Goal MAE | Scoreline KL | Variety | Status |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
-| Random Forest | 0.2076 | 50.6% | 0.89 | 8.5639 | 21.5% | Production |
-| XGBoost | 0.2119 | 48.1% | 0.87 | 10.3027 | 16.5% | Benchmark |
-| Stacked | 0.2082 | 48.1% | 0.87 | 8.6580 | 18.4% | Benchmark |
+| Random Forest | 0.2078 | 50.6% | 0.89 | 7.1373 | 25.3% | Production |
+| XGBoost | 0.2109 | 50.6% | 0.87 | 10.1708 | 20.9% | Benchmark |
+| Stacked | 0.2077 | 50.0% | 0.87 | 8.4604 | 24.7% | Benchmark |
 
-These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results. Scoreline quality (KL divergence vs empirical scorelines and argmax-variety) is measured on the held-out evaluation tail (472 matches) and transcribed from `models/metrics.json`. Production follows pooled RPS across three rolling-origin folds (Random Forest 0.1970, Stacked 0.1978, XGBoost 0.1995); the table headlines the most recent fold.
+These are time-ordered validation results, not a guarantee of future match accuracy. The dashboard distinguishes recorded scores from projected fixtures; projected fixtures must never be presented as observed results. Scoreline quality (KL divergence vs empirical scorelines and argmax-variety) is measured on the held-out evaluation tail (158 matches) and transcribed from `models/metrics.json`. Production follows pooled RPS across three rolling-origin folds (Random Forest 0.1974, Stacked 0.1981, XGBoost 0.1994); the table headlines the most recent fold.
 
 ## Completed phases
 
