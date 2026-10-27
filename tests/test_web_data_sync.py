@@ -101,6 +101,44 @@ def test_dashboard_benchmark_matches_authoritative_model_metrics():
     assert receipt.get("argmaxVariety") == round(float(production_quality.get("argmax_variety", 0.0)) * 100, 1)
 
 
+def test_evaluation_receipt_matches_the_benchmark_artifacts():
+    """The receipt and the metrics sidecar describe the same run.
+
+    The receipt is the measurement surface (population, pooled metrics,
+    intervals); ``models/metrics.json`` still headlines the most recent fold
+    for the dashboard and the prose tables. Both are generated in one pass,
+    so a disagreement means an artifact was hand-edited or the run was
+    partial.
+    """
+    from src.receipt import load_receipt
+
+    receipt = load_receipt(str(REPOSITORY_ROOT / "models" / "evaluation_receipt.json"))
+    metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
+
+    population = receipt["population"]
+    validation = metrics.get("validation") or {}
+    assert [fold["validation_start"] for fold in population["folds"]] == validation["fold_val_starts"]
+    assert [fold["validation_rows"] for fold in population["folds"]] == validation["fold_val_rows"]
+    assert [fold["train_rows"] for fold in population["folds"]] == validation["fold_train_rows"]
+    assert population["n_validation_rows"] == sum(validation["fold_val_rows"])
+    assert population["n_evaluation_rows"] == len(receipt["rows"])
+    assert population["n_evaluation_rows"] + population["n_calibration_rows"] == population["n_validation_rows"]
+
+    assert set(receipt["models"]) == set(metrics["models"])
+    for name, source in metrics["models"].items():
+        last_fold = receipt["models"][name]["folds"][-1]["metrics"]
+        for key in ("accuracy", "log_loss", "macro_f1", "rps", "avg_goal_mae"):
+            assert round(last_fold[key], 4) == source[key], (name, key)
+
+        pooled = receipt["models"][name]["pooled"]
+        for key, value in validation["pooled_metrics"][name].items():
+            assert round(pooled[key], 4) == value, (name, key)
+
+        for interval in receipt["models"][name]["pooled_ci"].values():
+            low, high = interval
+            assert low <= high, name
+
+
 def test_metrics_artifact_carries_fold_receipts():
     metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
     validation = metrics.get("validation") or {}

@@ -18,6 +18,14 @@ data:
 pipeline:
   split_date: "2024-01-01"
 
+evaluation:
+  # Evaluation receipt (models/evaluation_receipt.json). The receipt records
+  # these values, so changing them makes artifacts incomparable rather than
+  # silently re-scored.
+  bootstrap_resamples: 2000
+  bootstrap_seed: 42
+  ci_level: 0.95
+
 model:
   home_advantage: 65.0
   # Member blend fallback defaults. The joint tuning receipt in

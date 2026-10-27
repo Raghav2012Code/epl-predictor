@@ -44,6 +44,11 @@ _DEFAULTS: Dict[str, Any] = {
         },
     },
     "pipeline": {"split_date": "2024-01-01"},
+    "evaluation": {
+        "bootstrap_resamples": 2000,
+        "bootstrap_seed": 42,
+        "ci_level": 0.95,
+    },
     "model": {
         "home_advantage": 65.0,
         "blend_classifier": 0.6,

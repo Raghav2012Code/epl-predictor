@@ -45,6 +45,7 @@ logger = get_logger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 DEFAULT_MODEL_PATH = os.path.join(MODELS_DIR, "production_model.joblib")
+RECEIPT_PATH = os.path.join(MODELS_DIR, "evaluation_receipt.json")
 
 
 def _round_probabilities(probabilities: List[float]) -> List[float]:
@@ -280,6 +281,11 @@ class PremierLeaguePredictionPipeline:
             },
         }
 
+        # One generated receipt per training run: the measurement surface every
+        # later experiment is judged against. No timestamps in compared fields;
+        # a failed write fails the run rather than leaving the surface missing.
+        self.write_evaluation_receipt(folds, per_fold_metrics, split_date=split_date_str)
+
         for _name, _m in self.metrics.items():
             logger.info(
                 f"      - {_name:13s} Accuracy: {_m['accuracy']:.3f} | "
@@ -361,6 +367,31 @@ class PremierLeaguePredictionPipeline:
         self.save_model(DEFAULT_MODEL_PATH)
 
         return self.metrics
+
+    def write_evaluation_receipt(
+        self,
+        folds: List[Tuple[pd.DataFrame, pd.DataFrame]],
+        per_fold_metrics: List[Dict[str, Any]],
+        split_date: str,
+        path: Optional[str] = None,
+    ) -> str:
+        """Writes the versioned evaluation receipt for the benchmarked folds."""
+        from src.config import get_config as _get_cfg_receipt
+        from src.receipt import build_receipt, data_fingerprint, write_receipt
+
+        cfg = _get_cfg_receipt().get("evaluation", {}) or {}
+        receipt = build_receipt(
+            folds,
+            per_fold_metrics,
+            split_date=split_date,
+            fingerprint=data_fingerprint(self.engineered_df),
+            seed=int(cfg.get("bootstrap_seed", 42)),
+            resamples=int(cfg.get("bootstrap_resamples", 2000)),
+            ci_level=float(cfg.get("ci_level", 0.95)),
+        )
+        destination = write_receipt(path or RECEIPT_PATH, receipt)
+        logger.info(f"      - Evaluation receipt saved to: {destination}")
+        return destination
 
     def save_model(self, filepath: Optional[str] = None) -> str:
         """Saves the current fitted production model checkpoint to disk."""

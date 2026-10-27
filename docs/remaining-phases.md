@@ -32,6 +32,8 @@ Random Forest, XGBoost, multinomial logistic regression, and Elo-Poisson members
 
 Time-series validation separates training, calibration, and evaluation data. The stacked meta-learner uses out-of-fold probabilities, calibration is selected on a disjoint slice, and production selection uses RPS with documented tie-breakers.
 
+Every training run writes `models/evaluation_receipt.json`: one schema-versioned, deterministic artifact that states the evaluation population (fold starts, train and validation rows, and the evaluation rows left after the calibration slice is removed), records per-model per-fold and pooled metrics, and attaches seeded bootstrap confidence intervals over resampled matches. The receipt, not prose, is the measurement surface for later model changes; the dashboard benchmark and the prose tables stay transcribed from the generated metrics as before.
+
 ### Phase 4 — Forecast outputs
 
 The pipeline writes the forecast CSV and Markdown report, persists compatible model metadata, and uses the shared draw-decision rule for probabilities, forecasts, and scorelines.
@@ -58,7 +60,7 @@ Before publishing a refreshed forecast or model:
 
 1. Run the offline pipeline when the cached source data is sufficient.
 2. Regenerate the web dataset with `.venv\Scripts\python.exe export_web_data.py`.
-3. Confirm generated CSV, Markdown, JSON, metrics, and PNG artifacts are synchronized. Validate forecast labels with the shared draw-decision rule rather than assuming the raw probability argmax is always the published outcome.
+3. Confirm generated CSV, Markdown, JSON, metrics, and PNG artifacts are synchronized, including `models/evaluation_receipt.json`, whose evaluation population and pooled metrics must agree with `models/metrics.json`. Validate forecast labels with the shared draw-decision rule rather than assuming the raw probability argmax is always the published outcome.
 4. Run `.venv\Scripts\python.exe -m pytest tests/ -v` from the repository root.
 5. Run `npm run build` from `web/`.
 6. Inspect the dashboard at desktop and narrow phone widths, including Analytics diagnostics and tables.
