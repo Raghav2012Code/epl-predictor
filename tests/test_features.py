@@ -84,6 +84,20 @@ def test_congestion_serving_matches_training():
     assert float(feat2["home_congestion_14d"].iloc[0]) == 3.0
 
 
+def test_serving_features_skip_abandoned_ties_with_nan_goals():
+    # Abandoned cup ties (Tottenham vs Leyton Orient, 2020) are stored with NaN
+    # goals; pandas means skip them, so serving must not poison its EWM/rolling
+    # features with NaN either.
+    raw = _mini_history()
+    raw.loc[0, ["home_goals", "away_goals"]] = np.nan
+    feat = build_fixture_features("Arsenal", "Chelsea", datetime(2024, 2, 20), raw)
+    row = feat.iloc[0]
+    ewm_cols = [c for c in feat.columns if c.startswith("home_ewm_")]
+    assert ewm_cols and row[ewm_cols].notna().all()
+    assert abs(float(row["home_ewm_goals_for_5"]) - 2.0) < 1e-9
+    assert abs(float(row["home_roll_goals_for_5"]) - 2.0) < 1e-9
+
+
 def test_travel_unknown_club_falls_back():
     raw = _mini_history(home="Arsenal", away="Atlantis FC")
     eng = build_engineered_dataset(raw)
