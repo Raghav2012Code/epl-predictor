@@ -19,6 +19,7 @@ from src.models import build_rolling_folds, split_calibration_evaluation
 from src.receipt import (
     RECEIPT_SCHEMA_VERSION,
     ReceiptSchemaError,
+    build_diagnostics,
     build_receipt,
     load_receipt,
     pooled_from_rows,
@@ -279,3 +280,108 @@ def test_model_set_must_be_stable_across_folds():
     per_fold_metrics[1] = {"Model A": per_fold_metrics[1]["Model A"]}
     with pytest.raises(ValueError, match="stable model set"):
         _receipt(folds, per_fold_metrics, frame)
+
+
+def _row(actual: int, predicted: int, probas=(0.2, 0.3, 0.5), model: str = "M"):
+    return {
+        "fold": 1,
+        "date": "2024-01-01",
+        "home_team": "Alpha",
+        "away_team": "Beta",
+        "actual": actual,
+        "odds_missing": 0,
+        "predicted": {model: predicted},
+        "probas": {model: list(probas)},
+    }
+
+
+def test_confusion_orientation_and_known_answers():
+    rows = [_row(actual, predicted) for actual, predicted in (
+        (0, 0), (0, 2), (1, 1), (1, 0), (2, 2), (2, 2),
+    )]
+    block = build_diagnostics(rows, ["M"])["models"]["M"]["overall"]
+
+    assert block["n"] == 6
+    # Rows are actual, columns predicted; actual Away predicted Home is [0][2].
+    assert block["confusion"] == [[1, 0, 1], [1, 1, 0], [0, 0, 2]]
+
+    assert block["recall"]["Away"] == pytest.approx(0.5)
+    assert block["recall"]["Draw"] == pytest.approx(0.5)
+    assert block["recall"]["Home"] == pytest.approx(1.0)
+    assert block["precision"]["Away"] == pytest.approx(0.5)
+    assert block["precision"]["Draw"] == pytest.approx(1.0)
+    assert block["precision"]["Home"] == pytest.approx(2 / 3, abs=1e-6)
+
+    assert block["observed_share"]["Away"] == pytest.approx(2 / 6, abs=1e-6)
+    assert block["predicted_share"]["Home"] == pytest.approx(0.5, abs=1e-6)
+    for shares in (block["observed_share"], block["predicted_share"]):
+        assert sum(shares.values()) == pytest.approx(1.0, abs=1e-5)
+
+
+def test_slice_without_a_class_scores_zero_instead_of_nan():
+    rows = [_row(2, 2), _row(2, 1)]
+    block = build_diagnostics(rows, ["M"])["models"]["M"]["overall"]
+    assert block["recall"]["Away"] == 0.0
+    assert block["precision"]["Away"] == 0.0
+    for key in ("recall", "precision", "observed_share", "predicted_share"):
+        assert all(np.isfinite(list(block[key].values()))), key
+
+
+def test_shape_segments_partition_the_population_and_are_inclusive():
+    rows = [
+        _row(2, 2, probas=(0.50, 0.20, 0.30)),  # gap 0.20 -> lopsided
+        _row(2, 2, probas=(0.45, 0.20, 0.35)),  # gap 0.10 -> tight
+        _row(2, 2, probas=(0.60, 0.10, 0.40)),  # gap 0.20 -> lopsided
+        _row(2, 2, probas=(0.25, 0.30, 0.45)),  # gap 0.20 -> lopsided
+    ]
+    blocks = build_diagnostics(rows, ["M"], threshold=0.20)["models"]["M"]
+    assert blocks["overall"]["n"] == 4
+    assert blocks["lopsided"]["n"] == 3
+    assert blocks["tight"]["n"] == 1
+    assert blocks["lopsided"]["n"] + blocks["tight"]["n"] == blocks["overall"]["n"]
+
+
+def test_shape_segments_use_each_models_own_probabilities():
+    row = {
+        "fold": 1,
+        "date": "2024-01-01",
+        "home_team": "Alpha",
+        "away_team": "Beta",
+        "actual": 2,
+        "odds_missing": 0,
+        "predicted": {"A": 2, "B": 2},
+        # A is tight (gap 0.10); B is lopsided (gap 0.50).
+        "probas": {"A": [0.45, 0.20, 0.55], "B": [0.15, 0.20, 0.65]},
+    }
+    diagnostics = build_diagnostics([row], ["A", "B"], threshold=0.20)
+    assert diagnostics["models"]["A"]["tight"]["n"] == 1
+    assert diagnostics["models"]["A"]["lopsided"]["n"] == 0
+    assert diagnostics["models"]["B"]["lopsided"]["n"] == 1
+    assert diagnostics["models"]["B"]["tight"]["n"] == 0
+
+
+def test_receipt_carries_the_diagnostics_and_their_definitions():
+    frame = _frame()
+    receipt = _build(frame, lopsided_gap_threshold=0.25)
+
+    definitions = receipt["diagnostics"]["definitions"]
+    assert definitions["shape_segments"]["threshold"] == 0.25
+    assert definitions["confusion"] == {
+        "rows": "actual",
+        "columns": "predicted",
+        "classes": ["Away", "Draw", "Home"],
+    }
+
+    expected = build_diagnostics(receipt["rows"], MODELS, threshold=0.25)
+    for name in MODELS:
+        stored = receipt["diagnostics"]["models"][name]
+        assert stored == expected["models"][name]
+        assert stored["overall"]["n"] == receipt["population"]["n_evaluation_rows"]
+
+
+def test_previous_schema_version_is_rejected(tmp_path):
+    path = tmp_path / "receipt.json"
+    path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+    with pytest.raises(ReceiptSchemaError):
+        load_receipt(str(path))
+

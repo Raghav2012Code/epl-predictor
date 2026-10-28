@@ -14,8 +14,12 @@ scored.
 The artifact also stores the scored rows (identifiers, actual outcome, the
 market-availability flag, and each model's predicted class and probability
 vector) so diagnostics added later -- confusion, calibration, segment
-splits, market baseline -- are derivations of this file rather than a new
-schema each time.
+splits -- are derivations of this file rather than a new schema each time.
+
+Schema v2 adds the per-outcome diagnostics: confusion counts, recall and
+precision, predicted-versus-observed class shares, and the same block split
+into lopsided and tight matches by a documented absolute home-minus-away
+probability gap.
 """
 
 from __future__ import annotations
@@ -28,15 +32,21 @@ from typing import Any, Dict, List, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
+from src.evaluate import confusion_counts
 from src.models import split_calibration_evaluation
 
-RECEIPT_SCHEMA_VERSION = 1
+RECEIPT_SCHEMA_VERSION = 2
 
 # Transcribed into the artifact at six decimal places; comparisons and
 # re-derivations allow this much slack.
 FLOAT_PRECISION = 6
 
 OUTCOME_ORDER: Tuple[str, ...] = ("Away", "Draw", "Home")
+
+# Boundary tolerance for the documented |p_home - p_away| segmentation: a gap
+# that is equal to the threshold in decimal can subtract to just below it in
+# binary floating point, and such a match must still count as lopsided.
+SHAPE_GAP_EPSILON = 1e-12
 
 FOLD_METRIC_KEYS: Tuple[str, ...] = (
     "rps",
@@ -115,6 +125,118 @@ def pooled_from_rows(rows: Sequence[Dict[str, Any]], model_name: str) -> Dict[st
         "log_loss": float(np.mean(row_log_loss(probas, actual))),
         "accuracy": float(np.mean(preds == actual)),
         "macro_f1": macro_f1(preds, actual),
+    }
+
+
+def _shares(counts: np.ndarray) -> Dict[str, float]:
+    """Share of the block per outcome class, in Away/Draw/Home order."""
+    values = np.asarray(counts, dtype=float)
+    total = float(values.sum())
+    if total <= 0:
+        return {label: 0.0 for label in OUTCOME_ORDER}
+    return {label: _round(value / total) for label, value in zip(OUTCOME_ORDER, values)}
+
+
+def _recall_precision(confusion: np.ndarray) -> Tuple[Dict[str, float], Dict[str, float]]:
+    """Per-outcome recall and precision from a rows=actual, cols=predicted matrix.
+
+    A class with no support scores 0.0 rather than NaN, so the artifact stays
+    readable when a slice misses an outcome entirely.
+    """
+    matrix = np.asarray(confusion, dtype=int)
+    recall: Dict[str, float] = {}
+    precision: Dict[str, float] = {}
+    for index, label in enumerate(OUTCOME_ORDER):
+        actual_total = int(matrix[index].sum())
+        predicted_total = int(matrix[:, index].sum())
+        recall[label] = _round(matrix[index, index] / actual_total) if actual_total else 0.0
+        precision[label] = _round(matrix[index, index] / predicted_total) if predicted_total else 0.0
+    return recall, precision
+
+
+def _diagnostic_block(rows: Sequence[Dict[str, Any]], model_name: str) -> Dict[str, Any]:
+    """Confusion, recall/precision and shares for one model over one row set."""
+    if not rows:
+        return {
+            "n": 0,
+            "confusion": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            "recall": {label: 0.0 for label in OUTCOME_ORDER},
+            "precision": {label: 0.0 for label in OUTCOME_ORDER},
+            "observed_share": {label: 0.0 for label in OUTCOME_ORDER},
+            "predicted_share": {label: 0.0 for label in OUTCOME_ORDER},
+        }
+    actual = np.array([row["actual"] for row in rows], dtype=int)
+    predicted = np.array([row["predicted"][model_name] for row in rows], dtype=int)
+    confusion = confusion_counts(actual, predicted)
+    recall, precision = _recall_precision(confusion)
+    return {
+        "n": int(len(rows)),
+        "confusion": [[int(value) for value in row] for row in confusion],
+        "recall": recall,
+        "precision": precision,
+        "observed_share": _shares(np.bincount(actual, minlength=3)),
+        "predicted_share": _shares(np.bincount(predicted, minlength=3)),
+    }
+
+
+def build_diagnostics(
+    rows: Sequence[Dict[str, Any]],
+    model_names: Sequence[str],
+    threshold: float = 0.20,
+) -> Dict[str, Any]:
+    """Per-outcome diagnostics and the lopsided/tight split for every model.
+
+    Shape segments use each model's own probabilities, so the split never
+    depends on the production selection or on any external input. The
+    threshold is written into the artifact, which makes a re-segmentation a
+    visible diff instead of a silent change of population.
+    """
+    rows = list(rows)
+    if not rows:
+        raise ValueError("Cannot build diagnostics without evaluation rows.")
+    threshold = float(threshold)
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError(f"lopsided gap threshold must be in [0, 1], got {threshold}.")
+
+    models: Dict[str, Dict[str, Any]] = {}
+    for name in model_names:
+        gaps = [
+            abs(float(row["probas"][name][2]) - float(row["probas"][name][0]))
+            for row in rows
+        ]
+        # Probabilities are floats: a gap typed as 0.20 can subtract to
+        # 0.19999999999999996, so the boundary comparison carries a tolerance
+        # and a match sitting on the threshold counts as lopsided.
+        boundary = threshold - SHAPE_GAP_EPSILON
+        lopsided_rows = [row for row, gap in zip(rows, gaps) if gap >= boundary]
+        tight_rows = [row for row, gap in zip(rows, gaps) if gap < boundary]
+        overall = _diagnostic_block(rows, name)
+        lopsided = _diagnostic_block(lopsided_rows, name)
+        tight = _diagnostic_block(tight_rows, name)
+        if lopsided["n"] + tight["n"] != overall["n"]:
+            raise ValueError(
+                f"{name}: shape segments hold {lopsided['n']} + {tight['n']} rows "
+                f"but the overall block holds {overall['n']}."
+            )
+        models[name] = {"overall": overall, "lopsided": lopsided, "tight": tight}
+
+    return {
+        "definitions": {
+            "confusion": {
+                "rows": "actual",
+                "columns": "predicted",
+                "classes": list(OUTCOME_ORDER),
+            },
+            "shape_segments": {
+                "metric": "abs(p_home - p_away)",
+                "basis": "each model's own evaluation probabilities",
+                "threshold": _round(threshold),
+                "boundary_tolerance": SHAPE_GAP_EPSILON,
+                "lopsided": "gap >= threshold - boundary_tolerance",
+                "tight": "gap < threshold - boundary_tolerance",
+            },
+        },
+        "models": models,
     }
 
 
@@ -216,6 +338,7 @@ def build_receipt(
     seed: int = 42,
     resamples: int = 2000,
     ci_level: float = 0.95,
+    lopsided_gap_threshold: float = 0.20,
 ) -> Dict[str, Any]:
     """Builds the deterministic receipt for one full rolling-origin benchmark."""
     if not folds:
@@ -379,6 +502,8 @@ def build_receipt(
             },
         }
 
+    diagnostics = build_diagnostics(rows, model_names, lopsided_gap_threshold)
+
     return {
         "schema_version": RECEIPT_SCHEMA_VERSION,
         "method": {
@@ -396,6 +521,7 @@ def build_receipt(
         "data_fingerprint": str(fingerprint),
         "population": population,
         "models": models_block,
+        "diagnostics": diagnostics,
         "rows": rows,
     }
 

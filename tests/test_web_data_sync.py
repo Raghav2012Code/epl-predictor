@@ -139,6 +139,43 @@ def test_evaluation_receipt_matches_the_benchmark_artifacts():
             assert low <= high, name
 
 
+def test_receipt_diagnostics_cover_the_evaluation_population():
+    """Confusion, shares and shape segments describe exactly the recorded rows."""
+    from src.receipt import load_receipt
+
+    receipt = load_receipt(str(REPOSITORY_ROOT / "models" / "evaluation_receipt.json"))
+    rows = receipt["rows"]
+    n_rows = receipt["population"]["n_evaluation_rows"]
+    shape = receipt["diagnostics"]["definitions"]["shape_segments"]
+    boundary = shape["threshold"] - shape["boundary_tolerance"]
+
+    for name in receipt["models"]:
+        blocks = receipt["diagnostics"]["models"][name]
+        overall = blocks["overall"]
+        assert overall["n"] == n_rows
+        assert sum(sum(row) for row in overall["confusion"]) == n_rows
+
+        observed = [sum(1 for row in rows if row["actual"] == cls) for cls in (0, 1, 2)]
+        predicted = [
+            sum(1 for row in rows if row["predicted"][name] == cls) for cls in (0, 1, 2)
+        ]
+        assert [sum(row) for row in overall["confusion"]] == observed, name
+        assert [
+            sum(row[cls] for row in overall["confusion"]) for cls in (0, 1, 2)
+        ] == predicted, name
+
+        lopsided = sum(
+            1
+            for row in rows
+            if abs(row["probas"][name][2] - row["probas"][name][0]) >= boundary
+        )
+        assert blocks["lopsided"]["n"] == lopsided, name
+        assert blocks["tight"]["n"] == n_rows - lopsided, name
+
+        for shares in (overall["observed_share"], overall["predicted_share"]):
+            assert abs(sum(shares.values()) - 1.0) < 1e-5, name
+
+
 def test_metrics_artifact_carries_fold_receipts():
     metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
     validation = metrics.get("validation") or {}

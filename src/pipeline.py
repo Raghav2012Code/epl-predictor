@@ -388,6 +388,7 @@ class PremierLeaguePredictionPipeline:
             seed=int(cfg.get("bootstrap_seed", 42)),
             resamples=int(cfg.get("bootstrap_resamples", 2000)),
             ci_level=float(cfg.get("ci_level", 0.95)),
+            lopsided_gap_threshold=float(cfg.get("lopsided_gap_threshold", 0.20)),
         )
         destination = write_receipt(path or RECEIPT_PATH, receipt)
         logger.info(f"      - Evaluation receipt saved to: {destination}")

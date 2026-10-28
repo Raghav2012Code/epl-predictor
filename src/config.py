@@ -48,6 +48,7 @@ _DEFAULTS: Dict[str, Any] = {
         "bootstrap_resamples": 2000,
         "bootstrap_seed": 42,
         "ci_level": 0.95,
+        "lopsided_gap_threshold": 0.20,
     },
     "model": {
         "home_advantage": 65.0,

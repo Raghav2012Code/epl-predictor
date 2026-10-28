@@ -25,6 +25,9 @@ evaluation:
   bootstrap_resamples: 2000
   bootstrap_seed: 42
   ci_level: 0.95
+  # Absolute home-minus-away probability gap at or above which a match counts
+  # as lopsided. Recorded in the artifact, so a change is a visible diff.
+  lopsided_gap_threshold: 0.20
 
 model:
   home_advantage: 65.0
