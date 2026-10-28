@@ -20,6 +20,11 @@ Schema v2 adds the per-outcome diagnostics: confusion counts, recall and
 precision, predicted-versus-observed class shares, and the same block split
 into lopsided and tight matches by a documented absolute home-minus-away
 probability gap.
+
+Schema v3 adds calibration: per-outcome expected calibration error and
+reliability points on fixed, recorded bin edges, with a macro figure. The
+binning is the plot path's own helper, so the receipt and the reliability
+PNG cannot disagree.
 """
 
 from __future__ import annotations
@@ -32,10 +37,10 @@ from typing import Any, Dict, List, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
-from src.evaluate import confusion_counts
+from src.evaluate import RELIABILITY_BINS, confusion_counts, reliability_points
 from src.models import split_calibration_evaluation
 
-RECEIPT_SCHEMA_VERSION = 2
+RECEIPT_SCHEMA_VERSION = 3
 
 # Transcribed into the artifact at six decimal places; comparisons and
 # re-derivations allow this much slack.
@@ -183,6 +188,7 @@ def build_diagnostics(
     rows: Sequence[Dict[str, Any]],
     model_names: Sequence[str],
     threshold: float = 0.20,
+    bins: int = RELIABILITY_BINS,
 ) -> Dict[str, Any]:
     """Per-outcome diagnostics and the lopsided/tight split for every model.
 
@@ -218,7 +224,12 @@ def build_diagnostics(
                 f"{name}: shape segments hold {lopsided['n']} + {tight['n']} rows "
                 f"but the overall block holds {overall['n']}."
             )
-        models[name] = {"overall": overall, "lopsided": lopsided, "tight": tight}
+        models[name] = {
+            "overall": overall,
+            "lopsided": lopsided,
+            "tight": tight,
+            "calibration": _calibration_block(rows, name, bins),
+        }
 
     return {
         "definitions": {
@@ -235,8 +246,85 @@ def build_diagnostics(
                 "lopsided": "gap >= threshold - boundary_tolerance",
                 "tight": "gap < threshold - boundary_tolerance",
             },
+            "calibration": calibration_definitions(bins),
         },
         "models": models,
+    }
+
+
+def calibration_definitions(bins: int = RELIABILITY_BINS) -> Dict[str, Any]:
+    """Bin edges and the ECE definition, written into the artifact verbatim."""
+    bins = int(bins)
+    if bins < 1:
+        raise ValueError(f"bins must be >= 1, got {bins}.")
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    return {
+        "metric": "expected calibration error",
+        "formula": (
+            "sum over non-empty bins of (matches/N) * abs(observed - predicted); "
+            "macro is the unweighted mean over Away/Draw/Home"
+        ),
+        "basis": "one-vs-rest per outcome on the evaluation rows",
+        "bins": bins,
+        "edges": [_round(edge) for edge in edges],
+        "edge_rule": "[lo, hi) except the final bin which is [lo, hi]",
+    }
+
+
+def _calibration_block(
+    rows: Sequence[Dict[str, Any]],
+    model_name: str,
+    bins: int = RELIABILITY_BINS,
+) -> Dict[str, Any]:
+    """Per-outcome ECE and reliability points for one model over one row set."""
+    rows = list(rows)
+    total = len(rows)
+    if total == 0:
+        return {
+            "n": 0,
+            "macro_ece": 0.0,
+            "per_outcome": {
+                label: {"ece": 0.0, "points": []} for label in OUTCOME_ORDER
+            },
+        }
+
+    actual = np.array([row["actual"] for row in rows], dtype=int)
+    probas = np.array([row["probas"][model_name] for row in rows], dtype=float)
+    if not np.all((probas >= 0.0) & (probas <= 1.0)):
+        raise ValueError(
+            f"{model_name}: probabilities outside [0, 1] cannot be binned reliably."
+        )
+
+    per_outcome: Dict[str, Any] = {}
+    eces: List[float] = []
+    for index, label in enumerate(OUTCOME_ORDER):
+        points = reliability_points(actual, probas, index, bins=bins)
+        matches = int(sum(count for _, _, count in points))
+        if matches != total:
+            raise ValueError(
+                f"{model_name} {label}: bins hold {matches} rows but the block has "
+                f"{total}; the edge rule must cover every probability."
+            )
+        ece = float(
+            sum((count / total) * abs(observed - predicted) for predicted, observed, count in points)
+        )
+        per_outcome[label] = {
+            "ece": _round(ece),
+            "points": [
+                {
+                    "predicted": _round(predicted),
+                    "observed": _round(observed),
+                    "matches": int(count),
+                }
+                for predicted, observed, count in points
+            ],
+        }
+        eces.append(ece)
+
+    return {
+        "n": total,
+        "macro_ece": _round(float(np.mean(eces))),
+        "per_outcome": per_outcome,
     }
 
 

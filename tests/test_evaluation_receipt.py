@@ -21,6 +21,7 @@ from src.receipt import (
     ReceiptSchemaError,
     build_diagnostics,
     build_receipt,
+    calibration_definitions,
     load_receipt,
     pooled_from_rows,
     row_rps,
@@ -379,9 +380,85 @@ def test_receipt_carries_the_diagnostics_and_their_definitions():
         assert stored["overall"]["n"] == receipt["population"]["n_evaluation_rows"]
 
 
-def test_previous_schema_version_is_rejected(tmp_path):
-    path = tmp_path / "receipt.json"
-    path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
-    with pytest.raises(ReceiptSchemaError):
-        load_receipt(str(path))
+def test_previous_schema_versions_are_rejected(tmp_path):
+    for version in (1, 2):
+        path = tmp_path / f"receipt-v{version}.json"
+        path.write_text(json.dumps({"schema_version": version}), encoding="utf-8")
+        with pytest.raises(ReceiptSchemaError):
+            load_receipt(str(path))
+
+
+def test_calibration_known_answers():
+    rows = [
+        _row(0, 0, probas=(0.0, 0.5, 0.5)),
+        _row(0, 1, probas=(0.0, 0.5, 0.5)),
+        _row(1, 1, probas=(0.0, 0.5, 0.5)),
+        _row(1, 2, probas=(0.0, 0.5, 0.5)),
+    ]
+    calibration = build_diagnostics(rows, ["M"])["models"]["M"]["calibration"]
+
+    assert calibration["n"] == 4
+    assert calibration["per_outcome"]["Away"]["ece"] == pytest.approx(0.5)
+    assert calibration["per_outcome"]["Draw"]["ece"] == pytest.approx(0.0)
+    assert calibration["per_outcome"]["Home"]["ece"] == pytest.approx(0.5)
+    assert calibration["macro_ece"] == pytest.approx(1 / 3, abs=1e-6)
+
+    away_points = calibration["per_outcome"]["Away"]["points"]
+    assert away_points == [{"predicted": 0.0, "observed": 0.5, "matches": 4}]
+
+
+def test_calibration_bin_edges_include_both_boundaries():
+    rows = [
+        _row(0, 0, probas=(0.0, 0.5, 0.5)),
+        _row(0, 0, probas=(0.25, 0.5, 0.25)),
+        _row(0, 0, probas=(0.5, 0.25, 0.25)),
+        _row(0, 0, probas=(0.75, 0.1, 0.15)),
+        _row(0, 0, probas=(1.0, 0.0, 0.0)),
+    ]
+    diagnostics = build_diagnostics(rows, ["M"], bins=4)
+    assert diagnostics["definitions"]["calibration"]["edges"] == [0.0, 0.25, 0.5, 0.75, 1.0]
+
+    points = diagnostics["models"]["M"]["calibration"]["per_outcome"]["Away"]["points"]
+    # Edges are inclusive at their lower bound; the final bin is closed, so
+    # 0.75 and 1.0 share it (mean 0.875) instead of 1.0 being dropped.
+    assert [point["predicted"] for point in points] == [0.0, 0.25, 0.5, 0.875]
+    assert [point["matches"] for point in points] == [1, 1, 1, 2]
+
+
+def test_macro_ece_is_an_unweighted_mean_over_outcomes():
+    rows = [
+        _row(0, 0, probas=(0.1, 0.1, 0.8)),
+        _row(2, 2, probas=(0.1, 0.1, 0.8)),
+        _row(2, 2, probas=(0.1, 0.1, 0.8)),
+        _row(2, 2, probas=(0.1, 0.1, 0.8)),
+    ]
+    calibration = build_diagnostics(rows, ["M"])["models"]["M"]["calibration"]
+    assert calibration["per_outcome"]["Away"]["ece"] == pytest.approx(0.15)
+    assert calibration["per_outcome"]["Draw"]["ece"] == pytest.approx(0.10)
+    assert calibration["per_outcome"]["Home"]["ece"] == pytest.approx(0.05)
+    # Unweighted mean. A support-weighted mean would be 0.075.
+    assert calibration["macro_ece"] == pytest.approx(0.10)
+    assert abs(calibration["macro_ece"] - 0.075) > 1e-6
+
+
+def test_receipt_records_calibration_and_conserves_rows():
+    receipt = _build(_frame())
+    assert receipt["diagnostics"]["definitions"]["calibration"] == calibration_definitions()
+
+    for name in MODELS:
+        calibration = receipt["diagnostics"]["models"][name]["calibration"]
+        assert calibration["n"] == receipt["population"]["n_evaluation_rows"]
+        for label in ("Away", "Draw", "Home"):
+            entry = calibration["per_outcome"][label]
+            assert sum(point["matches"] for point in entry["points"]) == calibration["n"]
+            assert 0.0 <= entry["ece"] <= 1.0
+        assert calibration["macro_ece"] == pytest.approx(
+            sum(
+                calibration["per_outcome"][label]["ece"]
+                for label in ("Away", "Draw", "Home")
+            )
+            / 3,
+            abs=1e-6,
+        )
+
 

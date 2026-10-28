@@ -176,6 +176,50 @@ def test_receipt_diagnostics_cover_the_evaluation_population():
             assert abs(sum(shares.values()) - 1.0) < 1e-5, name
 
 
+def test_receipt_calibration_blocks_match_the_rows():
+    """ECE and reliability points are reproducible from the recorded rows."""
+    import numpy as np
+    import pytest
+
+    from src.evaluate import reliability_points
+    from src.receipt import load_receipt
+
+    receipt = load_receipt(str(REPOSITORY_ROOT / "models" / "evaluation_receipt.json"))
+    definitions = receipt["diagnostics"]["definitions"]["calibration"]
+    edges = definitions["edges"]
+
+    assert len(edges) == definitions["bins"] + 1
+    assert edges[0] == 0.0 and edges[-1] == 1.0
+    assert all(later > earlier for earlier, later in zip(edges, edges[1:]))
+
+    rows = receipt["rows"]
+    n_rows = receipt["population"]["n_evaluation_rows"]
+    actual = np.array([row["actual"] for row in rows], dtype=int)
+
+    for name in receipt["models"]:
+        probas = np.array([row["probas"][name] for row in rows], dtype=float)
+        block = receipt["diagnostics"]["models"][name]["calibration"]
+        assert block["n"] == n_rows
+
+        eces = []
+        for index, label in enumerate(("Away", "Draw", "Home")):
+            points = reliability_points(actual, probas, index, bins=definitions["bins"])
+            expected = sum(
+                (count / n_rows) * abs(observed - predicted)
+                for predicted, observed, count in points
+            )
+            entry = block["per_outcome"][label]
+            assert entry["ece"] == pytest.approx(expected, abs=1e-5), (name, label)
+            assert sum(point["matches"] for point in entry["points"]) == n_rows
+            for point in entry["points"]:
+                assert point["matches"] > 0
+                assert 0.0 <= point["predicted"] <= 1.0
+                assert 0.0 <= point["observed"] <= 1.0
+            eces.append(expected)
+
+        assert block["macro_ece"] == pytest.approx(sum(eces) / 3, abs=1e-5), name
+
+
 def test_metrics_artifact_carries_fold_receipts():
     metrics = json.loads((REPOSITORY_ROOT / "models/metrics.json").read_text(encoding="utf-8"))
     validation = metrics.get("validation") or {}
